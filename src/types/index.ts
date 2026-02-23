@@ -34,3 +34,8 @@ export interface Brand {
   id: number;
   nome: string;
 }
+
+export interface Grid {
+  id: number;
+  nome: string;
+}

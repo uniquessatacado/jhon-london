@@ -8,6 +8,7 @@ import { PDVPage } from './pages/PDV';
 import { CategoryPage } from './pages/settings/CategoryPage';
 import { BrandPage } from './pages/settings/BrandPage';
 import { ApiStatusPage } from './pages/settings/ApiStatusPage';
+import { GridPage } from './pages/settings/GridPage';
 
 const router = createBrowserRouter([
   {
@@ -41,6 +42,10 @@ const router = createBrowserRouter([
       {
         path: 'configuracoes/marcas',
         element: <BrandPage />,
+      },
+      {
+        path: 'configuracoes/grades',
+        element: <GridPage />,
       },
       {
         path: 'configuracoes/status-api',

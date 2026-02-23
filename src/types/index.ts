@@ -24,3 +24,13 @@ export interface Product {
   criado_em: string;
   atualizado_em: string;
 }
+
+export interface Category {
+  id: number;
+  nome: string;
+}
+
+export interface Brand {
+  id: number;
+  nome: string;
+}

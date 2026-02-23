@@ -33,7 +33,7 @@ const NavLinkItem = ({ to, icon: Icon, label }: { to: string, icon: React.Elemen
     className={({ isActive }) =>
       `flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition-all duration-200 ${
         isActive 
-        ? 'bg-primary/20 text-primary shadow-sm ring-1 ring-primary/30 backdrop-blur-sm' 
+        ? 'bg-emerald-500/10 text-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.1)] ring-1 ring-emerald-500/20 backdrop-blur-sm' 
         : 'text-muted-foreground hover:bg-white/5 hover:text-foreground hover:translate-x-1'
       }`
     }
@@ -45,13 +45,29 @@ const NavLinkItem = ({ to, icon: Icon, label }: { to: string, icon: React.Elemen
 
 const AnimatedLogo = () => {
   return (
-    <div className="flex items-center justify-center w-full px-2">
-       <h1 className="text-2xl font-bold tracking-tight">
-          {/* Gradiente animado estilo 'Shine' */}
-          <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-blue-400 bg-[size:200%_auto] bg-clip-text text-transparent animate-shimmer">
-            John London ERP
-          </span>
-       </h1>
+    <div className="flex items-center gap-4 px-2 select-none group">
+       {/* Container da Imagem com efeito de brilho suave */}
+       <div className="relative h-12 w-12 shrink-0 rounded-xl overflow-hidden shadow-[0_0_15px_rgba(52,211,153,0.2)] border border-emerald-500/20 group-hover:border-emerald-500/50 transition-colors duration-500">
+          <img 
+            src="/logo.jpg" 
+            alt="John London Logo" 
+            className="h-full w-full object-cover transform transition-transform duration-700 group-hover:scale-110"
+          />
+          {/* Brilho de vidro sobre o logo */}
+          <div className="absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+       </div>
+
+       <div className="flex flex-col">
+         <h1 className="text-xl font-bold tracking-tight leading-none">
+            {/* Texto com Gradiente Esmeralda combinando com o logo */}
+            <span className="bg-gradient-to-r from-emerald-400 via-teal-200 to-emerald-500 bg-[size:200%_auto] bg-clip-text text-transparent animate-shimmer drop-shadow-[0_2px_10px_rgba(16,185,129,0.5)]">
+              John London
+            </span>
+         </h1>
+         <span className="text-[0.65rem] font-medium text-emerald-500/60 uppercase tracking-[0.2em] mt-1">
+            ERP System
+         </span>
+       </div>
     </div>
   );
 };
@@ -82,7 +98,7 @@ export function Layout() {
       
       {/* Sidebar Flutuante (Desktop) */}
       <aside className="hidden md:flex flex-col w-72 rounded-3xl bg-black/40 backdrop-blur-xl border border-white/5 shadow-2xl overflow-hidden transition-all duration-300">
-        <div className="flex h-20 items-center justify-center border-b border-white/5 px-6">
+        <div className="flex h-24 items-center justify-center border-b border-white/5 px-4 bg-gradient-to-b from-white/5 to-transparent">
            <AnimatedLogo />
         </div>
         <div className="flex-1 overflow-y-auto py-6 px-4 space-y-2 scrollbar-thin scrollbar-thumb-white/10">
@@ -92,7 +108,7 @@ export function Layout() {
              <Collapsible defaultOpen={isSettingsOpen} className="mt-4">
               <CollapsibleTrigger className="flex items-center justify-between w-full rounded-2xl px-4 py-3 text-sm font-medium text-muted-foreground transition-all hover:bg-white/5 hover:text-foreground [&[data-state=open]>svg]:rotate-180 group">
                  <div className="flex items-center gap-3">
-                  <Settings className="h-5 w-5 group-hover:text-primary transition-colors" />
+                  <Settings className="h-5 w-5 group-hover:text-emerald-400 transition-colors" />
                   <span>Configurações</span>
                  </div>
                  <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200" />
@@ -107,7 +123,7 @@ export function Layout() {
         </div>
         <div className="p-4 border-t border-white/5 bg-white/5">
             <div className="flex items-center gap-3 px-2">
-                <div className="h-10 w-10 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold shadow-lg">
+                <div className="h-10 w-10 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white font-bold shadow-lg shadow-emerald-900/20">
                     JL
                 </div>
                 <div className="flex flex-col">

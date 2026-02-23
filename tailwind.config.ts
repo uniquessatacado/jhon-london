@@ -77,7 +77,10 @@ export default {
         },
         typing: {
           "0%": { width: "0" },
-          "100%": { width: "100%" },
+          "50%": { width: "100%" }, /* Digita até a metade do tempo */
+          "80%": { width: "100%" }, /* Fica parado um pouco */
+          "95%": { width: "0" },    /* Apaga rápido */
+          "100%": { width: "0" },
         },
         blink: {
           "50%": { borderColor: "transparent" },
@@ -86,7 +89,7 @@ export default {
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
-        typing: "typing 3.5s steps(30, end), blink .75s step-end infinite",
+        typing: "typing 8s steps(30, end) infinite, blink .75s step-end infinite", // Loop infinito para ficar dinâmico
       },
     },
   },

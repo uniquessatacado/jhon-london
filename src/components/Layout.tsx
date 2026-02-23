@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import { Home, Package, ShoppingCart, Settings, Menu, LogOut, ChevronDown, Tag, Building, CircleUser } from 'lucide-react';
+import { Home, Package, ShoppingCart, Settings, Menu, LogOut, ChevronDown, Tag, Building, CircleUser, Server } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import {
@@ -21,6 +21,7 @@ const navItems = [
 const settingsNavItems = [
     { to: '/configuracoes/categorias', label: 'Categorias', icon: Tag },
     { to: '/configuracoes/marcas', label: 'Marcas', icon: Building },
+    { to: '/configuracoes/status-api', label: 'Status da API', icon: Server },
 ]
 
 const NavLinkItem = ({ to, icon: Icon, label }: { to: string, icon: React.ElementType, label: string }) => (
@@ -90,6 +91,7 @@ export function Layout() {
                 {navItems.map(item => <NavLinkItem key={item.to} {...item} />)}
                  <NavLinkItem to="/configuracoes/categorias" icon={Tag} label="Categorias" />
                  <NavLinkItem to="/configuracoes/marcas" icon={Building} label="Marcas" />
+                 <NavLinkItem to="/configuracoes/status-api" icon={Server} label="Status da API" />
               </nav>
             </SheetContent>
           </Sheet>

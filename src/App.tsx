@@ -7,6 +7,7 @@ import { NewProductPage } from './pages/products/NewProduct';
 import { PDVPage } from './pages/PDV';
 import { CategoryPage } from './pages/settings/CategoryPage';
 import { BrandPage } from './pages/settings/BrandPage';
+import { ApiStatusPage } from './pages/settings/ApiStatusPage';
 
 const router = createBrowserRouter([
   {
@@ -40,6 +41,10 @@ const router = createBrowserRouter([
       {
         path: 'configuracoes/marcas',
         element: <BrandPage />,
+      },
+      {
+        path: 'configuracoes/status-api',
+        element: <ApiStatusPage />,
       },
     ],
   },

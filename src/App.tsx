@@ -5,7 +5,8 @@ import { DashboardPage } from './pages/Dashboard';
 import { ProductListPage } from './pages/products/ProductList';
 import { NewProductPage } from './pages/products/NewProduct';
 import { PDVPage } from './pages/PDV';
-import { SettingsPage } from './pages/Settings';
+import { CategoryPage } from './pages/settings/CategoryPage';
+import { BrandPage } from './pages/settings/BrandPage';
 
 const router = createBrowserRouter([
   {
@@ -33,8 +34,12 @@ const router = createBrowserRouter([
         element: <PDVPage />,
       },
       {
-        path: 'configuracoes',
-        element: <SettingsPage />,
+        path: 'configuracoes/categorias',
+        element: <CategoryPage />,
+      },
+      {
+        path: 'configuracoes/marcas',
+        element: <BrandPage />,
       },
     ],
   },

@@ -1,5 +1,5 @@
-import { NavLink, Outlet } from 'react-router-dom';
-import { Home, Package, ShoppingCart, Settings, Menu, LogOut } from 'lucide-react';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { Home, Package, ShoppingCart, Settings, Menu, LogOut, ChevronDown, Tag, Building } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import {
@@ -11,15 +11,22 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { CircleUser } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { cn } from '@/lib/utils';
+import { useState } from 'react';
 
 const navItems = [
   { to: '/', icon: Home, label: 'Dashboard' },
   { to: '/produtos', icon: Package, label: 'Produtos' },
   { to: '/pdv', icon: ShoppingCart, label: 'PDV' },
-  { to: '/configuracoes', icon: Settings, label: 'Configurações' },
 ];
 
-const NavLinkItem = ({ to, icon: Icon, label }: typeof navItems[0]) => (
+const settingsNavItems = [
+    { to: '/configuracoes/categorias', label: 'Categorias', icon: Tag },
+    { to: '/configuracoes/marcas', label: 'Marcas', icon: Building },
+]
+
+const NavLinkItem = ({ to, icon: Icon, label }: { to: string, icon: React.ElementType, label: string }) => (
   <NavLink
     to={to}
     className={({ isActive }) =>
@@ -34,6 +41,9 @@ const NavLinkItem = ({ to, icon: Icon, label }: typeof navItems[0]) => (
 );
 
 export function Layout() {
+  const location = useLocation();
+  const isSettingsOpen = location.pathname.startsWith('/configuracoes');
+  
   return (
     <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
       <div className="hidden border-r bg-muted/40 md:block">
@@ -46,6 +56,18 @@ export function Layout() {
           <div className="flex-1">
             <nav className="grid items-start px-2 text-sm font-medium lg:px-4">
               {navItems.map(item => <NavLinkItem key={item.to} {...item} />)}
+               <Collapsible defaultOpen={isSettingsOpen}>
+                <CollapsibleTrigger className="flex items-center justify-between w-full rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary [&[data-state=open]>svg]:rotate-180">
+                   <div className="flex items-center gap-3">
+                    <Settings className="h-4 w-4" />
+                    <span>Configurações</span>
+                   </div>
+                   <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200" />
+                </CollapsibleTrigger>
+                <CollapsibleContent className="pl-7 pt-1 space-y-1">
+                    {settingsNavItems.map(item => <NavLinkItem key={item.to} {...item} />)}
+                </CollapsibleContent>
+              </Collapsible>
             </nav>
           </div>
         </div>
@@ -68,6 +90,9 @@ export function Layout() {
                   <span className="text-primary">John London ERP</span>
                 </NavLink>
                 {navItems.map(item => <NavLinkItem key={item.to} {...item} />)}
+                {/* Mobile settings can be simplified or also made collapsible if needed */}
+                 <NavLinkItem to="/configuracoes/categorias" icon={Tag} label="Categorias" />
+                 <NavLinkItem to="/configuracoes/marcas" icon={Building} label="Marcas" />
               </nav>
             </SheetContent>
           </Sheet>

@@ -46,11 +46,12 @@ const NavLinkItem = ({ to, icon: Icon, label }: { to: string, icon: React.Elemen
 const AnimatedLogo = () => {
   return (
     <div className="flex items-center justify-center w-full px-2">
-      <div className="relative w-max">
-        <h1 className="inline-block overflow-hidden whitespace-nowrap border-r-4 border-primary pr-1 text-xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400 animate-typing">
-          John London ERP
-        </h1>
-      </div>
+       <h1 className="text-2xl font-bold tracking-tight">
+          {/* Gradiente animado estilo 'Shine' */}
+          <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-blue-400 bg-[size:200%_auto] bg-clip-text text-transparent animate-shimmer">
+            John London ERP
+          </span>
+       </h1>
     </div>
   );
 };
@@ -81,7 +82,7 @@ export function Layout() {
       
       {/* Sidebar Flutuante (Desktop) */}
       <aside className="hidden md:flex flex-col w-72 rounded-3xl bg-black/40 backdrop-blur-xl border border-white/5 shadow-2xl overflow-hidden transition-all duration-300">
-        <div className="flex h-20 items-center justify-center border-b border-white/5">
+        <div className="flex h-20 items-center justify-center border-b border-white/5 px-6">
            <AnimatedLogo />
         </div>
         <div className="flex-1 overflow-y-auto py-6 px-4 space-y-2 scrollbar-thin scrollbar-thumb-white/10">

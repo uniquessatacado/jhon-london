@@ -33,6 +33,10 @@ const router = createBrowserRouter([
         element: <NewProductPage />,
       },
       {
+        path: 'produtos/editar/:id',
+        element: <NewProductPage />,
+      },
+      {
         path: 'pdv',
         element: <PDVPage />,
       },

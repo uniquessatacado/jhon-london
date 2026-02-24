@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, MoreHorizontal, Pencil, Trash2, Search, Filter, X, PackageOpen, Box } from 'lucide-react';
+import { PlusCircle, MoreHorizontal, Pencil, Trash2, Search, Filter, X, PackageOpen, Box, Eye } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -10,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useProducts } from '@/hooks/use-products';
 import { useCategories, useSubcategories } from '@/hooks/use-categories';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Product } from '@/types';
+import { ViewProductDialog } from '../../components/products/ViewProductDialog';
 
 export function ProductListPage() {
   const { data: products, isLoading, isError } = useProducts();
@@ -20,6 +22,10 @@ export function ProductListPage() {
   const [filterCat, setFilterCat] = useState<string>('all');
   const [filterSub, setFilterSub] = useState<string>('all');
   const [showFilters, setShowFilters] = useState(false);
+  
+  // Estado do Modal de Visualização
+  const [viewProduct, setViewProduct] = useState<Product | null>(null);
+  const [isViewOpen, setIsViewOpen] = useState(false);
 
   // Subcategorias filtradas pela categoria selecionada no filtro
   const { data: subcategories } = useSubcategories(filterCat !== 'all' ? Number(filterCat) : null);
@@ -28,7 +34,12 @@ export function ProductListPage() {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
   };
 
-  // Lógica de Filtragem no Frontend (já que a API retorna tudo por enquanto)
+  const handleViewProduct = (product: Product) => {
+    setViewProduct(product);
+    setIsViewOpen(true);
+  };
+
+  // Lógica de Filtragem no Frontend
   const filteredProducts = useMemo(() => {
     if (!products) return [];
     
@@ -47,6 +58,19 @@ export function ProductListPage() {
     setFilterSub('all');
   };
 
+  // Helper para calcular estoque total das variações
+  const getTotalStock = (product: Product) => {
+    if (product.variacoes && product.variacoes.length > 0) {
+        return product.variacoes.reduce((acc, v) => acc + (Number(v.estoque) || 0), 0);
+    }
+    return Number(product.estoque) || 0;
+  };
+
+  // Helper para iniciais
+  const getInitials = (name: string) => {
+      return name.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase().substring(0, 2);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -62,7 +86,7 @@ export function ProductListPage() {
         </Link>
       </div>
 
-      {/* CONTAINER PRINCIPAL - Estilo Glassmorphism Escuro */}
+      {/* CONTAINER PRINCIPAL */}
       <div className="rounded-3xl border border-white/10 bg-black/40 backdrop-blur-xl shadow-2xl overflow-hidden ring-1 ring-white/5">
         
         {/* BARRA DE FERRAMENTAS */}
@@ -85,7 +109,7 @@ export function ProductListPage() {
            </Button>
         </div>
         
-        {/* ÁREA DE FILTROS EXPANSÍVEL */}
+        {/* ÁREA DE FILTROS */}
         {showFilters && (
             <div className="p-6 bg-black/40 border-b border-white/10 grid grid-cols-1 md:grid-cols-3 gap-6 animate-in slide-in-from-top-2">
                 <div className="space-y-2">
@@ -142,7 +166,7 @@ export function ProductListPage() {
                 ))
               ) : filteredProducts.length > 0 ? (
                 filteredProducts.map(product => {
-                    const catName = categories?.find(c => c.id === product.categoria_id)?.nome || '-';
+                    const totalEstoque = getTotalStock(product);
                     
                     return (
                       <TableRow key={product.id} className="border-white/5 hover:bg-white/[0.04] transition-colors group">
@@ -151,7 +175,9 @@ export function ProductListPage() {
                                 {product.imagem_principal ? (
                                     <img src={product.imagem_principal} alt="" className="h-full w-full object-cover" />
                                 ) : (
-                                    <Box className="h-5 w-5 text-muted-foreground/50" />
+                                    <div className="flex items-center justify-center w-full h-full bg-emerald-500/10 text-emerald-500 font-bold text-xs">
+                                        {getInitials(product.nome)}
+                                    </div>
                                 )}
                             </div>
                         </TableCell>
@@ -165,20 +191,20 @@ export function ProductListPage() {
                         </TableCell>
                         <TableCell>
                              <div className="flex flex-col">
-                                <span className="text-sm font-medium text-gray-300">{catName}</span>
-                                <span className="text-xs text-muted-foreground">ID Sub: {product.subcategoria_id || '-'}</span> 
+                                <span className="text-sm font-medium text-gray-300">{product.categoria_nome || categories?.find(c => c.id === product.categoria_id)?.nome || '-'}</span>
+                                <span className="text-xs text-muted-foreground">{product.subcategoria_nome || '-'}</span> 
                             </div>
                         </TableCell>
                         <TableCell className="text-right">
                             <Badge 
                                 variant="outline" 
                                 className={`rounded-lg border px-3 py-1 font-mono ${
-                                    product.estoque > product.estoque_minimo 
+                                    totalEstoque > product.estoque_minimo 
                                     ? 'bg-emerald-500/5 text-emerald-400 border-emerald-500/20' 
                                     : 'bg-red-500/5 text-red-400 border-red-500/20'
                                 }`}
                             >
-                                {product.estoque} un
+                                {totalEstoque} un
                             </Badge>
                         </TableCell>
                         <TableCell className="text-right pr-6">
@@ -196,8 +222,17 @@ export function ProductListPage() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="bg-zinc-900/95 backdrop-blur-xl border-white/10 rounded-xl w-40">
                               <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                              <DropdownMenuItem className="focus:bg-white/10 rounded-lg cursor-pointer"><Pencil className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
-                              <DropdownMenuItem className="text-red-500 focus:bg-red-500/10 focus:text-red-400 rounded-lg cursor-pointer"><Trash2 className="mr-2 h-4 w-4" /> Excluir</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleViewProduct(product)} className="focus:bg-white/10 rounded-lg cursor-pointer">
+                                <Eye className="mr-2 h-4 w-4" /> Visualizar
+                              </DropdownMenuItem>
+                              <DropdownMenuItem asChild className="focus:bg-white/10 rounded-lg cursor-pointer">
+                                <Link to={`/produtos/editar/${product.id}`}>
+                                    <Pencil className="mr-2 h-4 w-4" /> Editar
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem className="text-red-500 focus:bg-red-500/10 focus:text-red-400 rounded-lg cursor-pointer">
+                                <Trash2 className="mr-2 h-4 w-4" /> Excluir
+                              </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>
@@ -224,6 +259,13 @@ export function ProductListPage() {
           </Table>
         </div>
       </div>
+      
+      {/* Modal de Visualização */}
+      <ViewProductDialog 
+        product={viewProduct} 
+        open={isViewOpen} 
+        onOpenChange={setIsViewOpen} 
+      />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,12 +8,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { 
   Check, ArrowLeft, Info, DollarSign, Lock, Box, Grid as GridIcon, Tag, Ruler, AlertTriangle, ArrowDown, Copy, Barcode, ScanBarcode, 
-  Upload, X, Image as ImageIcon, Video, Play, Trash2 
+  Upload, X, Image as ImageIcon, Video, Play, Trash2, Loader2 
 } from 'lucide-react';
 import { useCategories, useAllSubcategories } from '@/hooks/use-categories';
 import { useBrands } from '@/hooks/use-brands';
 import { useGrids } from '@/hooks/use-grids';
-import { useCreateProduct } from '@/hooks/use-create-product';
+import { useCreateProduct, useUpdateProduct } from '@/hooks/use-create-product';
+import { useProductDetails } from '@/hooks/use-product-details';
 import { api } from '@/lib/api';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -23,8 +24,10 @@ import { toast } from 'sonner';
 
 export function NewProductPage() {
   const navigate = useNavigate();
+  const { id } = useParams(); // Get ID from URL for edit mode
+  const isEditMode = !!id;
   
-  const { register, control, handleSubmit, formState: { errors, isSubmitting }, setValue, watch } = useForm<any>({
+  const { register, control, handleSubmit, formState: { errors, isSubmitting }, setValue, watch, reset } = useForm<any>({
     defaultValues: {
       variacoes: [],
       composicao_atacado: [], 
@@ -55,7 +58,11 @@ export function NewProductPage() {
   const { data: brands } = useBrands();
   const { data: grids } = useGrids();
   const { data: allSubcategories } = useAllSubcategories();
-  const { mutate: createProduct, isPending } = useCreateProduct();
+  
+  // Hooks de Mutação & Fetch
+  const { mutate: createProduct, isPending: isCreating } = useCreateProduct();
+  const { mutate: updateProduct, isPending: isUpdating } = useUpdateProduct();
+  const { data: productData, isLoading: isLoadingData } = useProductDetails(id);
 
   // Estados Locais
   const [globalAtacadoMin, setGlobalAtacadoMin] = useState('10');
@@ -67,6 +74,9 @@ export function NewProductPage() {
 
   const [galleryFiles, setGalleryFiles] = useState<File[]>([]);
   const [galleryPreviews, setGalleryPreviews] = useState<string[]>([]);
+  
+  // Novos estados para controlar imagens existentes (que vieram da API)
+  const [existingGallery, setExistingGallery] = useState<string[]>([]);
 
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [videoPreview, setVideoPreview] = useState<string | null>(null);
@@ -81,6 +91,56 @@ export function NewProductPage() {
       .then(res => setGlobalAtacadoMin(res.data?.valor || '10'))
       .catch(() => {});
   }, []);
+
+  // --- POPULAR DADOS NA EDIÇÃO ---
+  useEffect(() => {
+    if (productData) {
+        // Resetar formulário com dados da API
+        reset({
+            nome: productData.nome,
+            grade_id: String(productData.grade_id),
+            subcategoria_id: String(productData.subcategoria_id),
+            marca_id: String(productData.marca_id),
+            ncm: productData.ncm,
+            cfop_padrao: productData.cfop_padrao,
+            cst_icms: productData.cst_icms,
+            origem: productData.origem,
+            unidade_medida: productData.unidade_medida,
+            preco_custo: productData.preco_custo,
+            preco_varejo: productData.preco_varejo,
+            habilita_atacado_geral: productData.habilita_atacado_geral,
+            preco_atacado_geral: productData.preco_atacado_geral,
+            habilita_atacado_grade: productData.habilita_atacado_grade,
+            usar_preco_atacado_unico: productData.usar_preco_atacado_unico,
+            grade_atacado_id: productData.grade_atacado_id ? String(productData.grade_atacado_id) : '',
+            preco_atacado_grade: productData.preco_atacado_grade,
+            variacoes: productData.variacoes?.map(v => ({
+                tamanho: v.tamanho,
+                estoque: v.estoque,
+                sku: v.sku,
+                codigo_barras: v.codigo_barras
+            })) || [],
+            // Parse do JSON da composição se necessário, ou usar direto se a API já retornar objeto
+            composicao_atacado: typeof productData.composicao_atacado_grade === 'string' 
+                ? JSON.parse(productData.composicao_atacado_grade || "[]") 
+                : (productData.composicao_atacado_grade || [])
+        });
+
+        // Configurar Previews
+        if (productData.imagem_principal) {
+            setMainImagePreview(productData.imagem_principal);
+        }
+        
+        if (productData.imagens_galeria && productData.imagens_galeria.length > 0) {
+            setGalleryPreviews(productData.imagens_galeria);
+            setExistingGallery(productData.imagens_galeria); // Guarda referência das originais
+        }
+
+        if (productData.video) {
+            setVideoPreview(productData.video);
+        }
+    }
+  }, [productData, reset]);
   
   // Watchers Principais
   const selectedGridId = watch('grade_id');
@@ -113,8 +173,26 @@ export function NewProductPage() {
     return grids?.find(g => String(g.id) === String(selectedGridId));
   }, [grids, selectedGridId]);
 
+  // Ao selecionar uma grade, preenche variações APENAS SE não estivermos editando OU se a grade mudou
+  // No modo edição, as variações já vêm preenchidas no useEffect do reset.
+  // Precisamos detectar MUDANÇA manual de grade.
   useEffect(() => {
-    if (selectedGridObj) {
+    if (!selectedGridObj) return;
+    
+    // Se estivermos carregando dados iniciais do produto, não substitua.
+    // O reset() cuida disso. Só substitua se o usuário mudar manualmente.
+    // Para simplificar: se o formulário estiver "dirty" (mexido) ou se não tiver variações
+    // Mas o reset marca como dirty? Não.
+    // Vamos verificar se as variações atuais correspondem à grade selecionada.
+    
+    // Se o array de variações estiver vazio ou se os tamanhos forem diferentes da grade selecionada, refaz.
+    const currentSizes = variacoesValues.map((v:any) => v.tamanho);
+    const newSizes = selectedGridObj.tamanhos.map(t => t.tamanho);
+    
+    const isDifferent = JSON.stringify(currentSizes) !== JSON.stringify(newSizes);
+    
+    // IMPORTANTE: Só resetar se for realmente diferente para não perder dados carregados da API
+    if (isDifferent) {
         const newVariations = selectedGridObj.tamanhos.map(t => ({
             tamanho: t.tamanho,
             estoque: 0,
@@ -123,7 +201,7 @@ export function NewProductPage() {
         }));
         replaceVariacoes(newVariations);
     }
-  }, [selectedGridId, grids, replaceVariacoes]);
+  }, [selectedGridId, selectedGridObj, replaceVariacoes]); // Removido variacoesValues do dep para evitar loop, verificação feita dentro
 
   const handleBulkStockApply = () => {
     if (!bulkStockQty) return;
@@ -134,10 +212,20 @@ export function NewProductPage() {
   };
 
   // --- LÓGICA DE CLASSIFICAÇÃO ---
+  // Só aplica defaults fiscais se for NOVO produto ou se o usuário mudar a subcategoria manualmente.
+  // Como detectar mudança manual? Comparar com o valor original vindo da API é complexo.
+  // Vamos assumir: se os campos fiscais estiverem vazios, preenche.
   useEffect(() => {
     if (selectedSubcategoryId && allSubcategories) {
       const sub = allSubcategories.find(s => String(s.id) === String(selectedSubcategoryId));
-      if (sub) {
+      const currentNcm = watch('ncm');
+      
+      // Se ncm estiver vazio (usuário acabou de selecionar sub), preenche.
+      // Se já tiver valor (veio da API ou digitado), não sobrescreve agressivamente, 
+      // a menos que queiramos forçar o padrão da subcategoria.
+      // Melhor: preencher apenas se estivermos criando (sem ID) ou se o campo estiver vazio.
+      
+      if (sub && (!isEditMode || !currentNcm)) {
         setValue('ncm', sub.ncm);
         setValue('cfop_padrao', sub.cfop_padrao);
         setValue('cst_icms', sub.cst_icms);
@@ -145,9 +233,7 @@ export function NewProductPage() {
         setValue('unidade_medida', sub.unidade_medida);
       }
     }
-  }, [selectedSubcategoryId, allSubcategories, setValue]);
-
-  const getCategoryName = (catId: number) => categories?.find(c => c.id === catId)?.nome || '';
+  }, [selectedSubcategoryId, allSubcategories, setValue, isEditMode]);
 
   // --- LÓGICA DE PACOTE ---
   const gradeAtacadoObj = useMemo(() => {
@@ -157,11 +243,18 @@ export function NewProductPage() {
 
   useEffect(() => {
     if (gradeAtacadoObj) {
-        const initComposicao = gradeAtacadoObj.tamanhos.map(t => ({
-            tamanho: t.tamanho,
-            quantidade: 1 
-        }));
-        replaceComposicao(initComposicao);
+        // Mesma lógica da grade principal: só substitui se estiver diferente ou vazio
+        const currentSizes = composicaoAtacadoValues.map((v:any) => v.tamanho);
+        const newSizes = gradeAtacadoObj.tamanhos.map(t => t.tamanho);
+        const isDifferent = JSON.stringify(currentSizes) !== JSON.stringify(newSizes);
+
+        if (isDifferent) {
+            const initComposicao = gradeAtacadoObj.tamanhos.map(t => ({
+                tamanho: t.tamanho,
+                quantidade: 1 
+            }));
+            replaceComposicao(initComposicao);
+        }
     }
   }, [selectedGradeAtacadoId, gradeAtacadoObj, replaceComposicao]);
 
@@ -191,7 +284,7 @@ export function NewProductPage() {
     const validFiles: File[] = [];
     const newPreviews: string[] = [];
 
-    if (galleryFiles.length + files.length > 5) {
+    if (galleryPreviews.length + files.length > 5) {
       return toast.error("Limite máximo de 5 imagens na galeria.");
     }
 
@@ -211,8 +304,50 @@ export function NewProductPage() {
   };
 
   const removeGalleryImage = (index: number) => {
-    setGalleryFiles(prev => prev.filter((_, i) => i !== index));
-    setGalleryPreviews(prev => prev.filter((_, i) => i !== index));
+    // Se o índice for menor que existingGallery.length, é uma imagem antiga.
+    // Mas aqui galleryPreviews mistura antigas e novas.
+    // O ideal é manter estados separados ou saber qual é qual.
+    // Simplificação: galleryPreviews é a fonte da verdade visual.
+    
+    // Se removemos, precisamos saber se estamos removendo um File ou uma URL antiga.
+    // Vamos reconstruir a lógica:
+    // galleryFiles contém APENAS NOVOS arquivos.
+    // existingGallery contém URLs vindas do banco.
+    // galleryPreviews contém TUDO (URLs antigas + blobs novos).
+    
+    // Vamos achar quem é quem.
+    const itemToRemove = galleryPreviews[index];
+    const isOldImage = existingGallery.includes(itemToRemove);
+    
+    if (isOldImage) {
+        // Remover do existingGallery (simula deleção)
+        // Nota: A API precisaria saber quais manter. O jeito mais fácil é reenviar as que ficaram se a API suportar,
+        // mas FormData envia arquivos. Normalmente APIs que recebem updates mantém o que não foi enviado se não for explícito.
+        // Neste caso, vamos assumir que o backend não deleta imagens da galeria a menos que enviemos uma lista de "imagens para manter" ou "imagens para deletar".
+        // Para simplificar: apenas visualmente remove. Se o backend precisar, teríamos que implementar lógica de "delete_images".
+        // Vamos apenas remover do visual por enquanto.
+        setGalleryPreviews(prev => prev.filter((_, i) => i !== index));
+        // TODO: Backend support for deleting specific gallery images on update
+    } else {
+        // É um arquivo novo. Precisamos achar qual File corresponde.
+        // Isso é difícil pois só temos o preview URL.
+        // Vamos assumir ordem: [Antigas..., Novas...]
+        // Se temos N antigas, e removemos índice I > N, é o arquivo (I - N).
+        // Mas se removemos uma antiga antes, o índice muda.
+        
+        // RESTART SIMPLES PARA EVITAR BUGS:
+        setGalleryPreviews(prev => prev.filter((_, i) => i !== index));
+        
+        // Tentar remover do array de files se for novo
+        // Essa lógica de "mixed array" é complexa. 
+        // Vamos simplificar: filter visual é mandatório. Filter do File[] é best effort.
+        const numExisting = galleryPreviews.filter(p => existingGallery.includes(p)).length;
+        if (index >= numExisting) {
+            // É novo
+            const fileIndex = index - numExisting;
+            setGalleryFiles(prev => prev.filter((_, i) => i !== fileIndex));
+        }
+    }
   };
 
   const handleVideoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -247,13 +382,30 @@ export function NewProductPage() {
     // Adiciona arquivos ao objeto de dados antes de enviar para o hook
     const payload = {
         ...data,
+        id: isEditMode ? Number(id) : undefined,
         imagem_principal_file: mainImageFile,
         imagens_galeria_files: galleryFiles,
-        video_file: videoFile
+        video_file: videoFile,
+        // Passar flag se necessário ou deixar a API decidir
     };
 
-    createProduct(payload);
+    if (isEditMode) {
+        updateProduct(payload);
+    } else {
+        createProduct(payload);
+    }
   };
+  
+  const isSaving = isCreating || isUpdating;
+
+  if (isEditMode && isLoadingData) {
+      return (
+          <div className="flex h-[80vh] items-center justify-center flex-col gap-4">
+              <Loader2 className="h-12 w-12 animate-spin text-emerald-500" />
+              <p className="text-muted-foreground">Carregando dados do produto...</p>
+          </div>
+      );
+  }
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-8 pb-20">
@@ -265,12 +417,12 @@ export function NewProductPage() {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold">Novo Produto</h1>
-            <p className="text-muted-foreground">Cadastro completo com grade e variação de estoque.</p>
+            <h1 className="text-3xl font-bold">{isEditMode ? 'Editar Produto' : 'Novo Produto'}</h1>
+            <p className="text-muted-foreground">{isEditMode ? 'Alterar dados, preços e estoque.' : 'Cadastro completo com grade e variação de estoque.'}</p>
           </div>
         </div>
-        <Button size="lg" type="submit" disabled={isPending || isSubmitting} className="bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20">
-          {isPending || isSubmitting ? 'Salvando...' : <><Check className="mr-2 h-4 w-4" /> Salvar Produto</>}
+        <Button size="lg" type="submit" disabled={isSaving || isSubmitting} className="bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20">
+          {isSaving ? 'Salvando...' : <><Check className="mr-2 h-4 w-4" /> {isEditMode ? 'Salvar Alterações' : 'Salvar Produto'}</>}
         </Button>
       </div>
 
@@ -284,7 +436,7 @@ export function NewProductPage() {
         <CardContent className="pt-6 space-y-6">
             <div className="max-w-md">
                 <Label className="text-base font-semibold">Selecione a Grade do Produto *</Label>
-                <Select onValueChange={(v) => setValue('grade_id', v)}>
+                <Select onValueChange={(v) => setValue('grade_id', v)} value={watch('grade_id')}>
                     <SelectTrigger className="mt-2 bg-black/40 border-emerald-500/30 h-12 text-lg focus:ring-emerald-500/30">
                         <SelectValue placeholder="Escolha uma grade..." />
                     </SelectTrigger>
@@ -319,7 +471,7 @@ export function NewProductPage() {
                             <TableHeader className="bg-black/40">
                                 <TableRow className="border-white/10 hover:bg-transparent">
                                     <TableHead className="w-[100px] text-emerald-400 font-bold">Tamanho</TableHead>
-                                    <TableHead className="w-[150px]">Estoque Inicial</TableHead>
+                                    <TableHead className="w-[150px]">Estoque Atual</TableHead>
                                     <TableHead><div className="flex items-center gap-2"><ScanBarcode className="h-4 w-4" /> SKU</div></TableHead>
                                     <TableHead><div className="flex items-center gap-2"><Barcode className="h-4 w-4" /> Cód. Barras</div></TableHead>
                                 </TableRow>
@@ -375,14 +527,14 @@ export function NewProductPage() {
                     <div className="grid grid-cols-2 gap-4">
                          <div className="grid gap-2">
                             <Label>Subcategoria *</Label>
-                            <Select onValueChange={(value) => setValue('subcategoria_id', value)}>
+                            <Select onValueChange={(value) => setValue('subcategoria_id', value)} value={watch('subcategoria_id')}>
                                 <SelectTrigger className="bg-black/40 border-white/10"><SelectValue placeholder="Selecione..." /></SelectTrigger>
                                 <SelectContent>{allSubcategories?.map(sub => (<SelectItem key={sub.id} value={String(sub.id)}>{sub.nome}</SelectItem>))}</SelectContent>
                             </Select>
                          </div>
                          <div className="grid gap-2">
                             <Label>Marca *</Label>
-                            <Select onValueChange={(value) => setValue('marca_id', value)}>
+                            <Select onValueChange={(value) => setValue('marca_id', value)} value={watch('marca_id')}>
                                 <SelectTrigger className="bg-black/40 border-white/10"><SelectValue placeholder="Selecione..." /></SelectTrigger>
                                 <SelectContent>{brands?.map(brand => <SelectItem key={brand.id} value={String(brand.id)}>{brand.nome}</SelectItem>)}</SelectContent>
                             </Select>
@@ -437,7 +589,7 @@ export function NewProductPage() {
                   <div className="space-y-3">
                     <div className="flex justify-between items-center">
                         <Label className="flex items-center gap-2"><GridIcon className="h-4 w-4 text-emerald-400" /> Galeria (Até 5 fotos)</Label>
-                        <span className="text-xs text-muted-foreground">{galleryFiles.length}/5</span>
+                        <span className="text-xs text-muted-foreground">{galleryPreviews.length}/5</span>
                     </div>
                     
                     <div className="grid grid-cols-3 gap-2">
@@ -449,14 +601,17 @@ export function NewProductPage() {
                                     variant="destructive"
                                     size="icon"
                                     className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                                    onClick={() => removeGalleryImage(idx)}
+                                    onClick={(e) => {
+                                        e.stopPropagation(); // Impede clique no parent se houver
+                                        removeGalleryImage(idx);
+                                    }}
                                 >
                                     <X className="h-3 w-3" />
                                 </Button>
                             </div>
                         ))}
                         
-                        {galleryFiles.length < 5 && (
+                        {galleryPreviews.length < 5 && (
                             <div 
                                 className="aspect-square rounded-lg border-2 border-dashed border-white/10 flex flex-col items-center justify-center cursor-pointer hover:bg-white/5 hover:border-emerald-500/30 transition-all"
                                 onClick={() => galleryInputRef.current?.click()}
@@ -499,8 +654,8 @@ export function NewProductPage() {
                                         <Play className="h-5 w-5 text-purple-400" />
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-medium truncate text-white">{videoFile?.name}</p>
-                                        <p className="text-xs text-muted-foreground">{(videoFile!.size / 1024 / 1024).toFixed(1)} MB</p>
+                                        <p className="text-sm font-medium truncate text-white">{videoFile?.name || 'Vídeo carregado'}</p>
+                                        <p className="text-xs text-muted-foreground">{videoFile ? (videoFile.size / 1024 / 1024).toFixed(1) + ' MB' : 'Salvo no servidor'}</p>
                                     </div>
                                     <Button 
                                         type="button" 
@@ -571,7 +726,7 @@ export function NewProductPage() {
                             <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
                                 <div className="grid gap-2">
                                     <Label className="text-xs text-purple-300">Grade do Pacote</Label>
-                                    <Select onValueChange={(v) => setValue('grade_atacado_id', v)}>
+                                    <Select onValueChange={(v) => setValue('grade_atacado_id', v)} value={watch('grade_atacado_id')}>
                                         <SelectTrigger className="bg-black/40 border-white/10 h-9"><SelectValue placeholder="Selecione..." /></SelectTrigger>
                                         <SelectContent>{grids?.map(g => <SelectItem key={g.id} value={String(g.id)}>{g.nome}</SelectItem>)}</SelectContent>
                                     </Select>

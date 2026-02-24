@@ -1,0 +1,195 @@
+import { Product } from '@/types';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Package, Tag, Ruler, FileText, Grid as GridIcon } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
+
+interface ViewProductDialogProps {
+  product: Product | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+export function ViewProductDialog({ product, open, onOpenChange }: ViewProductDialogProps) {
+  if (!product) return null;
+
+  const formatCurrency = (val: number) => 
+    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden bg-zinc-950 border-white/10 text-white">
+        <DialogHeader className="p-6 pb-2 bg-white/5 border-b border-white/10">
+          <div className="flex items-start gap-4">
+            <div className="h-16 w-16 rounded-lg bg-white/10 overflow-hidden border border-white/10 flex-shrink-0">
+               {product.imagem_principal ? (
+                 <img src={product.imagem_principal} alt={product.nome} className="h-full w-full object-cover" />
+               ) : (
+                 <div className="h-full w-full flex items-center justify-center text-muted-foreground bg-white/5">
+                   <Package className="h-8 w-8 opacity-50" />
+                 </div>
+               )}
+            </div>
+            <div>
+               <DialogTitle className="text-2xl font-bold">{product.nome}</DialogTitle>
+               <DialogDescription className="text-muted-foreground flex items-center gap-2 mt-1">
+                 <Badge variant="outline" className="text-emerald-400 border-emerald-500/30">SKU: {product.sku || 'N/A'}</Badge>
+                 <span>•</span>
+                 <span>{product.categoria_nome || 'Sem Categoria'}</span>
+               </DialogDescription>
+            </div>
+          </div>
+        </DialogHeader>
+        
+        <Tabs defaultValue="basic" className="flex-1 flex flex-col min-h-0">
+            <div className="px-6 pt-2 bg-white/5 border-b border-white/10">
+                <TabsList className="bg-transparent h-auto p-0 gap-6">
+                    <TabsTrigger value="basic" className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-emerald-500 rounded-none pb-3 pt-2 px-1 text-muted-foreground data-[state=active]:text-emerald-400">
+                        <Tag className="mr-2 h-4 w-4" /> Dados Básicos
+                    </TabsTrigger>
+                    <TabsTrigger value="stock" className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-emerald-500 rounded-none pb-3 pt-2 px-1 text-muted-foreground data-[state=active]:text-emerald-400">
+                        <GridIcon className="mr-2 h-4 w-4" /> Estoque & Grade
+                    </TabsTrigger>
+                    <TabsTrigger value="fiscal" className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-emerald-500 rounded-none pb-3 pt-2 px-1 text-muted-foreground data-[state=active]:text-emerald-400">
+                        <FileText className="mr-2 h-4 w-4" /> Fiscal
+                    </TabsTrigger>
+                    <TabsTrigger value="dims" className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-emerald-500 rounded-none pb-3 pt-2 px-1 text-muted-foreground data-[state=active]:text-emerald-400">
+                        <Ruler className="mr-2 h-4 w-4" /> Dimensões
+                    </TabsTrigger>
+                </TabsList>
+            </div>
+
+            <ScrollArea className="flex-1 p-6">
+                <TabsContent value="basic" className="mt-0 space-y-6">
+                    <div className="grid grid-cols-2 gap-4">
+                        <Card className="bg-white/5 border-white/10">
+                            <CardContent className="p-4 space-y-2">
+                                <span className="text-xs font-medium text-muted-foreground uppercase">Preços</span>
+                                <div className="flex justify-between items-center border-b border-white/5 pb-2">
+                                    <span>Custo:</span>
+                                    <span className="font-mono">{formatCurrency(product.preco_custo)}</span>
+                                </div>
+                                <div className="flex justify-between items-center border-b border-white/5 pb-2">
+                                    <span>Varejo:</span>
+                                    <span className="font-mono text-emerald-400 font-bold">{formatCurrency(product.preco_varejo)}</span>
+                                </div>
+                                {product.habilita_atacado_geral && (
+                                    <div className="flex justify-between items-center text-purple-300">
+                                        <span>Atacado Geral:</span>
+                                        <span className="font-mono">{formatCurrency(product.preco_atacado_geral)}</span>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                        <Card className="bg-white/5 border-white/10">
+                            <CardContent className="p-4 space-y-2">
+                                <span className="text-xs font-medium text-muted-foreground uppercase">Classificação</span>
+                                <div className="grid grid-cols-1 gap-1">
+                                    <p><span className="text-muted-foreground">Marca:</span> {product.marca_nome || product.marca_id}</p>
+                                    <p><span className="text-muted-foreground">Subcategoria:</span> {product.subcategoria_nome || product.subcategoria_id}</p>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+                    {product.imagens_galeria && product.imagens_galeria.length > 0 && (
+                        <div>
+                            <h4 className="font-medium mb-2 text-sm text-muted-foreground">Galeria</h4>
+                            <div className="flex gap-2 overflow-x-auto pb-2">
+                                {product.imagens_galeria.map((img, idx) => (
+                                    <img key={idx} src={img} className="h-24 w-24 rounded-md object-cover border border-white/10" alt={`Galeria ${idx}`} />
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </TabsContent>
+
+                <TabsContent value="stock" className="mt-0">
+                    <Card className="bg-white/5 border-white/10">
+                        <CardContent className="p-0">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow className="border-white/10 hover:bg-transparent">
+                                        <TableHead>Tamanho</TableHead>
+                                        <TableHead className="text-right">Estoque</TableHead>
+                                        <TableHead>SKU</TableHead>
+                                        <TableHead>EAN</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {product.variacoes?.map((v, i) => (
+                                        <TableRow key={i} className="border-white/5 hover:bg-white/5">
+                                            <TableCell className="font-bold text-emerald-400">{v.tamanho}</TableCell>
+                                            <TableCell className="text-right">{v.estoque}</TableCell>
+                                            <TableCell className="text-muted-foreground text-xs">{v.sku}</TableCell>
+                                            <TableCell className="text-muted-foreground text-xs">{v.codigo_barras}</TableCell>
+                                        </TableRow>
+                                    ))}
+                                    {!product.variacoes?.length && (
+                                        <TableRow>
+                                            <TableCell colSpan={4} className="text-center text-muted-foreground py-4">Sem variações cadastradas (Estoque Geral: {product.estoque})</TableCell>
+                                        </TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
+                <TabsContent value="fiscal" className="mt-0">
+                    <Card className="bg-white/5 border-white/10">
+                        <CardContent className="p-4 grid grid-cols-2 gap-4 text-sm">
+                             <div>
+                                <span className="block text-muted-foreground text-xs">NCM</span>
+                                <span className="font-mono">{product.ncm || '-'}</span>
+                             </div>
+                             <div>
+                                <span className="block text-muted-foreground text-xs">CFOP Padrão</span>
+                                <span className="font-mono">{product.cfop_padrao || '-'}</span>
+                             </div>
+                             <div>
+                                <span className="block text-muted-foreground text-xs">CST/CSOSN</span>
+                                <span className="font-mono">{product.cst_icms || '-'}</span>
+                             </div>
+                             <div>
+                                <span className="block text-muted-foreground text-xs">Origem</span>
+                                <span className="font-mono">{product.origem || '-'}</span>
+                             </div>
+                             <div>
+                                <span className="block text-muted-foreground text-xs">Unidade</span>
+                                <span className="font-mono">{product.unidade_medida || '-'}</span>
+                             </div>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
+                <TabsContent value="dims" className="mt-0">
+                     <Card className="bg-white/5 border-white/10">
+                        <CardContent className="p-4 grid grid-cols-4 gap-4 text-sm text-center">
+                             <div>
+                                <span className="block text-muted-foreground text-xs mb-1">Peso (kg)</span>
+                                <span className="font-mono bg-black/20 p-2 rounded block">{product.peso_kg}</span>
+                             </div>
+                             <div>
+                                <span className="block text-muted-foreground text-xs mb-1">Altura (cm)</span>
+                                <span className="font-mono bg-black/20 p-2 rounded block">{product.altura_cm}</span>
+                             </div>
+                             <div>
+                                <span className="block text-muted-foreground text-xs mb-1">Largura (cm)</span>
+                                <span className="font-mono bg-black/20 p-2 rounded block">{product.largura_cm}</span>
+                             </div>
+                             <div>
+                                <span className="block text-muted-foreground text-xs mb-1">Comp. (cm)</span>
+                                <span className="font-mono bg-black/20 p-2 rounded block">{product.comprimento_cm}</span>
+                             </div>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+            </ScrollArea>
+        </Tabs>
+      </DialogContent>
+    </Dialog>
+  );
+}

@@ -5,7 +5,8 @@ import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 
 // DTO atualizado para suportar arquivos
-type ProductFormDTO = {
+export type ProductFormDTO = {
+  id?: number; // Opcional para create, obrigatório para update
   nome: string;
   grade_id: string;
   subcategoria_id: string;
@@ -47,10 +48,13 @@ type ProductFormDTO = {
   imagem_principal_file?: File | null;
   imagens_galeria_files?: File[];
   video_file?: File | null;
+  
+  // Para manter imagens existentes em caso de update
+  keep_images?: boolean; 
 };
 
-async function createProduct(formData: ProductFormDTO): Promise<Product> {
-  
+// Função auxiliar para montar o FormData
+const buildProductFormData = (formData: ProductFormDTO) => {
   const payload = new FormData();
 
   // Campos Simples
@@ -78,8 +82,10 @@ async function createProduct(formData: ProductFormDTO): Promise<Product> {
   payload.append('habilita_atacado_grade', String(formData.habilita_atacado_grade));
   payload.append('usar_preco_atacado_unico', String(formData.usar_preco_atacado_unico));
   
-  if (formData.grade_atacado_id) {
+  if (formData.grade_atacado_id && formData.grade_atacado_id !== "null") {
     payload.append('grade_atacado_id', String(formData.grade_atacado_id));
+  } else {
+    payload.append('grade_atacado_id', '');
   }
   
   const precoAtacadoGrade = formData.usar_preco_atacado_unico 
@@ -124,14 +130,31 @@ async function createProduct(formData: ProductFormDTO): Promise<Product> {
       }
   }
   payload.append('composicao_atacado_grade', composicaoJson);
+  
+  return payload;
+};
 
+async function createProduct(formData: ProductFormDTO): Promise<Product> {
+  const payload = buildProductFormData(formData);
   // Envio com Content-Type automático (o browser define o boundary do multipart)
   const { data } = await api.post('/produtos', payload, {
     headers: {
       'Content-Type': 'multipart/form-data',
     },
   });
+  return data;
+}
+
+async function updateProduct(formData: ProductFormDTO): Promise<Product> {
+  if (!formData.id) throw new Error("ID do produto é obrigatório para atualização");
   
+  const payload = buildProductFormData(formData);
+  // PUT request
+  const { data } = await api.put(`/produtos/${formData.id}`, payload, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
   return data;
 }
 
@@ -149,6 +172,26 @@ export function useCreateProduct() {
     onError: (error) => {
       console.error('Erro ao criar produto:', error);
       toast.error('Falha ao criar o produto.', {
+        description: 'Verifique os dados e tente novamente.',
+      });
+    },
+  });
+}
+
+export function useUpdateProduct() {
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+
+  return useMutation({
+    mutationFn: updateProduct,
+    onSuccess: () => {
+      toast.success('Produto atualizado com sucesso!');
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      navigate('/produtos');
+    },
+    onError: (error) => {
+      console.error('Erro ao atualizar produto:', error);
+      toast.error('Falha ao atualizar o produto.', {
         description: 'Verifique os dados e tente novamente.',
       });
     },

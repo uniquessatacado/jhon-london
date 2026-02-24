@@ -36,6 +36,13 @@ export interface Grid {
   tamanhos: GridSize[];
 }
 
+export interface ProductVariation {
+  tamanho: string;
+  estoque: number;
+  sku: string;
+  codigo_barras: string;
+}
+
 export interface Product {
   id: number;
   nome: string;
@@ -57,6 +64,8 @@ export interface Product {
   atacado_grade_qtd_por_tamanho: number; // Ex: 2 peças de cada tamanho
   preco_atacado_grade: number; // Preço unitário dentro do pacote
   qtd_minima_atacado_grade: number; // Mantido para retrocompatibilidade ou regra extra
+  
+  composicao_atacado_grade?: any; // JSON string ou objeto dependendo do retorno da API
 
   estoque: number;
   estoque_minimo: number;
@@ -66,6 +75,15 @@ export interface Product {
   subcategoria_id: number | null;
   marca_id: number;
   grade_id: number | null; // Grade física do produto (pode ser diferente da do pacote)
+  
+  // Campos extras para listagem (vindos de joins na API)
+  categoria_nome?: string;
+  subcategoria_nome?: string;
+  marca_nome?: string;
+  grade_nome?: string;
+
+  // Variações
+  variacoes?: ProductVariation[];
   
   // Fiscal
   ncm: string;
@@ -82,6 +100,7 @@ export interface Product {
   
   imagem_principal: string;
   imagens_galeria: string[];
+  video?: string;
   
   criado_em: string;
   atualizado_em: string;

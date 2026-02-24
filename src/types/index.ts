@@ -44,15 +44,19 @@ export interface Product {
   preco_custo: number;
   preco_varejo: number;
   
-  // NOVOS CAMPOS DE PREÇO ATACADO
+  // NOVOS CAMPOS DE PREÇO ATACADO & PACOTE
   usar_preco_atacado_unico: boolean;
-  preco_atacado_geral: number;
-  preco_atacado_grade: number;
   
-  // Regras de Atacado
+  // Atacado Geral (Misturado)
   habilita_atacado_geral: boolean; 
+  preco_atacado_geral: number;
+  
+  // Atacado Grade (Pacote Fechado)
   habilita_atacado_grade: boolean;
-  qtd_minima_atacado_grade: number;
+  grade_atacado_id: number | null; // ID da grade que define o pacote
+  atacado_grade_qtd_por_tamanho: number; // Ex: 2 peças de cada tamanho
+  preco_atacado_grade: number; // Preço unitário dentro do pacote
+  qtd_minima_atacado_grade: number; // Mantido para retrocompatibilidade ou regra extra
 
   estoque: number;
   estoque_minimo: number;
@@ -61,7 +65,7 @@ export interface Product {
   categoria_id: number;
   subcategoria_id: number | null;
   marca_id: number;
-  grade_id: number | null;
+  grade_id: number | null; // Grade física do produto (pode ser diferente da do pacote)
   
   // Fiscal
   ncm: string;

@@ -21,9 +21,13 @@ async function fetchProduct(id: string): Promise<Product> {
 }
 
 export function useProduct(id: string | undefined) {
+  // Validação estrita: só busca se ID existir E não for a string "undefined"
+  const isValidId = !!id && id !== 'undefined' && id !== 'novo';
+
   return useQuery({
     queryKey: ['product', id],
     queryFn: () => fetchProduct(id!),
-    enabled: !!id, // Só executa se tiver ID
+    enabled: isValidId, // Trava a requisição aqui se o ID for inválido
+    retry: false, // Não fica tentando se der 404
   });
 }

@@ -42,6 +42,20 @@ export function ProductListPage() {
     });
   }, [products, search, filterCat]);
 
+  // Função auxiliar para pegar nome da categoria de forma segura
+  const getCategoryName = (catId: number) => {
+    if (!categories) return '...';
+    const cat = categories.find(c => String(c.id) === String(catId));
+    return cat ? cat.nome : '-';
+  };
+
+  // Função auxiliar para pegar nome da subcategoria
+  const getSubcategoryName = (subId: number | null) => {
+    if (!subId || !allSubcategories) return '-';
+    const sub = allSubcategories.find(s => String(s.id) === String(subId));
+    return sub ? sub.nome : '-';
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -124,15 +138,17 @@ export function ProductListPage() {
                 ))
               ) : filteredProducts.length > 0 ? (
                 filteredProducts.map(product => {
-                    // Lógica segura de busca de nomes
-                    const catName = categories?.find(c => String(c.id) === String(product.categoria_id))?.nome || '-';
-                    const subName = allSubcategories?.find(s => String(s.id) === String(product.subcategoria_id))?.nome || '-';
+                    // Lógica robusta para SKU
+                    const displaySku = product.sku 
+                        ? product.sku 
+                        : (product.variacoes && product.variacoes.length > 0 && product.variacoes[0].sku) 
+                            ? product.variacoes[0].sku 
+                            : 'S/ SKU';
                     
-                    // SKU Fallback (Produto -> Variação 1 -> N/A)
-                    const displaySku = product.sku || product.variacoes?.[0]?.sku || 'S/ SKU';
-                    
-                    // Estoque Total (Soma das variações)
-                    const totalEstoque = product.estoque > 0 ? product.estoque : (product.variacoes?.reduce((acc, v) => acc + (Number(v.estoque) || 0), 0) || 0);
+                    // Estoque Total
+                    const totalEstoque = product.estoque > 0 
+                        ? product.estoque 
+                        : (product.variacoes?.reduce((acc, v) => acc + (Number(v.estoque) || 0), 0) || 0);
 
                     return (
                       <TableRow key={product.id} className="border-white/5 hover:bg-white/[0.04] transition-colors group">
@@ -148,11 +164,16 @@ export function ProductListPage() {
                                         </div>
                                     </DialogTrigger>
                                     <DialogContent className="max-w-3xl bg-transparent border-none shadow-none p-0 flex items-center justify-center">
-                                        <img 
-                                            src={product.imagem_principal} 
-                                            alt={product.nome} 
-                                            className="max-h-[85vh] max-w-full rounded-lg shadow-2xl border border-white/10 bg-black" 
-                                        />
+                                        <div className="relative">
+                                            <img 
+                                                src={product.imagem_principal} 
+                                                alt={product.nome} 
+                                                className="max-h-[85vh] max-w-full rounded-lg shadow-2xl border border-white/10 bg-black" 
+                                            />
+                                            <Button className="absolute top-4 right-4 rounded-full" size="icon" variant="destructive">
+                                                <X className="h-4 w-4" />
+                                            </Button>
+                                        </div>
                                     </DialogContent>
                                 </Dialog>
                             ) : (
@@ -173,8 +194,8 @@ export function ProductListPage() {
                         </TableCell>
                         <TableCell>
                              <div className="flex flex-col">
-                                <span className="text-sm font-medium text-gray-300">{catName}</span>
-                                <span className="text-xs text-muted-foreground">{subName}</span> 
+                                <span className="text-sm font-medium text-gray-300">{getCategoryName(product.categoria_id)}</span>
+                                <span className="text-xs text-muted-foreground">{getSubcategoryName(product.subcategoria_id)}</span> 
                             </div>
                         </TableCell>
                         <TableCell className="text-right">
@@ -204,12 +225,14 @@ export function ProductListPage() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="bg-zinc-900/95 backdrop-blur-xl border-white/10 rounded-xl w-40">
                               <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                              {/* LINK CORRIGIDO PARA EDIÇÃO */}
-                              <DropdownMenuItem asChild className="focus:bg-white/10 rounded-lg cursor-pointer">
-                                  <Link to={`/produtos/editar/${product.id}`} className="flex items-center w-full">
-                                    <Pencil className="mr-2 h-4 w-4" /> Editar
-                                  </Link>
-                              </DropdownMenuItem>
+                              {/* GARANTINDO QUE O LINK NÃO SEJA UNDEFINED */}
+                              {product.id ? (
+                                  <DropdownMenuItem asChild className="focus:bg-white/10 rounded-lg cursor-pointer">
+                                      <Link to={`/produtos/editar/${product.id}`} className="flex items-center w-full">
+                                        <Pencil className="mr-2 h-4 w-4" /> Editar
+                                      </Link>
+                                  </DropdownMenuItem>
+                              ) : null}
                               <DropdownMenuItem className="text-red-500 focus:bg-red-500/10 focus:text-red-400 rounded-lg cursor-pointer"><Trash2 className="mr-2 h-4 w-4" /> Excluir</DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>

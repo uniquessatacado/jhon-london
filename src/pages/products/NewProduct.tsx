@@ -26,7 +26,10 @@ import { toast } from 'sonner';
 
 export function NewProductPage() {
   const navigate = useNavigate();
-  const { id } = useParams(); // Pega o ID da URL se for edição
+  const params = useParams();
+  
+  // Tratamento robusto do ID
+  const id = params.id && params.id !== 'undefined' && params.id !== 'novo' ? params.id : undefined;
   const isEditMode = !!id;
 
   // Hooks de Mutação
@@ -34,7 +37,7 @@ export function NewProductPage() {
   const { mutate: updateProduct, isPending: isUpdating } = useUpdateProduct();
   const isPending = isCreating || isUpdating;
 
-  // Dados para edição
+  // Dados para edição - Só busca se tiver ID válido
   const { data: existingProduct, isLoading: isLoadingProduct } = useProduct(id);
 
   const { register, control, handleSubmit, formState: { errors, isSubmitting }, setValue, watch, reset } = useForm<any>({
@@ -62,12 +65,12 @@ export function NewProductPage() {
             grade_id: String(existingProduct.grade_id),
             preco_custo: existingProduct.preco_custo,
             preco_varejo: existingProduct.preco_varejo,
-            variacoes: existingProduct.variacoes || [], // Assume que o backend retorna variacoes
+            variacoes: existingProduct.variacoes || [],
             // Campos de Atacado
-            habilita_atacado_geral: existingProduct.habilita_atacado_geral,
+            habilita_atacado_geral: Boolean(existingProduct.habilita_atacado_geral),
             preco_atacado_geral: existingProduct.preco_atacado_geral,
-            habilita_atacado_grade: existingProduct.habilita_atacado_grade,
-            usar_preco_atacado_unico: existingProduct.usar_preco_atacado_unico,
+            habilita_atacado_grade: Boolean(existingProduct.habilita_atacado_grade),
+            usar_preco_atacado_unico: Boolean(existingProduct.usar_preco_atacado_unico),
             grade_atacado_id: existingProduct.grade_atacado_id ? String(existingProduct.grade_atacado_id) : undefined,
             preco_atacado_grade: existingProduct.preco_atacado_grade,
             // Fiscal (opcional carregar, ou deixar o useEffect da subcategoria tratar)
@@ -76,7 +79,7 @@ export function NewProductPage() {
             cst_icms: existingProduct.cst_icms,
             unidade_medida: existingProduct.unidade_medida,
             origem: existingProduct.origem,
-            // Imagens (apenas URLs para visualização inicial)
+            // Imagens
             imagem_principal: existingProduct.imagem_principal,
         });
 
@@ -147,22 +150,26 @@ export function NewProductPage() {
     return grids?.find(g => String(g.id) === String(selectedGridId));
   }, [grids, selectedGridId]);
 
-  // Geração de Variações
+  // Geração de Variações: Só gera se NÃO estiver em modo de edição OU se o usuário mudar a grade intencionalmente
   useEffect(() => {
     if (selectedGridObj) {
+        // Verifica se a grade selecionada é a mesma que veio do banco (para edição)
         const isSameGridAsLoaded = existingProduct && String(existingProduct.grade_id) === String(selectedGridId);
         
+        // Se NÃO for a mesma grade (mudou ou é novo), verifica se precisa popular
         if (!isSameGridAsLoaded) {
+             // Se os campos estão vazios e não é edição, popula
              if (variacaoFields.length === 0 && !isEditMode) {
                  const newVariations = selectedGridObj.tamanhos.map(t => ({ tamanho: t.tamanho, estoque: 0, sku: '', codigo_barras: '' }));
                  replaceVariacoes(newVariations);
              }
         }
         
+        // Se estiver criando novo e selecionou grade, popula/substitui
         if (!isEditMode && selectedGridId) {
              const newVariations = selectedGridObj.tamanhos.map(t => ({ tamanho: t.tamanho, estoque: 0, sku: '', codigo_barras: '' }));
              
-             // Correção do erro TS: cast para any para acessar .tamanho no loop
+             // Só substitui se os tamanhos forem diferentes para não apagar o que o usuário digitou
              const currentSizes = variacaoFields.map((v: any) => v.tamanho).join(',');
              const newSizes = newVariations.map(v => v.tamanho).join(',');
              if (currentSizes !== newSizes) {
@@ -179,17 +186,23 @@ export function NewProductPage() {
   };
 
   useEffect(() => {
+    // Só auto-preenche se NÃO estiver editando ou se o usuário trocou a subcategoria manualmente
+    // Para simplificar: se a subcategoria do banco for diferente da atual, preenche
     if (selectedSubcategoryId && allSubcategories) {
       const sub = allSubcategories.find(s => String(s.id) === String(selectedSubcategoryId));
       if (sub) {
-        setValue('ncm', sub.ncm);
-        setValue('cfop_padrao', sub.cfop_padrao);
-        setValue('cst_icms', sub.cst_icms);
-        setValue('origem', sub.origem);
-        setValue('unidade_medida', sub.unidade_medida);
+        // Se estiver editando, só sobrescreve se o valor estiver vazio
+        const currentNcm = watch('ncm');
+        if (!currentNcm || !isEditMode) {
+             setValue('ncm', sub.ncm);
+             setValue('cfop_padrao', sub.cfop_padrao);
+             setValue('cst_icms', sub.cst_icms);
+             setValue('origem', sub.origem);
+             setValue('unidade_medida', sub.unidade_medida);
+        }
       }
     }
-  }, [selectedSubcategoryId, allSubcategories, setValue]);
+  }, [selectedSubcategoryId, allSubcategories, setValue, isEditMode]);
 
   const gradeAtacadoObj = useMemo(() => {
       if (!grids || !selectedGradeAtacadoId) return null;
@@ -257,7 +270,12 @@ export function NewProductPage() {
   };
 
   if (isEditMode && isLoadingProduct) {
-      return <div className="flex items-center justify-center h-full text-white">Carregando dados do produto...</div>;
+      return (
+          <div className="flex flex-col items-center justify-center h-[60vh] text-muted-foreground gap-4">
+              <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-emerald-500"></div>
+              <p>Carregando dados do produto...</p>
+          </div>
+      );
   }
 
   return (

@@ -31,7 +31,7 @@ export function ProductListPage() {
   const [filterSub, setFilterSub] = useState<string>('all');
   const [showFilters, setShowFilters] = useState(false);
   
-  const [viewProduct, setViewProduct] = useState<Product | null>(null);
+  const [viewProductId, setViewProductId] = useState<number | null>(null);
   const [isViewOpen, setIsViewOpen] = useState(false);
 
   const [replenishProduct, setReplenishProduct] = useState<Product | null>(null);
@@ -41,11 +41,26 @@ export function ProductListPage() {
 
   const { data: subcategories } = useSubcategories(filterCat !== 'all' ? Number(filterCat) : null);
 
+  const categoryMap = useMemo(() => {
+    if (!categories) return {};
+    return categories.reduce((acc, cat) => {
+        acc[cat.id] = cat.nome;
+        return acc;
+    }, {} as Record<number, string>);
+  }, [categories]);
+
   const formatCurrency = (value: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
   const handleViewProduct = (product: Product) => {
-    setViewProduct(product);
+    setViewProductId(product.id);
     setIsViewOpen(true);
+  };
+
+  const handleViewDialogChange = (open: boolean) => {
+    setIsViewOpen(open);
+    if (!open) {
+      setViewProductId(null);
+    }
   };
 
   const handleReplenishProduct = (product: Product) => {
@@ -123,51 +138,54 @@ export function ProductListPage() {
             </TableRow>
           ))
         ) : filteredProducts.length > 0 ? (
-          filteredProducts.map(product => (
-            <TableRow key={product.id} className="border-white/5 hover:bg-white/[0.04] transition-colors group">
-              <TableCell className="pl-6 py-4">
-                  <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-white/10 to-transparent border border-white/10 overflow-hidden flex items-center justify-center shadow-inner">
-                      {product.imagem_principal ? (
-                          <img src={product.imagem_principal} alt="" className="h-full w-full object-cover" />
-                      ) : (
-                          <div className="flex items-center justify-center w-full h-full bg-emerald-500/10 text-emerald-500 font-bold text-xs">
-                              {getInitials(product.nome)}
-                          </div>
-                      )}
-                  </div>
-              </TableCell>
-              <TableCell><span className="text-muted-foreground font-mono text-xs">#{product.id}</span></TableCell>
-              <TableCell><span className="font-medium text-white group-hover:text-emerald-400 transition-colors">{product.nome}</span></TableCell>
-              <TableCell>
-                   <div className="flex flex-col">
-                      <span className="text-sm font-medium text-gray-300">{product.categoria_nome || '-'}</span>
-                      <span className="text-xs text-muted-foreground">{product.subcategoria_nome || '-'}</span> 
-                  </div>
-              </TableCell>
-              <TableCell className="text-right">
-                  <Badge variant="outline" className={`rounded-lg border px-3 py-1 font-mono ${getTotalStock(product) > product.estoque_minimo ? 'bg-emerald-500/5 text-emerald-400 border-emerald-500/20' : 'bg-red-500/5 text-red-400 border-red-500/20'}`}>
-                      {getTotalStock(product)} un
-                  </Badge>
-              </TableCell>
-              <TableCell className="text-right pr-6"><span className="text-emerald-400 font-mono font-medium text-base">{formatCurrency(product.preco_varejo)}</span></TableCell>
-              <TableCell>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button aria-haspopup="true" size="icon" variant="ghost" className="h-8 w-8 hover:bg-white/10 rounded-lg text-muted-foreground hover:text-white">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="bg-zinc-900/95 backdrop-blur-xl border-white/10 rounded-xl w-40">
-                    <DropdownMenuItem onClick={() => handleViewProduct(product)}><Eye className="mr-2 h-4 w-4" /> Visualizar</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleReplenishProduct(product)}><PackagePlus className="mr-2 h-4 w-4" /> Repor Estoque</DropdownMenuItem>
-                    <DropdownMenuItem asChild><Link to={`/produtos/editar/${product.id}`}><Pencil className="mr-2 h-4 w-4" /> Editar</Link></DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleDuplicateProduct(product)}><Copy className="mr-2 h-4 w-4" /> Duplicar</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleDeleteRequest(product)} className="text-red-500 focus:text-red-400"><Trash2 className="mr-2 h-4 w-4" /> Excluir</DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </TableCell>
-            </TableRow>
-          ))
+          filteredProducts.map(product => {
+            const categoryName = categoryMap[product.categoria_id];
+            return (
+              <TableRow key={product.id} className="border-white/5 hover:bg-white/[0.04] transition-colors group">
+                <TableCell className="pl-6 py-4">
+                    <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-white/10 to-transparent border border-white/10 overflow-hidden flex items-center justify-center shadow-inner">
+                        {product.imagem_principal ? (
+                            <img src={product.imagem_principal} alt="" className="h-full w-full object-cover" />
+                        ) : (
+                            <div className="flex items-center justify-center w-full h-full bg-emerald-500/10 text-emerald-500 font-bold text-xs">
+                                {getInitials(product.nome)}
+                            </div>
+                        )}
+                    </div>
+                </TableCell>
+                <TableCell><span className="text-muted-foreground font-mono text-xs">#{product.id}</span></TableCell>
+                <TableCell><span className="font-medium text-white group-hover:text-emerald-400 transition-colors">{product.nome}</span></TableCell>
+                <TableCell>
+                     <div className="flex flex-col">
+                        <span className="text-sm font-medium text-gray-300">{categoryName || '-'}</span>
+                        <span className="text-xs text-muted-foreground">{product.subcategoria_nome || '-'}</span> 
+                    </div>
+                </TableCell>
+                <TableCell className="text-right">
+                    <Badge variant="outline" className={`rounded-lg border px-3 py-1 font-mono ${getTotalStock(product) > product.estoque_minimo ? 'bg-emerald-500/5 text-emerald-400 border-emerald-500/20' : 'bg-red-500/5 text-red-400 border-red-500/20'}`}>
+                        {getTotalStock(product)} un
+                    </Badge>
+                </TableCell>
+                <TableCell className="text-right pr-6"><span className="text-emerald-400 font-mono font-medium text-base">{formatCurrency(product.preco_varejo)}</span></TableCell>
+                <TableCell>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button aria-haspopup="true" size="icon" variant="ghost" className="h-8 w-8 hover:bg-white/10 rounded-lg text-muted-foreground hover:text-white">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="bg-zinc-900/95 backdrop-blur-xl border-white/10 rounded-xl w-40">
+                      <DropdownMenuItem onClick={() => handleViewProduct(product)}><Eye className="mr-2 h-4 w-4" /> Visualizar</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleReplenishProduct(product)}><PackagePlus className="mr-2 h-4 w-4" /> Repor Estoque</DropdownMenuItem>
+                      <DropdownMenuItem asChild><Link to={`/produtos/editar/${product.id}`}><Pencil className="mr-2 h-4 w-4" /> Editar</Link></DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleDuplicateProduct(product)}><Copy className="mr-2 h-4 w-4" /> Duplicar</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleDeleteRequest(product)} className="text-red-500 focus:text-red-400"><Trash2 className="mr-2 h-4 w-4" /> Excluir</DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
+              </TableRow>
+            )
+          })
         ) : (
           <TableRow><TableCell colSpan={7} className="h-64 text-center">Nenhum produto encontrado.</TableCell></TableRow>
         )}
@@ -280,7 +298,7 @@ export function ProductListPage() {
         </Link>
       )}
 
-      <ViewProductDialog product={viewProduct} open={isViewOpen} onOpenChange={setIsViewOpen} />
+      <ViewProductDialog productId={viewProductId} open={isViewOpen} onOpenChange={handleViewDialogChange} />
       <StockReplenishmentDialog product={replenishProduct} open={isReplenishOpen} onOpenChange={setIsReplenishOpen} />
       
       <AlertDialog open={!!productToDelete} onOpenChange={() => setProductToDelete(null)}>

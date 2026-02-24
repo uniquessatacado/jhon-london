@@ -7,6 +7,7 @@ export interface Subcategory {
   cst_icms: string;
   origem: string;
   unidade_medida: string;
+  grade_id?: number | null; // Novo campo para vincular grade padrão
 }
 
 export interface Category {

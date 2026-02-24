@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,11 +16,12 @@ import { useGrids } from '@/hooks/use-grids';
 import { useCreateProduct } from '@/hooks/use-create-product';
 import { api } from '@/lib/api';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { toast } from 'sonner';
 
 export function NewProductPage() {
   const navigate = useNavigate();
   // Using <any> to avoid strict type inference errors since defaultValues is partial
-  const { register, handleSubmit, formState: { errors }, setValue, watch } = useForm<any>({
+  const { register, handleSubmit, formState: { errors }, control, setValue, watch } = useForm<any>({
     defaultValues: {
       qtd_minima_atacado_grade: 6,
       habilita_atacado_geral: false,
@@ -59,16 +61,26 @@ export function NewProductPage() {
   // Buscar subcategorias quando categoria muda
   const { data: subcategories, isLoading: isLoadingSubs } = useSubcategories(selectedCategoryId ? Number(selectedCategoryId) : null);
 
-  // EFEITO 1: Preenchimento Automático Fiscal
+  // EFEITO 1: Preenchimento Automático Fiscal + GRADE
   useEffect(() => {
     if (selectedSubcategoryId && subcategories) {
       const sub = subcategories.find(s => String(s.id) === String(selectedSubcategoryId));
       if (sub) {
+        // Preenche Fiscal
         setValue('ncm', sub.ncm);
         setValue('cfop_padrao', sub.cfop_padrao);
         setValue('cst_icms', sub.cst_icms);
         setValue('origem', sub.origem);
         setValue('unidade_medida', sub.unidade_medida);
+
+        // Preenche Grade Automaticamente se tiver
+        if (sub.grade_id) {
+            setValue('grade_id', String(sub.grade_id));
+            toast.info('Grade selecionada automaticamente', {
+                description: `A grade padrão da subcategoria foi aplicada.`,
+                duration: 2000
+            });
+        }
       }
     }
   }, [selectedSubcategoryId, subcategories, setValue]);
@@ -264,7 +276,10 @@ export function NewProductPage() {
                            </div>
                            <div className="grid gap-2">
                             <Label>Grade (Opcional)</Label>
-                            <Select onValueChange={(value) => setValue('grade_id', value)}>
+                            <Select 
+                                onValueChange={(value) => setValue('grade_id', value)} 
+                                value={selectedGridId} // Controlado pelo formulário para atualizar visualmente quando for setado via código
+                            >
                                 <SelectTrigger className="bg-black/20 border-white/10"><SelectValue placeholder="Nenhuma" /></SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="null">Nenhuma</SelectItem>
@@ -319,7 +334,7 @@ export function NewProductPage() {
             {/* DIMENSÕES */}
             <TabsContent value="dimensions" className="animate-in fade-in slide-in-from-bottom-4">
                <div className="p-6 border border-white/10 rounded-xl bg-white/5">
-                  {selectedGridId && selectedGridId !== 'null' ? (
+                  {selectedGridId && selectedGridId !== 'null' && selectedGridId !== "null" ? (
                       <Alert className="mb-6 bg-emerald-500/10 border-emerald-500/20 text-emerald-400">
                         <AlertCircle className="h-4 w-4" />
                         <AlertTitle>Dimensões Dinâmicas</AlertTitle>
@@ -331,7 +346,7 @@ export function NewProductPage() {
                       <p className="text-muted-foreground mb-6">Preencha as dimensões da embalagem para cálculo de frete (produto único sem grade).</p>
                   )}
 
-                  <div className={`grid gap-6 md:grid-cols-2 ${selectedGridId && selectedGridId !== 'null' ? 'opacity-30 pointer-events-none grayscale' : ''}`}>
+                  <div className={`grid gap-6 md:grid-cols-2 ${selectedGridId && selectedGridId !== 'null' && selectedGridId !== "null" ? 'opacity-30 pointer-events-none grayscale' : ''}`}>
                     <div className="grid gap-2">
                         <Label htmlFor="peso_kg">Peso Bruto (kg)</Label>
                         <Input id="peso_kg" type="number" step="0.001" {...register('peso_kg')} className="bg-black/20 border-white/10" />

@@ -58,7 +58,10 @@ export function useDeleteCategory() {
 // --- Subcategories ---
 
 async function createSubcategory(newSub: Omit<Subcategory, 'id'>): Promise<Subcategory> {
-  const { data } = await api.post('/subcategorias', newSub);
+  const { data } = await api.post('/subcategorias', {
+    ...newSub,
+    grade_id: newSub.grade_id ? Number(newSub.grade_id) : null
+  });
   return data;
 }
 
@@ -74,4 +77,25 @@ export function useCreateSubcategory() {
   });
 }
 
-// Nota: Adicione update/delete subcategory se o backend suportar, mas o foco é a criação conforme prompt.
+// NOVO: Update Subcategory
+async function updateSubcategory({ id, ...updatedSub }: Partial<Subcategory> & { id: number }): Promise<Subcategory> {
+  const { data } = await api.put(`/subcategorias/${id}`, {
+    ...updatedSub,
+    grade_id: updatedSub.grade_id ? Number(updatedSub.grade_id) : null
+  });
+  return data;
+}
+
+export function useUpdateSubcategory() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: updateSubcategory,
+    onSuccess: (_, variables) => {
+      toast.success('Subcategoria atualizada com sucesso!');
+      // Invalida a query usando o ID da categoria pai para atualizar a lista
+      queryClient.invalidateQueries({ queryKey: ['subcategories'] });
+      queryClient.invalidateQueries({ queryKey: ['categories'] }); 
+    },
+    onError: () => toast.error('Falha ao atualizar subcategoria.'),
+  });
+}

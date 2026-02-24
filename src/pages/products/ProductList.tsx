@@ -1,50 +1,51 @@
 import { useState, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, MoreHorizontal, Pencil, Trash2, Search, Filter, X, PackageOpen, Box } from 'lucide-react';
+import { PlusCircle, MoreHorizontal, Pencil, Trash2, Search, Filter, X, PackageOpen, Box, Eye } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useProducts } from '@/hooks/use-products';
-import { useCategories, useSubcategories } from '@/hooks/use-categories';
+import { useCategories } from '@/hooks/use-categories';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ViewProductDialog } from '../../components/products/ViewProductDialog';
+import { Product } from '@/types';
 
 export function ProductListPage() {
-  const { data: products, isLoading, isError } = useProducts();
+  const navigate = useNavigate();
+  const { data: products, isLoading } = useProducts();
   const { data: categories } = useCategories();
   
-  // Estados de Filtro
+  // View Modal State
+  const [viewProduct, setViewProduct] = useState<Product | null>(null);
+  const [isViewOpen, setIsViewOpen] = useState(false);
+
+  // Filter States
   const [search, setSearch] = useState('');
   const [filterCat, setFilterCat] = useState<string>('all');
-  const [filterSub, setFilterSub] = useState<string>('all');
   const [showFilters, setShowFilters] = useState(false);
-
-  // Subcategorias filtradas pela categoria selecionada no filtro
-  const { data: subcategories } = useSubcategories(filterCat !== 'all' ? Number(filterCat) : null);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
   };
 
-  // Lógica de Filtragem no Frontend (já que a API retorna tudo por enquanto)
   const filteredProducts = useMemo(() => {
     if (!products) return [];
     
     return products.filter(p => {
-        const matchSearch = p.nome.toLowerCase().includes(search.toLowerCase()) || p.sku?.toLowerCase().includes(search.toLowerCase());
+        const matchSearch = p.nome.toLowerCase().includes(search.toLowerCase()) || 
+                           (p.sku && p.sku.toLowerCase().includes(search.toLowerCase()));
         const matchCat = filterCat === 'all' || String(p.categoria_id) === filterCat;
-        const matchSub = filterSub === 'all' || String(p.subcategoria_id) === filterSub;
         
-        return matchSearch && matchCat && matchSub;
+        return matchSearch && matchCat;
     });
-  }, [products, search, filterCat, filterSub]);
+  }, [products, search, filterCat]);
 
-  // Reset de subcategoria se categoria mudar
-  const handleCatChange = (val: string) => {
-    setFilterCat(val);
-    setFilterSub('all');
+  const handleView = (product: Product) => {
+    setViewProduct(product);
+    setIsViewOpen(true);
   };
 
   return (
@@ -55,17 +56,16 @@ export function ProductListPage() {
           <p className="text-muted-foreground">Gerenciamento de catálogo e estoque.</p>
         </div>
         <Link to="/produtos/novo">
-          <Button className="rounded-xl h-10 px-6 font-semibold bg-emerald-500 hover:bg-emerald-600 text-white shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-all hover:scale-105 active:scale-95">
+          <Button className="rounded-xl h-10 px-6 font-semibold bg-emerald-500 hover:bg-emerald-600 text-white shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-all">
             <PlusCircle className="mr-2 h-4 w-4" />
             Novo Produto
           </Button>
         </Link>
       </div>
 
-      {/* CONTAINER PRINCIPAL - Estilo Glassmorphism Escuro */}
       <div className="rounded-3xl border border-white/10 bg-black/40 backdrop-blur-xl shadow-2xl overflow-hidden ring-1 ring-white/5">
         
-        {/* BARRA DE FERRAMENTAS */}
+        {/* Toolbar */}
         <div className="p-6 border-b border-white/10 flex flex-col md:flex-row gap-4 bg-white/[0.02]">
            <div className="relative flex-1 group">
                 <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground group-focus-within:text-emerald-500 transition-colors" />
@@ -85,12 +85,12 @@ export function ProductListPage() {
            </Button>
         </div>
         
-        {/* ÁREA DE FILTROS EXPANSÍVEL */}
+        {/* Filters */}
         {showFilters && (
-            <div className="p-6 bg-black/40 border-b border-white/10 grid grid-cols-1 md:grid-cols-3 gap-6 animate-in slide-in-from-top-2">
+            <div className="p-6 bg-black/40 border-b border-white/10 grid grid-cols-1 md:grid-cols-2 gap-6 animate-in slide-in-from-top-2">
                 <div className="space-y-2">
                     <span className="text-xs font-medium text-emerald-500 uppercase tracking-wider">Categoria</span>
-                    <Select value={filterCat} onValueChange={handleCatChange}>
+                    <Select value={filterCat} onValueChange={setFilterCat}>
                         <SelectTrigger className="bg-white/5 border-white/10 rounded-lg"><SelectValue placeholder="Todas" /></SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">Todas</SelectItem>
@@ -98,18 +98,8 @@ export function ProductListPage() {
                         </SelectContent>
                     </Select>
                 </div>
-                <div className="space-y-2">
-                    <span className="text-xs font-medium text-emerald-500 uppercase tracking-wider">Subcategoria</span>
-                    <Select value={filterSub} onValueChange={setFilterSub} disabled={filterCat === 'all'}>
-                        <SelectTrigger className="bg-white/5 border-white/10 rounded-lg"><SelectValue placeholder="Todas" /></SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">Todas</SelectItem>
-                            {subcategories?.map(s => <SelectItem key={s.id} value={String(s.id)}>{s.nome}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                </div>
                 <div className="flex items-end">
-                    <Button variant="ghost" onClick={() => { setFilterCat('all'); setFilterSub('all'); setSearch(''); }} className="w-full text-muted-foreground hover:text-red-400 hover:bg-red-500/10 rounded-lg">
+                    <Button variant="ghost" onClick={() => { setFilterCat('all'); setSearch(''); }} className="w-full text-muted-foreground hover:text-red-400 hover:bg-red-500/10 rounded-lg">
                         <X className="mr-2 h-4 w-4" /> Limpar Filtros
                     </Button>
                 </div>
@@ -123,7 +113,7 @@ export function ProductListPage() {
                 <TableHead className="w-[80px] pl-6">Foto</TableHead>
                 <TableHead className="text-emerald-500 font-semibold">Produto</TableHead>
                 <TableHead className="text-emerald-500 font-semibold">Categoria / Sub</TableHead>
-                <TableHead className="text-right text-emerald-500 font-semibold">Estoque</TableHead>
+                <TableHead className="text-right text-emerald-500 font-semibold">Estoque Total</TableHead>
                 <TableHead className="text-right text-emerald-500 font-semibold pr-6">Preço</TableHead>
                 <TableHead className="w-[50px]"></TableHead>
               </TableRow>
@@ -142,16 +132,23 @@ export function ProductListPage() {
                 ))
               ) : filteredProducts.length > 0 ? (
                 filteredProducts.map(product => {
-                    const catName = categories?.find(c => c.id === product.categoria_id)?.nome || '-';
+                    // Calcula estoque real somando as variações
+                    const realStock = product.variacoes?.reduce((acc, curr) => acc + curr.estoque, 0) || product.estoque || 0;
                     
+                    // Usa nomes retornados pela API ou busca no cache de categorias
+                    const catName = product.categoria_nome || categories?.find(c => c.id === product.categoria_id)?.nome || '-';
+                    const subName = product.subcategoria_nome || (product.subcategoria_id ? 'Definida' : '-');
+
                     return (
                       <TableRow key={product.id} className="border-white/5 hover:bg-white/[0.04] transition-colors group">
                         <TableCell className="pl-6 py-4">
-                            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-white/10 to-transparent border border-white/10 overflow-hidden flex items-center justify-center shadow-inner">
+                            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-white/10 to-transparent border border-white/10 overflow-hidden flex items-center justify-center shadow-inner relative">
                                 {product.imagem_principal ? (
                                     <img src={product.imagem_principal} alt="" className="h-full w-full object-cover" />
                                 ) : (
-                                    <Box className="h-5 w-5 text-muted-foreground/50" />
+                                    <span className="text-sm font-bold text-muted-foreground">
+                                        {product.nome.substring(0, 2).toUpperCase()}
+                                    </span>
                                 )}
                             </div>
                         </TableCell>
@@ -159,26 +156,28 @@ export function ProductListPage() {
                             <div className="flex flex-col gap-1">
                                 <span className="font-medium text-white group-hover:text-emerald-400 transition-colors">{product.nome}</span>
                                 <div className="flex items-center gap-2">
-                                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground bg-white/5 px-1.5 py-0.5 rounded border border-white/5">SKU: {product.sku || 'N/A'}</span>
+                                    <Badge variant="outline" className="text-[10px] h-5 px-1.5 border-white/10 text-muted-foreground">
+                                        SKU: {product.sku || 'N/A'}
+                                    </Badge>
                                 </div>
                             </div>
                         </TableCell>
                         <TableCell>
                              <div className="flex flex-col">
                                 <span className="text-sm font-medium text-gray-300">{catName}</span>
-                                <span className="text-xs text-muted-foreground">ID Sub: {product.subcategoria_id || '-'}</span> 
+                                <span className="text-xs text-muted-foreground">{subName}</span> 
                             </div>
                         </TableCell>
                         <TableCell className="text-right">
                             <Badge 
                                 variant="outline" 
                                 className={`rounded-lg border px-3 py-1 font-mono ${
-                                    product.estoque > product.estoque_minimo 
+                                    realStock > (product.estoque_minimo || 0)
                                     ? 'bg-emerald-500/5 text-emerald-400 border-emerald-500/20' 
                                     : 'bg-red-500/5 text-red-400 border-red-500/20'
                                 }`}
                             >
-                                {product.estoque} un
+                                {realStock} un
                             </Badge>
                         </TableCell>
                         <TableCell className="text-right pr-6">
@@ -191,13 +190,21 @@ export function ProductListPage() {
                             <DropdownMenuTrigger asChild>
                               <Button aria-haspopup="true" size="icon" variant="ghost" className="h-8 w-8 hover:bg-white/10 rounded-lg text-muted-foreground hover:text-white">
                                 <MoreHorizontal className="h-4 w-4" />
-                                <span className="sr-only">Toggle menu</span>
                               </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="bg-zinc-900/95 backdrop-blur-xl border-white/10 rounded-xl w-40">
+                            <DropdownMenuContent align="end" className="bg-zinc-900/95 backdrop-blur-xl border-white/10 rounded-xl w-48">
                               <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                              <DropdownMenuItem className="focus:bg-white/10 rounded-lg cursor-pointer"><Pencil className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
-                              <DropdownMenuItem className="text-red-500 focus:bg-red-500/10 focus:text-red-400 rounded-lg cursor-pointer"><Trash2 className="mr-2 h-4 w-4" /> Excluir</DropdownMenuItem>
+                              <DropdownMenuSeparator className="bg-white/10" />
+                              <DropdownMenuItem onClick={() => handleView(product)} className="focus:bg-white/10 rounded-lg cursor-pointer">
+                                <Eye className="mr-2 h-4 w-4 text-emerald-400" /> Ver Detalhes
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => navigate(`/produtos/editar/${product.id}`)} className="focus:bg-white/10 rounded-lg cursor-pointer">
+                                <Pencil className="mr-2 h-4 w-4" /> Editar
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator className="bg-white/10" />
+                              <DropdownMenuItem className="text-red-500 focus:bg-red-500/10 focus:text-red-400 rounded-lg cursor-pointer">
+                                <Trash2 className="mr-2 h-4 w-4" /> Excluir
+                              </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>
@@ -207,12 +214,9 @@ export function ProductListPage() {
               ) : (
                 <TableRow>
                   <TableCell colSpan={6} className="h-64">
-                    <div className="flex flex-col items-center justify-center text-muted-foreground animate-in fade-in zoom-in duration-500">
-                        <div className="h-16 w-16 rounded-full bg-white/5 flex items-center justify-center mb-4">
-                            <PackageOpen className="h-8 w-8 opacity-50" />
-                        </div>
+                    <div className="flex flex-col items-center justify-center text-muted-foreground">
+                        <PackageOpen className="h-8 w-8 opacity-50 mb-4" />
                         <p className="text-lg font-medium text-white/50">Nenhum produto encontrado</p>
-                        <p className="text-sm">Tente ajustar seus filtros ou cadastre um novo produto.</p>
                         <Link to="/produtos/novo" className="mt-4">
                             <Button variant="link" className="text-emerald-400">Cadastrar Agora</Button>
                         </Link>
@@ -224,6 +228,12 @@ export function ProductListPage() {
           </Table>
         </div>
       </div>
+
+      <ViewProductDialog 
+        product={viewProduct} 
+        open={isViewOpen} 
+        onOpenChange={setIsViewOpen} 
+      />
     </div>
   );
 }

@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { Check, ArrowLeft, Info, ShoppingBag, DollarSign, Lock, Box, Grid as GridIcon, Tag, Ruler, AlertTriangle } from 'lucide-react';
+import { Check, ArrowLeft, Info, ShoppingBag, DollarSign, Lock, Box, Grid as GridIcon, Tag, Ruler, AlertTriangle, ArrowDown, Copy } from 'lucide-react';
 import { useCategories, useAllSubcategories } from '@/hooks/use-categories';
 import { useBrands } from '@/hooks/use-brands';
 import { useGrids } from '@/hooks/use-grids';
@@ -17,6 +17,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { toast } from 'sonner';
 
 export function NewProductPage() {
   const navigate = useNavigate();
@@ -54,8 +55,10 @@ export function NewProductPage() {
   const { data: allSubcategories } = useAllSubcategories();
   const { mutate: createProduct, isPending } = useCreateProduct();
 
-  // Config Global
+  // Estados Locais
   const [globalAtacadoMin, setGlobalAtacadoMin] = useState('10');
+  const [bulkStockQty, setBulkStockQty] = useState(''); // Estado para o input de preenchimento rápido
+
   useEffect(() => {
     api.get('/configuracoes/qtd_minima_atacado_geral')
       .then(res => setGlobalAtacadoMin(res.data?.valor || '10'))
@@ -96,6 +99,17 @@ export function NewProductPage() {
         replaceVariacoes(newVariations);
     }
   }, [selectedGridId, grids, replaceVariacoes]);
+
+  // Função para aplicar estoque em massa
+  const handleBulkStockApply = () => {
+    if (!bulkStockQty) return;
+    
+    variacaoFields.forEach((_, index) => {
+        setValue(`variacoes.${index}.estoque`, Number(bulkStockQty));
+    });
+    
+    toast.success(`Estoque definido como ${bulkStockQty} para todos os tamanhos!`);
+  };
 
   // --- LÓGICA 2: CLASSIFICAÇÃO E FISCAL ---
   useEffect(() => {
@@ -193,50 +207,76 @@ export function NewProductPage() {
             </div>
 
             {selectedGridId && variacaoFields.length > 0 && (
-                <div className="rounded-xl border border-white/10 overflow-hidden animate-in fade-in slide-in-from-top-4">
-                    <Table>
-                        <TableHeader className="bg-black/40">
-                            <TableRow className="border-white/10 hover:bg-transparent">
-                                <TableHead className="w-[100px] text-emerald-400 font-bold">Tamanho</TableHead>
-                                <TableHead className="w-[150px]">Estoque Inicial</TableHead>
-                                <TableHead>SKU (Opcional)</TableHead>
-                                <TableHead>Cód. Barras / EAN (Opcional)</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody className="bg-black/20">
-                            {variacaoFields.map((field: any, index) => (
-                                <TableRow key={field.id} className="border-white/10 hover:bg-white/5">
-                                    <TableCell className="font-bold text-lg text-white">
-                                        <Badge variant="outline" className="text-emerald-400 border-emerald-500/30 bg-emerald-500/10 px-3 py-1">
-                                            {field.tamanho}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell>
-                                        <Input 
-                                            type="number" 
-                                            {...register(`variacoes.${index}.estoque`)} 
-                                            className="bg-black/40 border-white/10 focus:bg-white/10"
-                                            placeholder="0"
-                                        />
-                                    </TableCell>
-                                    <TableCell>
-                                        <Input 
-                                            {...register(`variacoes.${index}.sku`)} 
-                                            className="bg-black/40 border-white/10 focus:bg-white/10 uppercase"
-                                            placeholder={`SKU-${field.tamanho}`}
-                                        />
-                                    </TableCell>
-                                    <TableCell>
-                                        <Input 
-                                            {...register(`variacoes.${index}.codigo_barras`)} 
-                                            className="bg-black/40 border-white/10 focus:bg-white/10"
-                                            placeholder="EAN13..."
-                                        />
-                                    </TableCell>
+                <div className="animate-in fade-in slide-in-from-top-4">
+                    {/* Bulk Update Controls */}
+                    <div className="flex items-end gap-3 mb-3 bg-emerald-500/5 border border-emerald-500/20 p-3 rounded-xl w-fit">
+                        <div className="grid gap-1.5">
+                            <Label className="text-xs text-emerald-400 font-medium flex items-center gap-1">
+                                <Copy className="h-3 w-3" /> Estoque Rápido (Todos)
+                            </Label>
+                            <Input 
+                                type="number" 
+                                className="h-8 w-32 bg-black/40 border-emerald-500/30 text-center font-bold focus:ring-emerald-500/40"
+                                placeholder="Qtd. Igual"
+                                value={bulkStockQty}
+                                onChange={(e) => setBulkStockQty(e.target.value)}
+                            />
+                        </div>
+                        <Button 
+                            type="button" 
+                            size="sm" 
+                            onClick={handleBulkStockApply}
+                            className="h-8 bg-emerald-500 hover:bg-emerald-600 text-white border border-emerald-400/20 shadow-lg shadow-emerald-500/10"
+                        >
+                            <ArrowDown className="mr-2 h-3 w-3" /> Aplicar
+                        </Button>
+                    </div>
+
+                    <div className="rounded-xl border border-white/10 overflow-hidden">
+                        <Table>
+                            <TableHeader className="bg-black/40">
+                                <TableRow className="border-white/10 hover:bg-transparent">
+                                    <TableHead className="w-[100px] text-emerald-400 font-bold">Tamanho</TableHead>
+                                    <TableHead className="w-[150px]">Estoque Inicial</TableHead>
+                                    <TableHead>SKU (Opcional)</TableHead>
+                                    <TableHead>Cód. Barras / EAN (Opcional)</TableHead>
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
+                            </TableHeader>
+                            <TableBody className="bg-black/20">
+                                {variacaoFields.map((field: any, index) => (
+                                    <TableRow key={field.id} className="border-white/10 hover:bg-white/5">
+                                        <TableCell className="font-bold text-lg text-white">
+                                            <Badge variant="outline" className="text-emerald-400 border-emerald-500/30 bg-emerald-500/10 px-3 py-1">
+                                                {field.tamanho}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell>
+                                            <Input 
+                                                type="number" 
+                                                {...register(`variacoes.${index}.estoque`)} 
+                                                className="bg-black/40 border-white/10 focus:bg-white/10"
+                                                placeholder="0"
+                                            />
+                                        </TableCell>
+                                        <TableCell>
+                                            <Input 
+                                                {...register(`variacoes.${index}.sku`)} 
+                                                className="bg-black/40 border-white/10 focus:bg-white/10 uppercase"
+                                                placeholder={`SKU-${field.tamanho}`}
+                                            />
+                                        </TableCell>
+                                        <TableCell>
+                                            <Input 
+                                                {...register(`variacoes.${index}.codigo_barras`)} 
+                                                className="bg-black/40 border-white/10 focus:bg-white/10"
+                                                placeholder="EAN13..."
+                                            />
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
                 </div>
             )}
             

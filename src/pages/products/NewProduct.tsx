@@ -131,6 +131,9 @@ export function NewProductPage() {
     return categories?.find(c => c.id === catId)?.nome || '';
   }
 
+  // Estilo base para os cards internos (Balões)
+  const cardBaseClass = "p-6 border border-white/10 rounded-xl bg-black/20 shadow-inner";
+
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
       <div className="flex items-center justify-between mb-6">
@@ -148,7 +151,7 @@ export function NewProductPage() {
         </Button>
       </div>
 
-      <div className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden p-6 shadow-2xl">
+      <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden p-6 shadow-2xl">
         <Tabs defaultValue="basic" className="w-full">
             <TabsList className="grid w-full grid-cols-4 bg-black/20 p-1 rounded-xl mb-8">
               <TabsTrigger value="basic" className="rounded-lg data-[state=active]:bg-emerald-500 data-[state=active]:text-white"><Package className="mr-2 h-4 w-4" />Dados Básicos</TabsTrigger>
@@ -159,64 +162,64 @@ export function NewProductPage() {
             
             {/* DADOS BÁSICOS */}
             <TabsContent value="basic" className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
-                <div className="grid gap-6 md:grid-cols-2">
+                <div className="grid gap-6 md:grid-cols-2 items-start">
                   {/* Identificação */}
-                  <div className="grid gap-4 p-4 border border-white/10 rounded-xl bg-white/5 col-span-2">
+                  <div className={`${cardBaseClass} col-span-2 grid gap-4`}>
                       <div className="grid gap-2">
                         <Label htmlFor="nome">Nome do Produto</Label>
-                        <Input id="nome" {...register('nome', { required: true })} className="bg-black/20 border-white/10" placeholder="Ex: Camiseta Básica Preta" />
+                        <Input id="nome" {...register('nome', { required: true })} className="bg-white/5 border-white/10 focus:bg-white/10 transition-all" placeholder="Ex: Camiseta Básica Preta" />
                         {errors.nome && <p className="text-sm text-red-500">Nome é obrigatório.</p>}
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                          <div className="grid gap-2">
                             <Label htmlFor="sku">SKU</Label>
-                            <Input id="sku" {...register('sku')} className="bg-black/20 border-white/10" />
+                            <Input id="sku" {...register('sku')} className="bg-white/5 border-white/10 focus:bg-white/10 transition-all" />
                         </div>
                         <div className="grid gap-2">
                             <Label htmlFor="codigo_barras">EAN (Código de Barras)</Label>
-                            <Input id="codigo_barras" {...register('codigo_barras')} className="bg-black/20 border-white/10" />
+                            <Input id="codigo_barras" {...register('codigo_barras')} className="bg-white/5 border-white/10 focus:bg-white/10 transition-all" />
                         </div>
                       </div>
                   </div>
 
                   {/* Preços Básicos (Varejo/Custo) */}
-                  <div className="grid gap-4 p-4 border border-white/10 rounded-xl bg-white/5">
-                      <h3 className="font-semibold text-emerald-400 flex items-center gap-2">
+                  <div className={`${cardBaseClass} grid gap-4 h-fit`}>
+                      <h3 className="font-semibold text-emerald-400 flex items-center gap-2 mb-2">
                         <DollarSign className="h-4 w-4" /> Financeiro (Varejo)
                       </h3>
                       <div className="grid grid-cols-2 gap-4">
                         <div className="grid gap-2">
                             <Label htmlFor="preco_custo">Custo (R$)</Label>
-                            <Input id="preco_custo" type="number" step="0.01" {...register('preco_custo')} className="bg-black/20 border-white/10" />
+                            <Input id="preco_custo" type="number" step="0.01" {...register('preco_custo')} className="bg-white/5 border-white/10 focus:bg-white/10" />
                         </div>
                         <div className="grid gap-2">
                             <Label htmlFor="preco_varejo">Venda Varejo (R$)</Label>
-                            <Input id="preco_varejo" type="number" step="0.01" {...register('preco_varejo', { required: true })} className="bg-black/20 border-white/10 font-bold text-emerald-400" />
+                            <Input id="preco_varejo" type="number" step="0.01" {...register('preco_varejo', { required: true })} className="bg-white/5 border-emerald-500/30 focus:bg-white/10 focus:border-emerald-500/50 font-bold text-emerald-400" />
                         </div>
                       </div>
-                      <div className="grid grid-cols-2 gap-4 pt-2 border-t border-white/5">
+                      <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/5 mt-2">
                          <div className="grid gap-2">
                             <Label htmlFor="estoque">Estoque Inicial</Label>
-                            <Input id="estoque" type="number" {...register('estoque')} className="bg-black/20 border-white/10" />
+                            <Input id="estoque" type="number" {...register('estoque')} className="bg-white/5 border-white/10 focus:bg-white/10" />
                         </div>
                         <div className="grid gap-2">
                             <Label htmlFor="estoque_minimo">Mínimo</Label>
-                            <Input id="estoque_minimo" type="number" {...register('estoque_minimo')} className="bg-black/20 border-white/10" />
+                            <Input id="estoque_minimo" type="number" {...register('estoque_minimo')} className="bg-white/5 border-white/10 focus:bg-white/10" />
                         </div>
                       </div>
                   </div>
 
                   {/* REGRAS DE ATACADO (PACOTE/KIT) */}
-                  <div className="grid gap-4 p-4 border border-white/10 rounded-xl bg-white/5">
-                    <h3 className="font-semibold text-emerald-400 flex items-center gap-2">
+                  <div className={`${cardBaseClass} grid gap-4 h-fit`}>
+                    <h3 className="font-semibold text-emerald-400 flex items-center gap-2 mb-2">
                         <ShoppingBag className="h-4 w-4" /> Regras de Atacado
                     </h3>
                     
                     {/* Toggle: Usar mesmo preço */}
-                    <div className="flex items-center justify-between bg-black/20 p-2 rounded-lg border border-white/5">
+                    <div className="flex items-center justify-between bg-white/5 p-3 rounded-lg border border-white/5">
                         <Label htmlFor="usar_preco_atacado_unico" className="cursor-pointer flex items-center gap-2 text-sm">
                             {usarPrecoUnico ? <Lock className="h-3 w-3 text-emerald-500" /> : <Lock className="h-3 w-3 text-muted-foreground" />}
-                            Usar mesmo preço unitário para ambos os tipos
+                            Usar mesmo preço unitário
                         </Label>
                         <Switch 
                             id="usar_preco_atacado_unico" 
@@ -226,12 +229,12 @@ export function NewProductPage() {
                     </div>
                     
                     {/* 1. ATACADO GERAL */}
-                    <div className={`p-4 rounded-xl border transition-all ${habilitaAtacadoGeral ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-black/20 border-white/5'}`}>
+                    <div className={`p-4 rounded-xl border transition-all ${habilitaAtacadoGeral ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-white/5 border-white/5'}`}>
                         <div className="flex items-start justify-between mb-2">
                             <div className="grid gap-1">
                                 <Label htmlFor="habilita_atacado_geral" className="font-medium cursor-pointer text-base">Atacado Geral</Label>
-                                <p className="text-xs text-muted-foreground">
-                                    Venda misturada (qualquer modelo). Mínimo global: <strong>{globalAtacadoMin} peças</strong>.
+                                <p className="text-[11px] text-muted-foreground leading-tight">
+                                    Venda misturada. Mínimo: {globalAtacadoMin} peças.
                                 </p>
                             </div>
                             <Switch 
@@ -242,7 +245,7 @@ export function NewProductPage() {
                         </div>
                         
                         {(habilitaAtacadoGeral || usarPrecoUnico) && (
-                            <div className="animate-in fade-in slide-in-from-top-2 mt-2">
+                            <div className="animate-in fade-in slide-in-from-top-2 mt-3">
                                 <Label className="text-xs">
                                     {usarPrecoUnico ? "Preço Atacado (R$)" : "Preço Atacado Geral (R$)"}
                                 </Label>
@@ -250,7 +253,7 @@ export function NewProductPage() {
                                     type="number" 
                                     step="0.01" 
                                     {...register('preco_atacado_geral')}
-                                    className="bg-white/5 border-white/10 mt-1 max-w-[200px]"
+                                    className="bg-black/40 border-white/10 mt-1 max-w-[200px]"
                                     placeholder="0.00"
                                 />
                             </div>
@@ -258,12 +261,12 @@ export function NewProductPage() {
                     </div>
 
                     {/* 2. ATACADO POR GRADE (PACOTE) */}
-                    <div className={`p-4 rounded-xl border transition-all ${habilitaAtacadoGrade ? 'bg-purple-500/5 border-purple-500/20' : 'bg-black/20 border-white/5'}`}>
+                    <div className={`p-4 rounded-xl border transition-all ${habilitaAtacadoGrade ? 'bg-purple-500/5 border-purple-500/20' : 'bg-white/5 border-white/5'}`}>
                          <div className="flex items-start justify-between mb-4">
                             <div className="grid gap-1">
                                 <Label htmlFor="habilita_atacado_grade" className="font-medium cursor-pointer text-base">Pacote Fechado (Grade)</Label>
-                                <p className="text-xs text-muted-foreground">
-                                    Vende o kit completo com todos os tamanhos da grade.
+                                <p className="text-[11px] text-muted-foreground leading-tight">
+                                    Venda do kit completo da grade.
                                 </p>
                             </div>
                             <Switch 
@@ -277,9 +280,9 @@ export function NewProductPage() {
                             <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
                                 {/* Seleção da Grade */}
                                 <div className="grid gap-2">
-                                    <Label>Selecionar Grade do Pacote</Label>
+                                    <Label className="text-xs text-purple-300">Selecionar Grade do Pacote</Label>
                                     <Select onValueChange={(v) => setValue('grade_atacado_id', v)}>
-                                        <SelectTrigger className="bg-white/5 border-white/10"><SelectValue placeholder="Selecione a grade..." /></SelectTrigger>
+                                        <SelectTrigger className="bg-black/40 border-white/10 h-9"><SelectValue placeholder="Selecione a grade..." /></SelectTrigger>
                                         <SelectContent>
                                             {grids?.map(g => <SelectItem key={g.id} value={String(g.id)}>{g.nome}</SelectItem>)}
                                         </SelectContent>
@@ -288,18 +291,12 @@ export function NewProductPage() {
 
                                 {/* Preview da Grade */}
                                 {gradeAtacadoObj && (
-                                    <div className="bg-purple-500/10 border border-purple-500/20 rounded-lg p-3">
-                                        <div className="flex flex-wrap gap-1 mb-2">
-                                            {gradeAtacadoObj.tamanhos.map((t, idx) => (
-                                                <Badge key={idx} variant="secondary" className="bg-purple-500/20 text-purple-300 hover:bg-purple-500/30">
-                                                    {t.tamanho}
-                                                </Badge>
-                                            ))}
-                                        </div>
-                                        <div className="flex items-center gap-2 text-xs text-purple-200/70">
-                                            <Info className="h-3 w-3" /> 
-                                            <span>Essa grade possui {gradeAtacadoObj.tamanhos.length} tamanhos distintos.</span>
-                                        </div>
+                                    <div className="flex flex-wrap gap-1 mb-1">
+                                        {gradeAtacadoObj.tamanhos.map((t, idx) => (
+                                            <Badge key={idx} variant="secondary" className="bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 text-[10px] px-1.5">
+                                                {t.tamanho}
+                                            </Badge>
+                                        ))}
                                     </div>
                                 )}
 
@@ -311,20 +308,20 @@ export function NewProductPage() {
                                                 type="number" 
                                                 min="1"
                                                 {...register('atacado_grade_qtd_por_tamanho')}
-                                                className="bg-white/5 border-white/10"
+                                                className="bg-black/40 border-white/10 h-9"
                                             />
-                                            <span className="text-xs text-muted-foreground whitespace-nowrap">pçs cada</span>
+                                            <span className="text-[10px] text-muted-foreground whitespace-nowrap">pçs cada</span>
                                         </div>
                                     </div>
                                     
                                     {!usarPrecoUnico && (
                                         <div>
-                                            <Label className="text-xs">Preço Unitário Grade (R$)</Label>
+                                            <Label className="text-xs">Unitário Grade (R$)</Label>
                                             <Input 
                                                 type="number" 
                                                 step="0.01" 
                                                 {...register('preco_atacado_grade')}
-                                                className="bg-white/5 border-white/10 mt-1"
+                                                className="bg-black/40 border-white/10 mt-1 h-9"
                                                 placeholder="0.00"
                                             />
                                         </div>
@@ -332,21 +329,21 @@ export function NewProductPage() {
                                 </div>
 
                                 {/* Card de Totalização */}
-                                <div className="bg-black/40 rounded-lg p-4 border border-white/10 flex flex-col gap-2">
-                                    <div className="flex justify-between items-center text-sm">
-                                        <span className="text-muted-foreground flex items-center gap-2"><Box className="h-4 w-4" /> Total de Peças no Pacote:</span>
-                                        <span className="font-bold text-white">{totalPecasPacote} peças</span>
+                                <div className="bg-black/40 rounded-lg p-3 border border-white/10 flex flex-col gap-1.5 mt-2">
+                                    <div className="flex justify-between items-center text-xs">
+                                        <span className="text-muted-foreground">Peças no Pacote:</span>
+                                        <span className="font-bold text-white">{totalPecasPacote}</span>
                                     </div>
-                                    <div className="flex justify-between items-center text-sm">
-                                        <span className="text-muted-foreground flex items-center gap-2"><DollarSign className="h-4 w-4" /> Preço Unitário Aplicado:</span>
+                                    <div className="flex justify-between items-center text-xs">
+                                        <span className="text-muted-foreground">Preço Unitário:</span>
                                         <span className="font-mono text-emerald-400">
                                             R$ {(usarPrecoUnico ? Number(precoAtacadoGeral) : Number(precoAtacadoGrade)).toFixed(2)}
                                         </span>
                                     </div>
                                     <div className="h-px bg-white/10 my-1" />
-                                    <div className="flex justify-between items-center">
-                                        <span className="font-medium text-white">Valor Total do Pacote</span>
-                                        <span className="font-bold text-lg text-emerald-400">
+                                    <div className="flex justify-between items-center text-sm">
+                                        <span className="font-medium text-white">Total Pacote</span>
+                                        <span className="font-bold text-emerald-400">
                                             {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valorTotalPacote)}
                                         </span>
                                     </div>
@@ -357,15 +354,15 @@ export function NewProductPage() {
                   </div>
 
                   {/* Categorização Simplificada */}
-                  <div className="grid gap-4 p-4 border border-white/10 rounded-xl bg-white/5 col-span-2">
-                       <h3 className="font-semibold text-emerald-400">Classificação</h3>
+                  <div className={`${cardBaseClass} col-span-2 grid gap-4`}>
+                       <h3 className="font-semibold text-emerald-400 mb-2">Classificação</h3>
                        
                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                            {/* Subcategoria é o principal agora */}
                            <div className="grid gap-2">
                             <Label>Subcategoria & Categoria <span className="text-xs text-muted-foreground">(Preenche fiscal)</span></Label>
                             <Select onValueChange={(value) => setValue('subcategoria_id', value)}>
-                                <SelectTrigger className="bg-black/20 border-white/10"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                                <SelectTrigger className="bg-white/5 border-white/10"><SelectValue placeholder="Selecione..." /></SelectTrigger>
                                 <SelectContent>
                                 {allSubcategories?.map(sub => (
                                     <SelectItem key={sub.id} value={String(sub.id)}>
@@ -380,7 +377,7 @@ export function NewProductPage() {
                            <div className="grid gap-2">
                             <Label>Marca</Label>
                             <Select onValueChange={(value) => setValue('marca_id', value)}>
-                                <SelectTrigger className="bg-black/20 border-white/10"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                                <SelectTrigger className="bg-white/5 border-white/10"><SelectValue placeholder="Selecione..." /></SelectTrigger>
                                 <SelectContent>
                                 {brands?.map(brand => <SelectItem key={brand.id} value={String(brand.id)}>{brand.nome}</SelectItem>)}
                                 </SelectContent>
@@ -392,7 +389,7 @@ export function NewProductPage() {
                                 onValueChange={(value) => setValue('grade_id', value)} 
                                 value={selectedGridId}
                             >
-                                <SelectTrigger className="bg-black/20 border-white/10"><SelectValue placeholder="Nenhuma" /></SelectTrigger>
+                                <SelectTrigger className="bg-white/5 border-white/10"><SelectValue placeholder="Nenhuma" /></SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="null">Nenhuma</SelectItem>
                                     {grids?.map(grid => <SelectItem key={grid.id} value={String(grid.id)}>{grid.nome}</SelectItem>)}
@@ -407,7 +404,7 @@ export function NewProductPage() {
 
             {/* DADOS FISCAIS */}
             <TabsContent value="fiscal" className="animate-in fade-in slide-in-from-bottom-4">
-              <div className="grid gap-6 p-6 border border-white/10 rounded-xl bg-white/5">
+              <div className={`${cardBaseClass}`}>
                   <div className="flex items-center gap-2 mb-4 text-emerald-400">
                     <Info className="h-5 w-5" />
                     <p className="text-sm">Estes dados foram carregados automaticamente da Subcategoria selecionada, mas você pode alterá-los.</p>
@@ -416,20 +413,20 @@ export function NewProductPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="grid gap-2">
                         <Label htmlFor="ncm">NCM</Label>
-                        <Input id="ncm" {...register('ncm')} className="bg-black/20 border-white/10" placeholder="00000000" />
+                        <Input id="ncm" {...register('ncm')} className="bg-white/5 border-white/10" placeholder="00000000" />
                     </div>
                     <div className="grid gap-2">
                         <Label htmlFor="cfop_padrao">CFOP Padrão</Label>
-                        <Input id="cfop_padrao" {...register('cfop_padrao')} className="bg-black/20 border-white/10" />
+                        <Input id="cfop_padrao" {...register('cfop_padrao')} className="bg-white/5 border-white/10" />
                     </div>
                     <div className="grid gap-2">
                         <Label htmlFor="cst_icms">CST/CSOSN</Label>
-                        <Input id="cst_icms" {...register('cst_icms')} className="bg-black/20 border-white/10" />
+                        <Input id="cst_icms" {...register('cst_icms')} className="bg-white/5 border-white/10" />
                     </div>
                     <div className="grid gap-2">
                         <Label>Origem</Label>
                         <Select onValueChange={(v) => setValue('origem', v)}>
-                             <SelectTrigger className="bg-black/20 border-white/10"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                             <SelectTrigger className="bg-white/5 border-white/10"><SelectValue placeholder="Selecione..." /></SelectTrigger>
                              <SelectContent>
                                 <SelectItem value="0">0 - Nacional</SelectItem>
                                 <SelectItem value="1">1 - Importada</SelectItem>
@@ -438,7 +435,7 @@ export function NewProductPage() {
                     </div>
                      <div className="grid gap-2">
                         <Label>Unidade de Medida</Label>
-                         <Input id="unidade_medida" {...register('unidade_medida')} className="bg-black/20 border-white/10" placeholder="UN" />
+                         <Input id="unidade_medida" {...register('unidade_medida')} className="bg-white/5 border-white/10" placeholder="UN" />
                     </div>
                   </div>
               </div>
@@ -446,7 +443,7 @@ export function NewProductPage() {
 
             {/* DIMENSÕES */}
             <TabsContent value="dimensions" className="animate-in fade-in slide-in-from-bottom-4">
-               <div className="p-6 border border-white/10 rounded-xl bg-white/5">
+               <div className={`${cardBaseClass}`}>
                   {selectedGridId && selectedGridId !== 'null' && selectedGridId !== "null" ? (
                       <Alert className="mb-6 bg-emerald-500/10 border-emerald-500/20 text-emerald-400">
                         <AlertCircle className="h-4 w-4" />
@@ -462,19 +459,19 @@ export function NewProductPage() {
                   <div className={`grid gap-6 md:grid-cols-2 ${selectedGridId && selectedGridId !== 'null' && selectedGridId !== "null" ? 'opacity-30 pointer-events-none grayscale' : ''}`}>
                     <div className="grid gap-2">
                         <Label htmlFor="peso_kg">Peso Bruto (kg)</Label>
-                        <Input id="peso_kg" type="number" step="0.001" {...register('peso_kg')} className="bg-black/20 border-white/10" />
+                        <Input id="peso_kg" type="number" step="0.001" {...register('peso_kg')} className="bg-white/5 border-white/10" />
                     </div>
                     <div className="grid gap-2">
                         <Label htmlFor="altura_cm">Altura (cm)</Label>
-                        <Input id="altura_cm" type="number" step="0.1" {...register('altura_cm')} className="bg-black/20 border-white/10" />
+                        <Input id="altura_cm" type="number" step="0.1" {...register('altura_cm')} className="bg-white/5 border-white/10" />
                     </div>
                     <div className="grid gap-2">
                         <Label htmlFor="largura_cm">Largura (cm)</Label>
-                        <Input id="largura_cm" type="number" step="0.1" {...register('largura_cm')} className="bg-black/20 border-white/10" />
+                        <Input id="largura_cm" type="number" step="0.1" {...register('largura_cm')} className="bg-white/5 border-white/10" />
                     </div>
                     <div className="grid gap-2">
                         <Label htmlFor="comprimento_cm">Comprimento (cm)</Label>
-                        <Input id="comprimento_cm" type="number" step="0.1" {...register('comprimento_cm')} className="bg-black/20 border-white/10" />
+                        <Input id="comprimento_cm" type="number" step="0.1" {...register('comprimento_cm')} className="bg-white/5 border-white/10" />
                     </div>
                   </div>
                </div>
@@ -482,15 +479,15 @@ export function NewProductPage() {
 
             {/* IMAGENS */}
             <TabsContent value="images" className="animate-in fade-in slide-in-from-bottom-4">
-              <div className="grid gap-6 p-6 border border-white/10 rounded-xl bg-white/5">
+              <div className={`${cardBaseClass}`}>
                   <div className="grid gap-2">
                     <Label htmlFor="imagem_principal">URL da Imagem Principal</Label>
-                    <Input id="imagem_principal" placeholder="https://exemplo.com/imagem.jpg" {...register('imagem_principal')} className="bg-black/20 border-white/10" />
+                    <Input id="imagem_principal" placeholder="https://exemplo.com/imagem.jpg" {...register('imagem_principal')} className="bg-white/5 border-white/10" />
                     <p className="text-xs text-muted-foreground">Cole a URL direta da imagem.</p>
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="imagens_galeria">URLs da Galeria (separadas por vírgula)</Label>
-                    <Textarea id="imagens_galeria" placeholder="https://exemplo.com/img1.jpg, https://exemplo.com/img2.jpg" {...register('imagens_galeria')} className="bg-black/20 border-white/10 min-h-[100px]" />
+                    <Textarea id="imagens_galeria" placeholder="https://exemplo.com/img1.jpg, https://exemplo.com/img2.jpg" {...register('imagens_galeria')} className="bg-white/5 border-white/10 min-h-[100px]" />
                   </div>
               </div>
             </TabsContent>

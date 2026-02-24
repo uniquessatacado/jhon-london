@@ -36,14 +36,6 @@ export interface Grid {
   tamanhos: GridSize[];
 }
 
-export interface ProductVariation {
-  id?: number;
-  tamanho: string;
-  estoque: number;
-  sku: string;
-  codigo_barras: string;
-}
-
 export interface Product {
   id: number;
   nome: string;
@@ -52,31 +44,28 @@ export interface Product {
   preco_custo: number;
   preco_varejo: number;
   
-  // Atacado
+  // NOVOS CAMPOS DE PREÇO ATACADO & PACOTE
   usar_preco_atacado_unico: boolean;
+  
+  // Atacado Geral (Misturado)
   habilita_atacado_geral: boolean; 
   preco_atacado_geral: number;
+  
+  // Atacado Grade (Pacote Fechado)
   habilita_atacado_grade: boolean;
-  grade_atacado_id: number | null;
-  preco_atacado_grade: number;
+  grade_atacado_id: number | null; // ID da grade que define o pacote
+  atacado_grade_qtd_por_tamanho: number; // Ex: 2 peças de cada tamanho
+  preco_atacado_grade: number; // Preço unitário dentro do pacote
+  qtd_minima_atacado_grade: number; // Mantido para retrocompatibilidade ou regra extra
 
-  estoque: number; // Total stock
+  estoque: number;
   estoque_minimo: number;
   
-  // IDs
+  // Relacionamentos
   categoria_id: number;
   subcategoria_id: number | null;
   marca_id: number;
-  grade_id: number | null;
-  
-  // Auxiliary Names (Returned by GET /api/produtos)
-  categoria_nome?: string;
-  subcategoria_nome?: string;
-  marca_nome?: string;
-  grade_nome?: string;
-
-  // Nested Data
-  variacoes: ProductVariation[];
+  grade_id: number | null; // Grade física do produto (pode ser diferente da do pacote)
   
   // Fiscal
   ncm: string;
@@ -91,7 +80,7 @@ export interface Product {
   largura_cm: number;
   comprimento_cm: number;
   
-  imagem_principal: string | null;
+  imagem_principal: string;
   imagens_galeria: string[];
   
   criado_em: string;

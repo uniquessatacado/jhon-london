@@ -3,7 +3,7 @@ import { Layout } from './components/Layout';
 import { LoginPage } from './pages/Login';
 import { DashboardPage } from './pages/Dashboard';
 import { ProductListPage } from './pages/products/ProductList';
-import { ProductFormPage } from './pages/products/ProductFormPage';
+import { NewProductPage } from './pages/products/NewProduct';
 import { PDVPage } from './pages/PDV';
 import { CategoryPage } from './pages/settings/CategoryPage';
 import { BrandPage } from './pages/settings/BrandPage';
@@ -30,11 +30,7 @@ const router = createBrowserRouter([
       },
       {
         path: 'produtos/novo',
-        element: <ProductFormPage />,
-      },
-      {
-        path: 'produtos/editar/:id',
-        element: <ProductFormPage />,
+        element: <NewProductPage />,
       },
       {
         path: 'pdv',

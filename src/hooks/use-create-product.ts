@@ -37,8 +37,13 @@ type ProductFormDTO = {
   habilita_atacado_grade: boolean;
   usar_preco_atacado_unico: boolean;
   grade_atacado_id: string;
-  atacado_grade_qtd_por_tamanho: number;
   preco_atacado_grade: number;
+  
+  // NOVO: Composição do pacote (grade fechada)
+  composicao_atacado: {
+    tamanho: string;
+    quantidade: number;
+  }[];
 
   imagens_galeria: string;
   imagem_principal: string;
@@ -53,6 +58,22 @@ async function createProduct(formData: Partial<ProductFormDTO>): Promise<Product
     sku: v.sku || '',
     codigo_barras: v.codigo_barras || ''
   })) || []);
+
+  // Conversão da Composição do Atacado Grade para JSON String
+  // Filtra apenas se tiver grade selecionada e quantidades preenchidas
+  let composicaoJson = null;
+  if (formData.habilita_atacado_grade && formData.grade_atacado_id && formData.composicao_atacado) {
+      const composicaoValida = formData.composicao_atacado
+          .filter(c => c && c.tamanho && Number(c.quantidade) > 0)
+          .map(c => ({
+              tamanho: c.tamanho,
+              quantidade: Number(c.quantidade)
+          }));
+      
+      if (composicaoValida.length > 0) {
+          composicaoJson = JSON.stringify(composicaoValida);
+      }
+  }
 
   const payload = {
     nome: formData.nome,
@@ -81,7 +102,10 @@ async function createProduct(formData: Partial<ProductFormDTO>): Promise<Product
     habilita_atacado_grade: formData.habilita_atacado_grade,
     usar_preco_atacado_unico: formData.usar_preco_atacado_unico,
     grade_atacado_id: formData.grade_atacado_id ? Number(formData.grade_atacado_id) : null,
-    atacado_grade_qtd_por_tamanho: Number(formData.atacado_grade_qtd_por_tamanho) || 1,
+    
+    // Enviamos o JSON da composição
+    composicao_atacado_grade: composicaoJson,
+    
     preco_atacado_grade: formData.usar_preco_atacado_unico 
         ? (Number(formData.preco_atacado_geral) || 0) 
         : (Number(formData.preco_atacado_grade) || 0),

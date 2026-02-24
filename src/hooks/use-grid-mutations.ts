@@ -53,7 +53,6 @@ async function updateGrid(updatedGrid: UpdateGridDTO): Promise<Grid> {
       comprimento_cm: Number(t.comprimento_cm),
     }))
   };
-  // Assumindo PUT /grades/:id
   const { data } = await api.put(`/grades/${updatedGrid.id}`, payload);
   return data;
 }

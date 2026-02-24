@@ -13,6 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Category, Subcategory } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { toast } from 'sonner';
 
 export function CategoryPage() {
   // Hooks de Dados
@@ -31,7 +32,7 @@ export function CategoryPage() {
 
   // Forms
   const { register: registerCat, handleSubmit: handleCatSubmit, reset: resetCat } = useForm<{ nome: string }>();
-  const { register: registerSub, handleSubmit: handleSubSubmit, reset: resetSub, setValue: setSubValue } = useForm<Omit<Subcategory, 'id' | 'categoria_id'>>();
+  const { register: registerSub, handleSubmit: handleSubSubmit, reset: resetSub, setValue: setSubValue, watch: watchSub } = useForm<Omit<Subcategory, 'id' | 'categoria_id'>>();
 
   // Handlers
   const onCatSubmit = (data: { nome: string }) => {
@@ -46,7 +47,27 @@ export function CategoryPage() {
   const onSubSubmit = (data: Omit<Subcategory, 'id' | 'categoria_id'>) => {
     if (!selectedCategory) return;
     
-    createSubcategory({ ...data, categoria_id: selectedCategory.id }, {
+    // 1. Limpeza do NCM (Remove tudo que não é número)
+    const ncmClean = data.ncm ? data.ncm.replace(/\D/g, '') : '';
+    
+    // 2. Validações Manuais
+    if (ncmClean.length !== 8) {
+        toast.error('NCM Inválido', { description: 'O NCM deve conter exatamente 8 números.' });
+        return;
+    }
+
+    // Verificar se os Selects foram preenchidos (react-hook-form as vezes ignora selects não registrados se não usar Controller)
+    // O watchSub ou o próprio data deve conter os valores se o setValue foi usado corretamente
+    if (!data.cfop_padrao || !data.cst_icms || !data.origem || !data.unidade_medida) {
+        toast.error('Campos Obrigatórios', { description: 'Por favor, selecione todas as opções fiscais.' });
+        return;
+    }
+
+    createSubcategory({ 
+        ...data, 
+        ncm: ncmClean, // Envia limpo
+        categoria_id: selectedCategory.id 
+    }, {
       onSuccess: () => {
         setIsSubDialogOpen(false);
         resetSub();
@@ -208,7 +229,9 @@ export function CategoryPage() {
               <div className="grid grid-cols-2 gap-4">
                  <div className="grid gap-2">
                   <Label htmlFor="ncm">NCM (8 dígitos)</Label>
-                  <Input id="ncm" {...registerSub('ncm', { required: true, minLength: 8, maxLength: 8 })} placeholder="00000000" />
+                  {/* Removido minLength/maxLength do register para permitir formatação visual pelo usuário */}
+                  <Input id="ncm" {...registerSub('ncm', { required: true })} placeholder="00000000" />
+                  <p className="text-[10px] text-muted-foreground">Aceita pontos. Enviaremos apenas números.</p>
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="cfop">CFOP Padrão</Label>

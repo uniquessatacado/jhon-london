@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
@@ -17,6 +18,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
 
 export function CategoryPage() {
+  const queryClient = useQueryClient();
+
   // Hooks de Dados
   const { data: categories, isLoading: isLoadingCats } = useCategories();
   const { data: grids } = useGrids();
@@ -77,10 +80,8 @@ export function CategoryPage() {
   const onSubSubmit = (data: any) => {
     if (!selectedCategory) return;
     
-    // 1. Limpeza do NCM (Remove tudo que não é número)
     const ncmClean = data.ncm ? String(data.ncm).replace(/\D/g, '') : '';
     
-    // 2. Validações Manuais
     if (ncmClean.length !== 8) {
         toast.error('NCM Inválido', { description: 'O NCM deve conter exatamente 8 números.' });
         return;
@@ -98,21 +99,17 @@ export function CategoryPage() {
         grade_id: data.grade_id && data.grade_id !== "null" ? Number(data.grade_id) : null
     };
 
+    const handleSuccess = () => {
+        setIsSubDialogOpen(false);
+        resetSub();
+        setEditingSub(null);
+        queryClient.invalidateQueries({ queryKey: ['subcategories', selectedCategory.id] });
+    };
+
     if (editingSub) {
-        updateSubcategory({ id: editingSub.id, ...payload }, {
-            onSuccess: () => {
-                setIsSubDialogOpen(false);
-                resetSub();
-                setEditingSub(null);
-            }
-        });
+        updateSubcategory({ id: editingSub.id, ...payload }, { onSuccess: handleSuccess });
     } else {
-        createSubcategory(payload, {
-            onSuccess: () => {
-                setIsSubDialogOpen(false);
-                resetSub();
-            }
-        });
+        createSubcategory(payload, { onSuccess: handleSuccess });
     }
   };
 
@@ -217,7 +214,6 @@ export function CategoryPage() {
                       <div className="flex items-start justify-between mb-2 pr-8">
                         <div>
                             <h3 className="font-bold text-lg text-white">{sub.nome}</h3>
-                            {/* Mostrar qual grade está vinculada se houver */}
                             {sub.grade_id && (
                                 <div className="flex items-center gap-1 mt-1 text-emerald-400 text-xs font-medium">
                                     <GridIcon className="h-3 w-3" />

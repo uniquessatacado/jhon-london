@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -79,9 +79,18 @@ export function NewProductPage() {
   const precoAtacadoGeral = watch('preco_atacado_geral') || 0;
   const precoAtacadoGrade = watch('preco_atacado_grade') || 0;
   
-  // Watchers para validação em tempo real
-  const variacoesValues = watch('variacoes');
-  const composicaoAtacadoWatch = watch('composicao_atacado');
+  // CORREÇÃO CRÍTICA: useWatch para garantir reatividade total na tabela
+  const composicaoAtacadoValues = useWatch({
+    control,
+    name: "composicao_atacado",
+    defaultValue: []
+  });
+  
+  const variacoesValues = useWatch({
+    control,
+    name: "variacoes",
+    defaultValue: []
+  });
 
   // --- LÓGICA 1: GRADE E VARIAÇÕES (CRÍTICO) ---
   const selectedGridObj = useMemo(() => {
@@ -141,6 +150,7 @@ export function NewProductPage() {
   // Inicializar composição quando trocar a grade do pacote
   useEffect(() => {
     if (gradeAtacadoObj) {
+        // Resetar apenas se a grade mudar
         const initComposicao = gradeAtacadoObj.tamanhos.map(t => ({
             tamanho: t.tamanho,
             quantidade: 1 
@@ -149,10 +159,10 @@ export function NewProductPage() {
     }
   }, [selectedGradeAtacadoId, gradeAtacadoObj, replaceComposicao]);
 
-  const totalPecasPacote = useMemo(() => {
-      if (!composicaoAtacadoWatch) return 0;
-      return composicaoAtacadoWatch.reduce((acc: number, curr: any) => acc + (Number(curr?.quantidade) || 0), 0);
-  }, [composicaoAtacadoWatch]);
+  // CÁLCULO DIRETO (SEM useMemo para evitar stale state)
+  const totalPecasPacote = composicaoAtacadoValues 
+    ? composicaoAtacadoValues.reduce((acc: number, curr: any) => acc + (Number(curr?.quantidade) || 0), 0)
+    : 0;
 
   const valorTotalPacote = useMemo(() => {
       const precoUnitario = usarPrecoUnico ? Number(precoAtacadoGeral) : Number(precoAtacadoGrade);
@@ -169,14 +179,12 @@ export function NewProductPage() {
                     duration: 5000,
                 });
                 
-                // Scroll para a tabela
                 const tableElement = document.getElementById('variations-table');
                 tableElement?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                return; // Impede o envio
+                return;
             }
         }
     }
-
     createProduct(data);
   };
 
@@ -269,12 +277,10 @@ export function NewProductPage() {
                             </TableHeader>
                             <TableBody className="bg-black/20">
                                 {variacaoFields.map((field: any, index) => {
-                                    // Lógica visual para SKU vs EAN
                                     const currentEan = variacoesValues?.[index]?.codigo_barras;
                                     const currentSku = variacoesValues?.[index]?.sku;
                                     const isMissingBoth = !currentEan && !currentSku;
                                     
-                                    // Se tem EAN, SKU é opcional. Se não tem EAN, SKU é obrigatório.
                                     const skuPlaceholder = currentEan ? "Opcional (tem EAN)" : "Obrigatório s/ EAN";
                                     const skuBorderClass = isMissingBoth ? "focus:border-red-500/50 border-red-500/30 bg-red-500/5" : "bg-black/40 border-white/10 focus:bg-white/10";
                                     const eanBorderClass = isMissingBoth ? "focus:border-red-500/50 border-red-500/30 bg-red-500/5" : "bg-black/40 border-white/10 focus:bg-white/10";
@@ -524,7 +530,7 @@ export function NewProductPage() {
                                                                 type="number" 
                                                                 min="0"
                                                                 className="h-7 w-20 ml-auto bg-black/40 border-white/10 text-right"
-                                                                {...register(`composicao_atacado.${idx}.quantidade`)}
+                                                                {...register(`composicao_atacado.${idx}.quantidade`, { valueAsNumber: true })}
                                                             />
                                                         </TableCell>
                                                     </TableRow>

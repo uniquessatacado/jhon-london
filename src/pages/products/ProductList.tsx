@@ -41,14 +41,6 @@ export function ProductListPage() {
 
   const { data: subcategories } = useSubcategories(filterCat !== 'all' ? Number(filterCat) : null);
 
-  const categoryMap = useMemo(() => {
-    if (!categories) return {};
-    return categories.reduce((acc, cat) => {
-        acc[cat.id] = cat.nome;
-        return acc;
-    }, {} as Record<number, string>);
-  }, [categories]);
-
   const formatCurrency = (value: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
   const handleViewProduct = (product: Product) => {
@@ -139,7 +131,6 @@ export function ProductListPage() {
           ))
         ) : filteredProducts.length > 0 ? (
           filteredProducts.map(product => {
-            const categoryName = categoryMap[product.categoria_id];
             return (
               <TableRow key={product.id} className="border-white/5 hover:bg-white/[0.04] transition-colors group">
                 <TableCell className="pl-6 py-4">
@@ -157,7 +148,7 @@ export function ProductListPage() {
                 <TableCell><span className="font-medium text-white group-hover:text-emerald-400 transition-colors">{product.nome}</span></TableCell>
                 <TableCell>
                      <div className="flex flex-col">
-                        <span className="text-sm font-medium text-gray-300">{categoryName || '-'}</span>
+                        <span className="text-sm font-medium text-gray-300">{product.categoria_nome || '-'}</span>
                         <span className="text-xs text-muted-foreground">{product.subcategoria_nome || '-'}</span> 
                     </div>
                 </TableCell>

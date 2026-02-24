@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Package, Tag, Ruler, FileText, Grid as GridIcon, Video, Loader2 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useProductDetails } from '@/hooks/use-product-details';
+import { useMemo } from 'react';
 
 interface ViewProductDialogProps {
   productId: number | null;
@@ -19,6 +20,21 @@ const ViewProductDialogContent = ({ product }: { product: Product }) => {
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0);
 
   const videoSrc = product.video_url || product.video;
+
+  const variacoesComDimensoes = useMemo(() => {
+    if (!product.variacoes) return [];
+    const dimensoes = product.dimensoes_grade || [];
+    return product.variacoes.map(v => {
+      const dim = dimensoes.find(d => d.tamanho === v.tamanho);
+      return {
+        ...v,
+        peso_kg: dim?.peso_kg,
+        altura_cm: dim?.altura_cm,
+        largura_cm: dim?.largura_cm,
+        comprimento_cm: dim?.comprimento_cm,
+      };
+    });
+  }, [product]);
 
   return (
     <>
@@ -179,7 +195,7 @@ const ViewProductDialogContent = ({ product }: { product: Product }) => {
               <TabsContent value="dims" className="mt-0">
                    <Card className="bg-white/5 border-white/10">
                       <CardContent className="p-0">
-                          {product.variacoes && product.variacoes.length > 0 ? (
+                          {variacoesComDimensoes && variacoesComDimensoes.length > 0 ? (
                               <Table>
                                   <TableHeader>
                                       <TableRow className="border-white/10 hover:bg-transparent">
@@ -191,7 +207,7 @@ const ViewProductDialogContent = ({ product }: { product: Product }) => {
                                       </TableRow>
                                   </TableHeader>
                                   <TableBody>
-                                      {product.variacoes.map((v, i) => (
+                                      {variacoesComDimensoes.map((v, i) => (
                                           <TableRow key={i} className="border-white/5 hover:bg-white/5">
                                               <TableCell className="font-bold">{v.tamanho}</TableCell>
                                               <TableCell>{v.peso_kg || '-'}</TableCell>

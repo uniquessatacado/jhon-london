@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, MoreHorizontal, Pencil, Trash2, Search, Filter, X, PackageOpen, Box, Eye } from 'lucide-react';
+import { PlusCircle, MoreHorizontal, Pencil, Trash2, Search, Filter, X, PackageOpen, Eye, PackagePlus } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -11,7 +11,8 @@ import { useProducts } from '@/hooks/use-products';
 import { useCategories, useSubcategories } from '@/hooks/use-categories';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Product } from '@/types';
-import { ViewProductDialog } from '../../components/products/ViewProductDialog';
+import { ViewProductDialog } from '@/components/products/ViewProductDialog';
+import { StockReplenishmentDialog } from '@/components/products/StockReplenishmentDialog';
 
 export function ProductListPage() {
   const { data: products, isLoading, isError } = useProducts();
@@ -27,6 +28,10 @@ export function ProductListPage() {
   const [viewProduct, setViewProduct] = useState<Product | null>(null);
   const [isViewOpen, setIsViewOpen] = useState(false);
 
+  // Estado do Modal de Reposição
+  const [replenishProduct, setReplenishProduct] = useState<Product | null>(null);
+  const [isReplenishOpen, setIsReplenishOpen] = useState(false);
+
   // Subcategorias filtradas pela categoria selecionada no filtro
   const { data: subcategories } = useSubcategories(filterCat !== 'all' ? Number(filterCat) : null);
 
@@ -37,6 +42,11 @@ export function ProductListPage() {
   const handleViewProduct = (product: Product) => {
     setViewProduct(product);
     setIsViewOpen(true);
+  };
+
+  const handleReplenishProduct = (product: Product) => {
+    setReplenishProduct(product);
+    setIsReplenishOpen(true);
   };
 
   // Lógica de Filtragem no Frontend
@@ -185,7 +195,9 @@ export function ProductListPage() {
                             <div className="flex flex-col gap-1">
                                 <span className="font-medium text-white group-hover:text-emerald-400 transition-colors">{product.nome}</span>
                                 <div className="flex items-center gap-2">
-                                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground bg-white/5 px-1.5 py-0.5 rounded border border-white/5">SKU: {product.sku || 'N/A'}</span>
+                                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground bg-white/5 px-1.5 py-0.5 rounded border border-white/5">
+                                      SKU: {product.variacoes?.[0]?.sku || product.sku || 'N/A'}
+                                    </span>
                                 </div>
                             </div>
                         </TableCell>
@@ -224,6 +236,9 @@ export function ProductListPage() {
                               <DropdownMenuLabel>Ações</DropdownMenuLabel>
                               <DropdownMenuItem onClick={() => handleViewProduct(product)} className="focus:bg-white/10 rounded-lg cursor-pointer">
                                 <Eye className="mr-2 h-4 w-4" /> Visualizar
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleReplenishProduct(product)} className="focus:bg-white/10 rounded-lg cursor-pointer">
+                                <PackagePlus className="mr-2 h-4 w-4" /> Repor Estoque
                               </DropdownMenuItem>
                               <DropdownMenuItem asChild className="focus:bg-white/10 rounded-lg cursor-pointer">
                                 <Link to={`/produtos/editar/${product.id}`}>
@@ -265,6 +280,13 @@ export function ProductListPage() {
         product={viewProduct} 
         open={isViewOpen} 
         onOpenChange={setIsViewOpen} 
+      />
+
+      {/* Modal de Reposição */}
+      <StockReplenishmentDialog
+        product={replenishProduct}
+        open={isReplenishOpen}
+        onOpenChange={setIsReplenishOpen}
       />
     </div>
   );

@@ -86,6 +86,9 @@ export function NewProductPage() {
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
 
+  // Ref para controlar se os dados iniciais já foram carregados para evitar sobrescrita pela lógica de grade
+  const initialDataLoaded = useRef(false);
+
   useEffect(() => {
     api.get('/configuracoes/qtd_minima_atacado_geral')
       .then(res => setGlobalAtacadoMin(res.data?.valor || '10'))
@@ -98,9 +101,9 @@ export function NewProductPage() {
         // Resetar formulário com dados da API
         reset({
             nome: productData.nome,
-            grade_id: String(productData.grade_id),
-            subcategoria_id: String(productData.subcategoria_id),
-            marca_id: String(productData.marca_id),
+            grade_id: productData.grade_id ? String(productData.grade_id) : "",
+            subcategoria_id: productData.subcategoria_id ? String(productData.subcategoria_id) : "",
+            marca_id: productData.marca_id ? String(productData.marca_id) : "",
             ncm: productData.ncm,
             cfop_padrao: productData.cfop_padrao,
             cst_icms: productData.cst_icms,
@@ -108,10 +111,10 @@ export function NewProductPage() {
             unidade_medida: productData.unidade_medida,
             preco_custo: productData.preco_custo,
             preco_varejo: productData.preco_varejo,
-            habilita_atacado_geral: productData.habilita_atacado_geral,
+            habilita_atacado_geral: !!productData.habilita_atacado_geral, // Ensure boolean
             preco_atacado_geral: productData.preco_atacado_geral,
-            habilita_atacado_grade: productData.habilita_atacado_grade,
-            usar_preco_atacado_unico: productData.usar_preco_atacado_unico,
+            habilita_atacado_grade: !!productData.habilita_atacado_grade, // Ensure boolean
+            usar_preco_atacado_unico: !!productData.usar_preco_atacado_unico, // Ensure boolean
             grade_atacado_id: productData.grade_atacado_id ? String(productData.grade_atacado_id) : '',
             preco_atacado_grade: productData.preco_atacado_grade,
             variacoes: productData.variacoes?.map(v => ({
@@ -120,7 +123,7 @@ export function NewProductPage() {
                 sku: v.sku,
                 codigo_barras: v.codigo_barras
             })) || [],
-            // Parse do JSON da composição se necessário, ou usar direto se a API já retornar objeto
+            // Parse do JSON da composição
             composicao_atacado: typeof productData.composicao_atacado_grade === 'string' 
                 ? JSON.parse(productData.composicao_atacado_grade || "[]") 
                 : (productData.composicao_atacado_grade || [])
@@ -133,12 +136,14 @@ export function NewProductPage() {
         
         if (productData.imagens_galeria && productData.imagens_galeria.length > 0) {
             setGalleryPreviews(productData.imagens_galeria);
-            setExistingGallery(productData.imagens_galeria); // Guarda referência das originais
+            setExistingGallery(productData.imagens_galeria); 
         }
 
         if (productData.video) {
             setVideoPreview(productData.video);
         }
+
+        initialDataLoaded.current = true;
     }
   }, [productData, reset]);
   
@@ -174,25 +179,26 @@ export function NewProductPage() {
   }, [grids, selectedGridId]);
 
   // Ao selecionar uma grade, preenche variações APENAS SE não estivermos editando OU se a grade mudou
-  // No modo edição, as variações já vêm preenchidas no useEffect do reset.
-  // Precisamos detectar MUDANÇA manual de grade.
   useEffect(() => {
     if (!selectedGridObj) return;
+
+    // Se estivermos em modo de edição e os dados iniciais acabaram de carregar, 
+    // verificamos se a grade salva corresponde ao que carregou.
+    // O problema é que o watch('grade_id') dispara logo após o reset.
+    // Se o reset preencheu variações, não queremos sobrescrever com zeros.
     
-    // Se estivermos carregando dados iniciais do produto, não substitua.
-    // O reset() cuida disso. Só substitua se o usuário mudar manualmente.
-    // Para simplificar: se o formulário estiver "dirty" (mexido) ou se não tiver variações
-    // Mas o reset marca como dirty? Não.
-    // Vamos verificar se as variações atuais correspondem à grade selecionada.
+    // Solução robusta:
+    // Comparar os tamanhos atuais (variacoesValues) com os tamanhos da grade selecionada (selectedGridObj).
+    // Se forem iguais em quantidade e nome, ASSUMIMOS QUE ESTÁ CERTO e não resetamos.
+    // Só resetamos se forem diferentes.
     
-    // Se o array de variações estiver vazio ou se os tamanhos forem diferentes da grade selecionada, refaz.
     const currentSizes = variacoesValues.map((v:any) => v.tamanho);
     const newSizes = selectedGridObj.tamanhos.map(t => t.tamanho);
     
     const isDifferent = JSON.stringify(currentSizes) !== JSON.stringify(newSizes);
     
-    // IMPORTANTE: Só resetar se for realmente diferente para não perder dados carregados da API
     if (isDifferent) {
+        // Se realmente mudou a grade (ou é nova criação), reseta para zerado
         const newVariations = selectedGridObj.tamanhos.map(t => ({
             tamanho: t.tamanho,
             estoque: 0,
@@ -201,7 +207,7 @@ export function NewProductPage() {
         }));
         replaceVariacoes(newVariations);
     }
-  }, [selectedGridId, selectedGridObj, replaceVariacoes]); // Removido variacoesValues do dep para evitar loop, verificação feita dentro
+  }, [selectedGridId, selectedGridObj, replaceVariacoes]); // variacoesValues removed from deps to avoid loop
 
   const handleBulkStockApply = () => {
     if (!bulkStockQty) return;
@@ -212,19 +218,12 @@ export function NewProductPage() {
   };
 
   // --- LÓGICA DE CLASSIFICAÇÃO ---
-  // Só aplica defaults fiscais se for NOVO produto ou se o usuário mudar a subcategoria manualmente.
-  // Como detectar mudança manual? Comparar com o valor original vindo da API é complexo.
-  // Vamos assumir: se os campos fiscais estiverem vazios, preenche.
   useEffect(() => {
     if (selectedSubcategoryId && allSubcategories) {
       const sub = allSubcategories.find(s => String(s.id) === String(selectedSubcategoryId));
       const currentNcm = watch('ncm');
       
-      // Se ncm estiver vazio (usuário acabou de selecionar sub), preenche.
-      // Se já tiver valor (veio da API ou digitado), não sobrescreve agressivamente, 
-      // a menos que queiramos forçar o padrão da subcategoria.
-      // Melhor: preencher apenas se estivermos criando (sem ID) ou se o campo estiver vazio.
-      
+      // Só preenche defaults se não estiver editando OU se o campo estiver vazio
       if (sub && (!isEditMode || !currentNcm)) {
         setValue('ncm', sub.ncm);
         setValue('cfop_padrao', sub.cfop_padrao);
@@ -243,7 +242,6 @@ export function NewProductPage() {
 
   useEffect(() => {
     if (gradeAtacadoObj) {
-        // Mesma lógica da grade principal: só substitui se estiver diferente ou vazio
         const currentSizes = composicaoAtacadoValues.map((v:any) => v.tamanho);
         const newSizes = gradeAtacadoObj.tamanhos.map(t => t.tamanho);
         const isDifferent = JSON.stringify(currentSizes) !== JSON.stringify(newSizes);
@@ -304,46 +302,14 @@ export function NewProductPage() {
   };
 
   const removeGalleryImage = (index: number) => {
-    // Se o índice for menor que existingGallery.length, é uma imagem antiga.
-    // Mas aqui galleryPreviews mistura antigas e novas.
-    // O ideal é manter estados separados ou saber qual é qual.
-    // Simplificação: galleryPreviews é a fonte da verdade visual.
-    
-    // Se removemos, precisamos saber se estamos removendo um File ou uma URL antiga.
-    // Vamos reconstruir a lógica:
-    // galleryFiles contém APENAS NOVOS arquivos.
-    // existingGallery contém URLs vindas do banco.
-    // galleryPreviews contém TUDO (URLs antigas + blobs novos).
-    
-    // Vamos achar quem é quem.
     const itemToRemove = galleryPreviews[index];
     const isOldImage = existingGallery.includes(itemToRemove);
     
-    if (isOldImage) {
-        // Remover do existingGallery (simula deleção)
-        // Nota: A API precisaria saber quais manter. O jeito mais fácil é reenviar as que ficaram se a API suportar,
-        // mas FormData envia arquivos. Normalmente APIs que recebem updates mantém o que não foi enviado se não for explícito.
-        // Neste caso, vamos assumir que o backend não deleta imagens da galeria a menos que enviemos uma lista de "imagens para manter" ou "imagens para deletar".
-        // Para simplificar: apenas visualmente remove. Se o backend precisar, teríamos que implementar lógica de "delete_images".
-        // Vamos apenas remover do visual por enquanto.
-        setGalleryPreviews(prev => prev.filter((_, i) => i !== index));
-        // TODO: Backend support for deleting specific gallery images on update
-    } else {
-        // É um arquivo novo. Precisamos achar qual File corresponde.
-        // Isso é difícil pois só temos o preview URL.
-        // Vamos assumir ordem: [Antigas..., Novas...]
-        // Se temos N antigas, e removemos índice I > N, é o arquivo (I - N).
-        // Mas se removemos uma antiga antes, o índice muda.
-        
-        // RESTART SIMPLES PARA EVITAR BUGS:
-        setGalleryPreviews(prev => prev.filter((_, i) => i !== index));
-        
-        // Tentar remover do array de files se for novo
-        // Essa lógica de "mixed array" é complexa. 
-        // Vamos simplificar: filter visual é mandatório. Filter do File[] é best effort.
+    setGalleryPreviews(prev => prev.filter((_, i) => i !== index));
+    
+    if (!isOldImage) {
         const numExisting = galleryPreviews.filter(p => existingGallery.includes(p)).length;
         if (index >= numExisting) {
-            // É novo
             const fileIndex = index - numExisting;
             setGalleryFiles(prev => prev.filter((_, i) => i !== fileIndex));
         }
@@ -386,7 +352,6 @@ export function NewProductPage() {
         imagem_principal_file: mainImageFile,
         imagens_galeria_files: galleryFiles,
         video_file: videoFile,
-        // Passar flag se necessário ou deixar a API decidir
     };
 
     if (isEditMode) {

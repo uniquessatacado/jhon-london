@@ -1,26 +1,20 @@
-# REGRAS DE OURO - NUNCA VIOLAR
+# REGRAS ABSOLUTAS - LEIA ANTES DE COMEÇAR
 
-## ❌ PROIBIDO FAZER SEM PERMISSÃO EXPLÍCITA:
-1. NUNCA deletar arquivos .tsx, .ts, .css existentes
-2. NUNCA remover funcionalidades já implementadas (upload, vídeo, etc.)
-3. NUNCA alterar rotas existentes sem confirmar
-4. NUNCA simplificar/remover campos de formulário
-5. NUNCA mudar nome de arquivos que estão sendo importados em outros lugares
+## 🚫 PROIBIDO (SE FIZER, QUEBRA O SISTEMA):
+1. NUNCA deletar arquivos .tsx, .ts existentes
+2. NUNCA remover funcionalidades já implementadas (upload de imagem/vídeo, abas fiscais, etc.)
+3. NUNCA simplificar formulários removendo campos
+4. NUNCA alterar nomes de componentes exportados
+5. NUNCA mudar rotas existentes
 
-## ⚠️ ANTES DE QUALQUER ALTERAÇÃO:
-1. Ler o arquivo existente completo antes de modificar
-2. Entender todas as funcionalidades atuais
-3. Manter TODOS os imports existentes
-4. Preservar TODOS os estados (useState) existentes
-5. Preservar TODOS os useEffect existentes
+## ✅ OBRIGATÓRIO FAZER:
+1. Ler arquivo existente completo antes de modificar
+2. Manter TODOS os imports, estados (useState), useEffect existentes
+3. Adicionar novas funcionalidades como código NOVO, não substituindo
+4. Testar se dados estão sendo salvos/carregados corretamente
+5. Validar que não perdeu funcionalidades anteriores
 
-## ✅ O QUE FAZER:
-1. ADICIONAR novas funcionalidades em arquivos SEPARADOS quando possível
-2. EDITAR arquivos existentes mantendo o que já funciona
-3. Usar extends/inheritance ao invés de substituir
-4. Comentar o que foi alterado
-
-## 🚨 SE PEDIREM "CORRIGIR":
-- Corrigir = arrumar erro, não reescrever do zero
-- Manter todas as funcionalidades existentes
-- Não remover campos, apenas preenchê-los corretamente
+## ⚠️ ATENÇÃO ESPECIAL:
+- Upload de imagem e vídeo deve continuar funcionando exatamente como antes
+- Aba Fiscal, Dimensões, Mídia devem permanecer intactas
+- Quando editar, TODOS os dados devem voltar preenchidos (grade, preços, toggles, etc.)

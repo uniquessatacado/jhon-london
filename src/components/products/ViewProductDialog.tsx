@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Package, Tag, Ruler, FileText, Grid as GridIcon } from 'lucide-react';
+import { Package, Tag, Ruler, FileText, Grid as GridIcon, Video } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface ViewProductDialogProps {
@@ -16,8 +16,8 @@ interface ViewProductDialogProps {
 export function ViewProductDialog({ product, open, onOpenChange }: ViewProductDialogProps) {
   if (!product) return null;
 
-  const formatCurrency = (val: number) => 
-    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
+  const formatCurrency = (val: number | undefined) => 
+    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -36,7 +36,7 @@ export function ViewProductDialog({ product, open, onOpenChange }: ViewProductDi
             <div>
                <DialogTitle className="text-2xl font-bold">{product.nome}</DialogTitle>
                <DialogDescription className="text-muted-foreground flex items-center gap-2 mt-1">
-                 <Badge variant="outline" className="text-emerald-400 border-emerald-500/30">SKU: {product.sku || 'N/A'}</Badge>
+                 <Badge variant="outline" className="text-emerald-400 border-emerald-500/30">SKU: {product.sku || product.variacoes?.[0]?.sku || 'N/A'}</Badge>
                  <span>•</span>
                  <span>{product.categoria_nome || 'Sem Categoria'}</span>
                </DialogDescription>
@@ -59,6 +59,11 @@ export function ViewProductDialog({ product, open, onOpenChange }: ViewProductDi
                     <TabsTrigger value="dims" className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-emerald-500 rounded-none pb-3 pt-2 px-1 text-muted-foreground data-[state=active]:text-emerald-400">
                         <Ruler className="mr-2 h-4 w-4" /> Dimensões
                     </TabsTrigger>
+                    {product.video && (
+                        <TabsTrigger value="media" className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-emerald-500 rounded-none pb-3 pt-2 px-1 text-muted-foreground data-[state=active]:text-emerald-400">
+                            <Video className="mr-2 h-4 w-4" /> Vídeo
+                        </TabsTrigger>
+                    )}
                 </TabsList>
             </div>
 
@@ -187,6 +192,18 @@ export function ViewProductDialog({ product, open, onOpenChange }: ViewProductDi
                         </CardContent>
                     </Card>
                 </TabsContent>
+
+                {product.video && (
+                    <TabsContent value="media" className="mt-0">
+                         <div className="aspect-video w-full rounded-lg overflow-hidden border border-white/10 bg-black">
+                             <video 
+                                src={product.video} 
+                                controls 
+                                className="w-full h-full"
+                             />
+                         </div>
+                    </TabsContent>
+                )}
             </ScrollArea>
         </Tabs>
       </DialogContent>

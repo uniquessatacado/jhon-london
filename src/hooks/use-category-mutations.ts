@@ -69,15 +69,16 @@ export function useCreateSubcategory() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: createSubcategory,
-    onSuccess: (_, variables) => {
+    onSuccess: () => {
       toast.success('Subcategoria criada com sucesso!');
-      queryClient.invalidateQueries({ queryKey: ['subcategories', variables.categoria_id] });
+      // Invalidação ampla para garantir a atualização
+      queryClient.invalidateQueries({ queryKey: ['subcategories'] });
+      queryClient.invalidateQueries({ queryKey: ['all-subcategories'] });
     },
     onError: () => toast.error('Falha ao criar subcategoria.'),
   });
 }
 
-// NOVO: Update Subcategory
 async function updateSubcategory({ id, ...updatedSub }: Partial<Subcategory> & { id: number }): Promise<Subcategory> {
   const { data } = await api.put(`/subcategorias/${id}`, {
     ...updatedSub,
@@ -90,16 +91,11 @@ export function useUpdateSubcategory() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: updateSubcategory,
-    onSuccess: (_, variables) => {
+    onSuccess: () => {
       toast.success('Subcategoria atualizada com sucesso!');
-      // Invalida a query específica da categoria pai para forçar o refetch
-      if (variables.categoria_id) {
-          queryClient.invalidateQueries({ queryKey: ['subcategories', variables.categoria_id] });
-      } else {
-          // Fallback para invalidar tudo se não tiver o ID por algum motivo
-          queryClient.invalidateQueries({ queryKey: ['subcategories'] });
-      }
-      queryClient.invalidateQueries({ queryKey: ['categories'] }); 
+      // Invalidação ampla para garantir a atualização
+      queryClient.invalidateQueries({ queryKey: ['subcategories'] });
+      queryClient.invalidateQueries({ queryKey: ['all-subcategories'] });
     },
     onError: () => toast.error('Falha ao atualizar subcategoria.'),
   });

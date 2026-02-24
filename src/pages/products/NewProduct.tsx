@@ -15,6 +15,7 @@ import { useBrands } from '@/hooks/use-brands';
 import { useGrids } from '@/hooks/use-grids';
 import { useCreateProduct, useUpdateProduct } from '@/hooks/use-create-product';
 import { useProductDetails } from '@/hooks/use-product-details';
+import { useProducts } from '@/hooks/use-products';
 import { api } from '@/lib/api';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -29,8 +30,8 @@ const MobileVariationCard = ({ field, index, register, duplicateCheck }: any) =>
   const currentEan = field.codigo_barras;
   const currentSku = field.sku;
   const isMissingBoth = !currentEan && !currentSku;
-  const isSkuDuplicate = currentSku && duplicateCheck.duplicateSkus.includes(currentSku);
-  const isEanDuplicate = currentEan && duplicateCheck.duplicateEans.includes(currentEan);
+  const isSkuDuplicate = currentSku && duplicateCheck.allDuplicateSkus.includes(currentSku);
+  const isEanDuplicate = currentEan && duplicateCheck.allDuplicateEans.includes(currentEan);
 
   const skuBorder = isMissingBoth ? "border-red-500/50 bg-red-500/5" : isSkuDuplicate ? "border-red-500 text-red-200" : "bg-black/40 border-white/10";
   const eanBorder = isMissingBoth ? "border-red-500/50 bg-red-500/5" : isEanDuplicate ? "border-red-500 text-red-200" : "bg-black/40 border-white/10";
@@ -47,12 +48,12 @@ const MobileVariationCard = ({ field, index, register, duplicateCheck }: any) =>
       <div className="space-y-2">
         <Label className="text-xs">SKU</Label>
         <Input {...register(`variacoes.${index}.sku`)} className={`${skuBorder} uppercase h-12`} placeholder={currentEan ? "Opcional" : "Obrigatório"} />
-        {isSkuDuplicate && <p className="text-xs text-red-400">SKU duplicado</p>}
+        {isSkuDuplicate && <p className="text-xs text-red-400">SKU já existe</p>}
       </div>
       <div className="space-y-2">
         <Label className="text-xs">Cód. Barras</Label>
         <Input {...register(`variacoes.${index}.codigo_barras`)} className={`${eanBorder} h-12`} placeholder="EAN-13" />
-        {isEanDuplicate && <p className="text-xs text-red-400">Cód. Barras duplicado</p>}
+        {isEanDuplicate && <p className="text-xs text-red-400">Cód. Barras já existe</p>}
       </div>
     </div>
   );
@@ -90,13 +91,14 @@ export function NewProductPage() {
   const { data: brands } = useBrands();
   const { data: grids } = useGrids();
   const { data: allSubcategories } = useAllSubcategories();
+  const { data: allProducts } = useProducts();
   
   const { mutate: createProduct, isPending: isCreating } = useCreateProduct();
   const { mutate: updateProduct, isPending: isUpdating } = useUpdateProduct();
   const { data: productData, isLoading: isLoadingData } = useProductDetails(fetchId || undefined);
 
+  const [existingIdentifiers, setExistingIdentifiers] = useState<{skus: string[], eans: string[]}>({ skus: [], eans: [] });
   const [globalAtacadoMin, setGlobalAtacadoMin] = useState('10');
-  const [bulkStockQty, setBulkStockQty] = useState(''); 
 
   const [mainImageFile, setMainImageFile] = useState<File | null>(null);
   const [mainImagePreview, setMainImagePreview] = useState<string | null>(null);
@@ -111,8 +113,33 @@ export function NewProductPage() {
   const videoInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    api.get('/configuracoes/qtd_minima_atacado_geral').then(res => setGlobalAtacadoMin(res.data?.valor || '10')).catch(() => {});
+    api.get('/configuracoes/qtd_minima_atacado_geral')
+      .then(res => setGlobalAtacadoMin(res.data?.valor || '10'))
+      .catch(() => {
+        console.error("Failed to fetch global wholesale minimum quantity.");
+      });
   }, []);
+
+  useEffect(() => {
+    if (allProducts) {
+        const skus: string[] = [];
+        const eans: string[] = [];
+        
+        const productsToScan = isEditMode 
+            ? allProducts.filter(p => String(p.id) !== id) 
+            : allProducts;
+
+        productsToScan.forEach(p => {
+            if (p.variacoes && p.variacoes.length > 0) {
+                p.variacoes.forEach(v => {
+                    if (v.sku) skus.push(v.sku.trim());
+                    if (v.codigo_barras) eans.push(v.codigo_barras.trim());
+                });
+            }
+        });
+        setExistingIdentifiers({ skus: [...new Set(skus)], eans: [...new Set(eans)] });
+    }
+  }, [allProducts, isEditMode, id]);
 
   useEffect(() => {
     if (productData) {
@@ -172,13 +199,21 @@ export function NewProductPage() {
   const variacoesValues = useWatch({ control, name: "variacoes", defaultValue: [] });
 
   const duplicateCheck = useMemo(() => {
-    const skus = variacoesValues?.map((v: any) => v.sku?.trim()).filter(Boolean) || [];
-    const eans = variacoesValues?.map((v: any) => v.codigo_barras?.trim()).filter(Boolean) || [];
+    const currentVariations = variacoesValues || [];
+    const skusInForm = currentVariations.map((v: any) => v.sku?.trim()).filter(Boolean);
+    const eansInForm = currentVariations.map((v: any) => v.codigo_barras?.trim()).filter(Boolean);
+
+    const duplicateSkusInForm = skusInForm.filter((item: string, index: number) => skusInForm.indexOf(item) !== index);
+    const duplicateEansInForm = eansInForm.filter((item: string, index: number) => eansInForm.indexOf(item) !== index);
+
+    const conflictingSkus = skusInForm.filter(sku => existingIdentifiers.skus.includes(sku));
+    const conflictingEans = eansInForm.filter(ean => existingIdentifiers.eans.includes(ean));
+
     return {
-      duplicateSkus: skus.filter((item: string, index: number) => skus.indexOf(item) !== index),
-      duplicateEans: eans.filter((item: string, index: number) => eans.indexOf(item) !== index)
+        allDuplicateSkus: [...new Set([...duplicateSkusInForm, ...conflictingSkus])],
+        allDuplicateEans: [...new Set([...duplicateEansInForm, ...conflictingEans])]
     };
-  }, [variacoesValues]);
+  }, [variacoesValues, existingIdentifiers]);
 
   const selectedGridObj = useMemo(() => grids?.find(g => String(g.id) === String(selectedGridId)), [grids, selectedGridId]);
 
@@ -255,7 +290,11 @@ export function NewProductPage() {
   const onSubmit = (data: any) => {
     if (!data.grade_id) return toast.error('Grade do Produto é obrigatória');
     if (data.variacoes?.some((v: any) => !v.sku && !v.codigo_barras)) return toast.error('Toda variação precisa de SKU ou Cód. Barras.');
-    if (duplicateCheck.duplicateSkus.length > 0 || duplicateCheck.duplicateEans.length > 0) return toast.error('Códigos duplicados detectados.');
+    if (duplicateCheck.allDuplicateSkus.length > 0 || duplicateCheck.allDuplicateEans.length > 0) {
+        return toast.error('SKU ou Cód. de Barras já existe.', {
+            description: 'Verifique os campos em vermelho. Eles já estão em uso por outro produto ou duplicados neste formulário.'
+        });
+    }
 
     const payload = { ...data, id: isEditMode ? Number(id) : undefined, imagem_principal_file: mainImageFile, imagens_galeria_files: galleryFiles, video_file: videoFile };
     isEditMode ? updateProduct(payload) : createProduct(payload);
@@ -312,8 +351,8 @@ export function NewProductPage() {
                                 <TableHeader className="bg-black/40"><TableRow className="border-white/10 hover:bg-transparent"><TableHead className="w-[100px] text-emerald-400 font-bold">Tamanho</TableHead><TableHead className="w-[150px]">Estoque</TableHead><TableHead>SKU</TableHead><TableHead>Cód. Barras</TableHead></TableRow></TableHeader>
                                 <TableBody className="bg-black/20">
                                     {variacaoFields.map((field: any, index) => {
-                                        const isSkuDuplicate = field.sku && duplicateCheck.duplicateSkus.includes(field.sku);
-                                        const isEanDuplicate = field.codigo_barras && duplicateCheck.duplicateEans.includes(field.codigo_barras);
+                                        const isSkuDuplicate = field.sku && duplicateCheck.allDuplicateSkus.includes(field.sku);
+                                        const isEanDuplicate = field.codigo_barras && duplicateCheck.allDuplicateEans.includes(field.codigo_barras);
                                         return (
                                             <TableRow key={field.id} className="border-white/10 hover:bg-white/5">
                                                 <TableCell><Badge variant="outline" className="text-emerald-400 border-emerald-500/30 bg-emerald-500/10 px-3 py-1">{field.tamanho}</Badge></TableCell>
@@ -412,6 +451,27 @@ export function NewProductPage() {
                 <div className="grid grid-cols-3 gap-2">
                     {galleryPreviews.map((preview, idx) => <div key={idx} className="relative aspect-square rounded-lg overflow-hidden border border-white/10 group"><img src={preview} alt={`Galeria ${idx}`} className="w-full h-full object-cover" /><Button type="button" variant="destructive" size="icon" className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100" onClick={() => removeGalleryImage(idx)}><X className="h-3 w-3" /></Button></div>)}
                     {galleryPreviews.length < 5 && <div className="aspect-square rounded-lg border-2 border-dashed border-white/10 flex flex-col items-center justify-center cursor-pointer hover:bg-white/5" onClick={() => galleryInputRef.current?.click()}><input type="file" ref={galleryInputRef} className="hidden" accept="image/*" multiple onChange={handleGalleryChange} /><Upload className="h-6 w-6 text-muted-foreground mb-1" /><span className="text-[10px] text-muted-foreground">Adicionar</span></div>}
+                </div>
+              </div>
+              <Separator className="bg-white/10" />
+              <div className="space-y-3">
+                <Label className="flex items-center gap-2"><Video className="h-4 w-4 text-emerald-400" /> Vídeo do Produto</Label>
+                <div className={`border-2 border-dashed rounded-xl p-4 flex flex-col items-center justify-center transition-all cursor-pointer hover:bg-white/5 ${videoPreview ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-white/10'}`} onClick={() => videoInputRef.current?.click()}>
+                    <input type="file" ref={videoInputRef} className="hidden" accept="video/*" onChange={(e) => handleFileChange(e, setVideoFile, setVideoPreview, 50, 'video')} />
+                    {videoPreview ? (
+                        <div className="relative group w-full aspect-video">
+                            <video src={videoPreview} className="w-full h-full object-contain rounded-lg" />
+                            <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-lg">
+                                <span className="text-white font-medium flex items-center"><Upload className="mr-2 h-4 w-4" /> Trocar Vídeo</span>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="text-center py-6 text-muted-foreground">
+                            <Upload className="mx-auto h-8 w-8 mb-2 opacity-50" />
+                            <p className="text-sm">Clique para enviar</p>
+                            <p className="text-[10px] opacity-70">Max 50MB</p>
+                        </div>
+                    )}
                 </div>
               </div>
             </CardContent>

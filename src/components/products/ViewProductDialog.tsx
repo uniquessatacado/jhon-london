@@ -115,8 +115,9 @@ const ViewProductDialogContent = ({ product }: { product: Product }) => {
                           <CardContent className="p-4 space-y-2">
                               <span className="text-xs font-medium text-muted-foreground uppercase">Classificação</span>
                               <div className="grid grid-cols-1 gap-1">
-                                  <p><span className="text-muted-foreground">Marca:</span> {product.marca_nome || product.marca_id}</p>
-                                  <p><span className="text-muted-foreground">Subcategoria:</span> {product.subcategoria_nome || product.subcategoria_id}</p>
+                                  <p><span className="text-muted-foreground">Categoria:</span> {product.categoria_nome || '-'}</p>
+                                  <p><span className="text-muted-foreground">Subcategoria:</span> {product.subcategoria_nome || '-'}</p>
+                                  <p><span className="text-muted-foreground">Marca:</span> {product.marca_nome || '-'}</p>
                               </div>
                           </CardContent>
                       </Card>

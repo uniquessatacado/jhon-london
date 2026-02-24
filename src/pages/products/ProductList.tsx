@@ -147,10 +147,10 @@ export function ProductListPage() {
                 <TableCell><span className="text-muted-foreground font-mono text-xs">#{product.id}</span></TableCell>
                 <TableCell><span className="font-medium text-white group-hover:text-emerald-400 transition-colors">{product.nome}</span></TableCell>
                 <TableCell>
-                     <div className="flex flex-col">
-                        <span className="text-sm font-medium text-gray-300">{product.categoria_nome || '-'}</span>
-                        <span className="text-xs text-muted-foreground">{product.subcategoria_nome || '-'}</span> 
-                    </div>
+                    <span className="text-sm font-medium text-gray-300">
+                        {product.categoria_nome ? `${product.categoria_nome} / ` : ''}
+                        {product.subcategoria_nome || '-'}
+                    </span>
                 </TableCell>
                 <TableCell className="text-right">
                     <Badge variant="outline" className={`rounded-lg border px-3 py-1 font-mono ${getTotalStock(product) > product.estoque_minimo ? 'bg-emerald-500/5 text-emerald-400 border-emerald-500/20' : 'bg-red-500/5 text-red-400 border-red-500/20'}`}>

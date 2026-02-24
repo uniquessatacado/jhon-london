@@ -86,7 +86,8 @@ export function NewProductPage() {
       preco_custo: 0,
       preco_varejo: 0,
       preco_atacado_geral: 0,
-      preco_atacado_grade: 0
+      preco_atacado_grade: 0,
+      categoria_id: '',
     }
   });
 
@@ -168,6 +169,7 @@ export function NewProductPage() {
         const formData = {
             nome: isDuplicateMode ? `${productData.nome} - Cópia` : productData.nome,
             grade_id: productData.grade_id ? String(productData.grade_id) : "",
+            categoria_id: productData.categoria_id ? String(productData.categoria_id) : "",
             subcategoria_id: productData.subcategoria_id ? String(productData.subcategoria_id) : "",
             marca_id: productData.marca_id ? String(productData.marca_id) : "",
             ncm: productData.ncm,
@@ -256,6 +258,15 @@ export function NewProductPage() {
         }
     }
   }, [selectedGridObj, replaceVariacoes, variacaoFields, isLoadingData]);
+
+  useEffect(() => {
+    if (selectedSubcategoryId && allSubcategories) {
+      const selectedSub = allSubcategories.find(sub => String(sub.id) === String(selectedSubcategoryId));
+      if (selectedSub) {
+        setValue('categoria_id', String(selectedSub.categoria_id));
+      }
+    }
+  }, [selectedSubcategoryId, allSubcategories, setValue]);
 
   useEffect(() => {
     const shouldFill = (!isEditMode && !isDuplicateMode) || !watch('ncm');
@@ -388,7 +399,14 @@ export function NewProductPage() {
                   <Label htmlFor="nome">Nome do Produto *</Label>
                   <Input id="nome" {...register('nome', { required: true })} className={`bg-black/40 h-14 text-base ${errors.nome ? 'border-red-500' : 'border-white/10'}`} placeholder="Ex: Camiseta Básica Gola V" />
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                   <div className="grid gap-2">
+                      <Label>Categoria *</Label>
+                      <Select value={watch('categoria_id')} disabled>
+                          <SelectTrigger className="bg-black/40 h-14 text-base border-white/10 disabled:opacity-70 disabled:cursor-not-allowed"><SelectValue placeholder="Selecione uma subcategoria..." /></SelectTrigger>
+                          <SelectContent>{categories?.map(cat => (<SelectItem key={cat.id} value={String(cat.id)}>{cat.nome}</SelectItem>))}</SelectContent>
+                      </Select>
+                   </div>
                    <div className="grid gap-2">
                       <Label>Subcategoria *</Label>
                       <Select onValueChange={(value) => setValue('subcategoria_id', value)} value={watch('subcategoria_id')}>

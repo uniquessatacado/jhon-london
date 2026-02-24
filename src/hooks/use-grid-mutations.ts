@@ -1,11 +1,27 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import { Grid } from '@/types';
+import { Grid, GridSize } from '@/types';
 import { toast } from 'sonner';
 
+type CreateGridDTO = {
+  nome: string;
+  tamanhos: Omit<GridSize, 'id'>[];
+};
+
 // --- Create ---
-async function createGrid(newGrid: { nome: string }): Promise<Grid> {
-  const { data } = await api.post('/grades', newGrid);
+async function createGrid(newGrid: CreateGridDTO): Promise<Grid> {
+  // Garantir que números sejam números
+  const payload = {
+    ...newGrid,
+    tamanhos: newGrid.tamanhos.map(t => ({
+      ...t,
+      peso_kg: Number(t.peso_kg),
+      altura_cm: Number(t.altura_cm),
+      largura_cm: Number(t.largura_cm),
+      comprimento_cm: Number(t.comprimento_cm),
+    }))
+  };
+  const { data } = await api.post('/grades', payload);
   return data;
 }
 
@@ -14,31 +30,12 @@ export function useCreateGrid() {
   return useMutation({
     mutationFn: createGrid,
     onSuccess: () => {
-      toast.success('Grade criada com sucesso!');
+      toast.success('Grade e tamanhos criados com sucesso!');
       queryClient.invalidateQueries({ queryKey: ['grids'] });
     },
-    onError: () => {
+    onError: (err) => {
+        console.error(err);
       toast.error('Falha ao criar grade.');
-    },
-  });
-}
-
-// --- Update ---
-async function updateGrid({ id, ...updatedGrid }: Partial<Grid>): Promise<Grid> {
-  const { data } = await api.put(`/grades/${id}`, updatedGrid);
-  return data;
-}
-
-export function useUpdateGrid() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: updateGrid,
-    onSuccess: () => {
-      toast.success('Grade atualizada com sucesso!');
-      queryClient.invalidateQueries({ queryKey: ['grids'] });
-    },
-    onError: () => {
-      toast.error('Falha ao atualizar grade.');
     },
   });
 }

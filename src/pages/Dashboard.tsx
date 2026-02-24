@@ -21,8 +21,10 @@ export function DashboardPage() {
     };
   }, [products]);
 
-  // Estilo comum para os cards de vidro
-  const glassCardClass = "bg-black/40 backdrop-blur-md border-white/10 shadow-lg hover:border-emerald-500/30 transition-colors duration-300";
+  // NOVO ESTILO:
+  // bg-gradient-to-br from-white/5 to-white/[0.02] -> Cria um efeito de luz vindo do canto superior esquerdo
+  // border-white/10 -> Borda sutil
+  const glassCardClass = "bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-md border-white/10 shadow-xl hover:shadow-emerald-500/10 hover:border-emerald-500/30 transition-all duration-300";
 
   if (isError) {
     return (
@@ -54,7 +56,7 @@ export function DashboardPage() {
         <Card className={glassCardClass}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Total de Produtos</CardTitle>
-            <div className="h-8 w-8 rounded-full bg-emerald-500/10 flex items-center justify-center">
+            <div className="h-8 w-8 rounded-full bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
                 <Package className="h-4 w-4 text-emerald-500" />
             </div>
           </CardHeader>
@@ -64,7 +66,7 @@ export function DashboardPage() {
             ) : (
               <div className="flex items-baseline space-x-2">
                   <div className="text-4xl font-bold text-foreground">{stats.totalProducts}</div>
-                  <span className="text-emerald-500 text-xs font-medium flex items-center">+12% <ArrowUpRight className="h-3 w-3 ml-0.5" /></span>
+                  <span className="text-emerald-500 text-xs font-medium flex items-center bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">+12% <ArrowUpRight className="h-3 w-3 ml-0.5" /></span>
               </div>
             )}
             <p className="text-xs text-muted-foreground mt-2">Produtos cadastrados</p>
@@ -75,8 +77,8 @@ export function DashboardPage() {
         <Card className={glassCardClass}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Alerta de Estoque</CardTitle>
-            <div className="h-8 w-8 rounded-full bg-yellow-500/10 flex items-center justify-center">
-                <TrendingDown className="h-4 w-4 text-yellow-500" />
+            <div className="h-8 w-8 rounded-full bg-orange-500/10 flex items-center justify-center border border-orange-500/20">
+                <TrendingDown className="h-4 w-4 text-orange-500" />
             </div>
           </CardHeader>
           <CardContent>
@@ -85,7 +87,7 @@ export function DashboardPage() {
             ) : (
               <div className="flex items-baseline space-x-2">
                   <div className="text-4xl font-bold text-foreground">{stats.lowStockProducts}</div>
-                  <span className="text-red-400 text-xs font-medium">Crítico</span>
+                  <span className="text-orange-400 text-xs font-medium bg-orange-500/10 px-2 py-0.5 rounded-full border border-orange-500/20">Atenção</span>
               </div>
             )}
             <p className="text-xs text-muted-foreground mt-2">Abaixo do mínimo configurado</p>
@@ -96,7 +98,7 @@ export function DashboardPage() {
         <Card className={glassCardClass}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Faturamento Hoje</CardTitle>
-            <div className="h-8 w-8 rounded-full bg-blue-500/10 flex items-center justify-center">
+            <div className="h-8 w-8 rounded-full bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
                 <DollarSign className="h-4 w-4 text-blue-500" />
             </div>
           </CardHeader>

@@ -97,7 +97,8 @@ export function Layout() {
     <div className="flex h-screen w-full bg-background overflow-hidden p-2 md:p-4 gap-4">
       
       {/* Sidebar Flutuante (Desktop) */}
-      <aside className="hidden md:flex flex-col w-72 rounded-3xl bg-black/40 backdrop-blur-xl border border-white/5 shadow-2xl overflow-hidden transition-all duration-300">
+      {/* bg-white/5 -> Mudança chave: Fundo claro transparente em vez de preto */}
+      <aside className="hidden md:flex flex-col w-72 rounded-3xl bg-white/5 backdrop-blur-xl border border-white/5 shadow-2xl overflow-hidden transition-all duration-300">
         <div className="flex h-24 items-center justify-center border-b border-white/5 px-4 bg-gradient-to-b from-white/5 to-transparent">
            <AnimatedLogo />
         </div>
@@ -135,10 +136,11 @@ export function Layout() {
       </aside>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col h-full rounded-3xl bg-card/30 backdrop-blur-md border border-white/5 shadow-2xl overflow-hidden relative">
+      {/* bg-white/5 -> Consistência na transparência */}
+      <div className="flex-1 flex flex-col h-full rounded-3xl bg-white/5 backdrop-blur-md border border-white/5 shadow-2xl overflow-hidden relative">
         
         {/* Header Glass */}
-        <header className={`flex h-16 items-center gap-4 px-6 transition-all duration-300 z-10 sticky top-0 ${scrolled ? 'bg-black/40 backdrop-blur-md border-b border-white/5' : 'bg-transparent'}`}>
+        <header className={`flex h-16 items-center gap-4 px-6 transition-all duration-300 z-10 sticky top-0 ${scrolled ? 'bg-background/40 backdrop-blur-md border-b border-white/5' : 'bg-transparent'}`}>
           <Sheet>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" className="shrink-0 md:hidden text-foreground hover:bg-white/10 rounded-xl">
@@ -146,7 +148,7 @@ export function Layout() {
                 <span className="sr-only">Toggle navigation menu</span>
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="flex flex-col bg-black/90 backdrop-blur-xl border-r-white/10 text-foreground">
+            <SheetContent side="left" className="flex flex-col bg-background/95 backdrop-blur-xl border-r-white/10 text-foreground">
               <nav className="grid gap-2 text-lg font-medium mt-8">
                 <div className="mb-6 px-2">
                     <AnimatedLogo />
@@ -170,7 +172,7 @@ export function Layout() {
                 <span className="sr-only">Toggle user menu</span>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56 rounded-2xl bg-black/80 backdrop-blur-xl border-white/10 text-foreground">
+            <DropdownMenuContent align="end" className="w-56 rounded-2xl bg-zinc-900/95 backdrop-blur-xl border-white/10 text-foreground">
               <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
               <DropdownMenuSeparator className="bg-white/10" />
               <DropdownMenuItem className="focus:bg-white/10 rounded-xl cursor-pointer">Configurações</DropdownMenuItem>

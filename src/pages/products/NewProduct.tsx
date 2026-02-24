@@ -9,7 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { 
   Check, ArrowLeft, Info, DollarSign, Lock, Box, Grid as GridIcon, Tag, Ruler, AlertTriangle, ArrowDown, Copy, Barcode, ScanBarcode, 
-  Upload, X, Image as ImageIcon, Video, Play, Trash2, Loader2 
+  Upload, X, Image as ImageIcon, Video, Play, Trash2, Loader2, FileText
 } from 'lucide-react';
 import { useCategories, useAllSubcategories } from '@/hooks/use-categories';
 import { useBrands } from '@/hooks/use-brands';
@@ -327,7 +327,11 @@ export function NewProductPage() {
   };
 
   const onSubmit = (data: any) => {
-    if (!data.grade_id) return toast.error('Grade do Produto é obrigatória');
+    if (!data.nome) return toast.error('O nome do produto é obrigatório.');
+    if (!data.grade_id) return toast.error('A grade do produto é obrigatória.');
+    if (!data.subcategoria_id) return toast.error('A subcategoria é obrigatória.');
+    if (!data.marca_id) return toast.error('A marca é obrigatória.');
+    if (!data.variacoes || data.variacoes.length === 0) return toast.error('Adicione pelo menos uma variação na grade.');
     if (data.variacoes?.some((v: any) => !v.sku && !v.codigo_barras)) return toast.error('Toda variação precisa de SKU ou Cód. Barras.');
     if (duplicateCheck.allDuplicateSkus.length > 0 || duplicateCheck.allDuplicateEans.length > 0) {
         return toast.error('SKU ou Cód. de Barras já existe.', {
@@ -364,33 +368,51 @@ export function NewProductPage() {
 
       {isDuplicateMode && <Alert className="bg-amber-500/10 border-amber-500/20 text-amber-200"><AlertTriangle className="h-4 w-4" /><AlertTitle>Modo de Duplicação</AlertTitle><AlertDescription>Estoque, SKU e imagens foram zerados.</AlertDescription></Alert>}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
-        <div className="space-y-6 md:space-y-8">
-          {/* SEÇÃO 1: GRADE E VARIAÇÕES */}
-          <Card className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl border-white/10 shadow-2xl">
-            <CardHeader className="pb-4 border-b border-white/10"><CardTitle className="flex items-center gap-2 text-emerald-400"><GridIcon className="h-5 w-5" /> 1. Grade, Estoque & Dimensões</CardTitle></CardHeader>
-            <CardContent className="pt-6 space-y-6">
-                <div>
-                    <Label className="text-base font-semibold">Grade do Produto *</Label>
-                    <Select onValueChange={(v) => setValue('grade_id', v)} value={watch('grade_id')}>
-                        <SelectTrigger className="mt-2 bg-black/40 border-emerald-500/30 h-14 text-lg focus:ring-emerald-500/30"><SelectValue placeholder="Escolha uma grade..." /></SelectTrigger>
-                        <SelectContent>{grids?.map(g => <SelectItem key={g.id} value={String(g.id)}>{g.nome}</SelectItem>)}</SelectContent>
-                    </Select>
-                </div>
+      <div className="space-y-6 md:space-y-8">
+        {/* SEÇÃO 1: IDENTIFICAÇÃO */}
+        <Card className="bg-black/20 border-white/10 shadow-lg">
+          <CardHeader className="pb-3 border-b border-white/5"><CardTitle className="text-base flex items-center gap-2 text-white"><Tag className="h-4 w-4 text-emerald-500" /> 1. Identificação e Classificação</CardTitle></CardHeader>
+          <CardContent className="space-y-4 pt-6">
+              <div className="grid gap-2">
+                  <Label htmlFor="nome">Nome do Produto *</Label>
+                  <Input id="nome" {...register('nome', { required: true })} className={`bg-black/40 h-14 text-base ${errors.nome ? 'border-red-500' : 'border-white/10'}`} placeholder="Ex: Camiseta Básica Gola V" />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                   <div className="grid gap-2">
+                      <Label>Subcategoria *</Label>
+                      <Select onValueChange={(value) => setValue('subcategoria_id', value)} value={watch('subcategoria_id')}>
+                          <SelectTrigger className={`bg-black/40 h-14 text-base ${errors.subcategoria_id ? 'border-red-500' : 'border-white/10'}`}><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                          <SelectContent>{allSubcategories?.map(sub => (<SelectItem key={sub.id} value={String(sub.id)}>{sub.nome}</SelectItem>))}</SelectContent>
+                      </Select>
+                   </div>
+                   <div className="grid gap-2">
+                      <Label>Marca *</Label>
+                      <Select onValueChange={(value) => setValue('marca_id', value)} value={watch('marca_id')}>
+                          <SelectTrigger className={`bg-black/40 h-14 text-base ${errors.marca_id ? 'border-red-500' : 'border-white/10'}`}><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                          <SelectContent>{brands?.map(brand => <SelectItem key={brand.id} value={String(brand.id)}>{brand.nome}</SelectItem>)}</SelectContent>
+                      </Select>
+                   </div>
+                   <div className="grid gap-2">
+                      <Label>Grade do Produto *</Label>
+                      <Select onValueChange={(v) => setValue('grade_id', v)} value={watch('grade_id')}>
+                          <SelectTrigger className={`bg-black/40 h-14 text-base ${errors.grade_id ? 'border-red-500' : 'border-white/10'}`}><SelectValue placeholder="Escolha uma grade..." /></SelectTrigger>
+                          <SelectContent>{grids?.map(g => <SelectItem key={g.id} value={String(g.id)}>{g.nome}</SelectItem>)}</SelectContent>
+                      </Select>
+                   </div>
+              </div>
+          </CardContent>
+        </Card>
 
-                {selectedGridId && variacaoFields.length > 0 && (
+        {/* SEÇÃO 2: GRADE, ESTOQUE & DIMENSÕES */}
+        {selectedGridId && (
+          <Card className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl border-white/10 shadow-2xl">
+            <CardHeader className="pb-4 border-b border-white/10"><CardTitle className="flex items-center gap-2 text-emerald-400"><GridIcon className="h-5 w-5" /> 2. Grade, Estoque & Dimensões</CardTitle></CardHeader>
+            <CardContent className="pt-6 space-y-6">
+                {variacaoFields.length > 0 && (
                     <div className="animate-in fade-in slide-in-from-top-4">
-                        <div className="flex items-center gap-2 mb-4 p-2 rounded-lg bg-black/20 border border-white/10">
-                            <Input 
-                                type="number"
-                                placeholder="Estoque p/ todos"
-                                className="bg-transparent border-none h-8"
-                                value={bulkStockQty}
-                                onChange={(e) => setBulkStockQty(e.target.value)}
-                            />
-                            <Button type="button" size="sm" onClick={handleApplyBulkStock} className="bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30">
-                                Aplicar
-                            </Button>
+                        <div className="flex items-center gap-2 mb-4 p-2 rounded-lg bg-black/20 border border-white/10 max-w-sm">
+                            <Input type="number" placeholder="Estoque p/ todos" className="bg-transparent border-none h-8" value={bulkStockQty} onChange={(e) => setBulkStockQty(e.target.value)} />
+                            <Button type="button" size="sm" onClick={handleApplyBulkStock} className="bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30">Aplicar</Button>
                         </div>
 
                         {isMobile ? (
@@ -403,7 +425,7 @@ export function NewProductPage() {
                         ) : (
                           <div id="variations-table" className="rounded-xl border border-white/10 overflow-hidden">
                             <Table>
-                                <TableHeader className="bg-black/40"><TableRow className="border-white/10 hover:bg-transparent"><TableHead className="w-[80px] text-emerald-400 font-bold">Tam.</TableHead><TableHead className="w-[90px]">Estoque</TableHead><TableHead>SKU</TableHead><TableHead>Cód. Barras</TableHead><TableHead>Peso(kg)</TableHead><TableHead>A(cm)</TableHead><TableHead>L(cm)</TableHead><TableHead>C(cm)</TableHead></TableRow></TableHeader>
+                                <TableHeader className="bg-black/40"><TableRow className="border-white/10 hover:bg-transparent"><TableHead className="w-[80px] text-emerald-400 font-bold">Tam.</TableHead><TableHead className="w-[100px]">Estoque</TableHead><TableHead className="min-w-[150px]">SKU</TableHead><TableHead className="min-w-[150px]">Cód. Barras</TableHead><TableHead>Peso(kg)</TableHead><TableHead>A(cm)</TableHead><TableHead>L(cm)</TableHead><TableHead>C(cm)</TableHead></TableRow></TableHeader>
                                 <TableBody className="bg-black/20">
                                     {variacaoFields.map((field: any, index) => {
                                         const currentVariation = variacoesValues?.[index];
@@ -432,113 +454,100 @@ export function NewProductPage() {
                 )}
             </CardContent>
           </Card>
+        )}
 
-          {/* IDENTIFICAÇÃO & CLASSIFICAÇÃO */}
-          <Card className="bg-black/20 border-white/10 shadow-lg">
-            <CardHeader className="pb-3 border-b border-white/5"><CardTitle className="text-base flex items-center gap-2 text-white"><Tag className="h-4 w-4 text-emerald-500" /> 2. Identificação</CardTitle></CardHeader>
-            <CardContent className="space-y-4 pt-4">
-                <div className="grid gap-2">
-                    <Label htmlFor="nome">Nome do Produto *</Label>
-                    <Input id="nome" {...register('nome', { required: true })} className="bg-black/40 border-white/10 h-14 text-base" placeholder="Ex: Calça Jeans" />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                     <div className="grid gap-2">
-                        <Label>Subcategoria *</Label>
-                        <Select onValueChange={(value) => setValue('subcategoria_id', value)} value={watch('subcategoria_id')}>
-                            <SelectTrigger className="bg-black/40 border-white/10 h-14 text-base"><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                            <SelectContent>{allSubcategories?.map(sub => (<SelectItem key={sub.id} value={String(sub.id)}>{sub.nome}</SelectItem>))}</SelectContent>
-                        </Select>
-                     </div>
-                     <div className="grid gap-2">
-                        <Label>Marca *</Label>
-                        <Select onValueChange={(value) => setValue('marca_id', value)} value={watch('marca_id')}>
-                            <SelectTrigger className="bg-black/40 border-white/10 h-14 text-base"><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                            <SelectContent>{brands?.map(brand => <SelectItem key={brand.id} value={String(brand.id)}>{brand.nome}</SelectItem>)}</SelectContent>
-                        </Select>
-                     </div>
-                </div>
-            </CardContent>
-          </Card>
-        </div>
+        {/* SEÇÃO 3: FINANCEIRO & ATACADO */}
+        <Card className="bg-black/20 border-white/10 shadow-lg">
+          <CardHeader className="pb-3 border-b border-white/5"><CardTitle className="text-base flex items-center gap-2 text-white"><DollarSign className="h-4 w-4 text-emerald-500" /> 3. Financeiro e Atacado</CardTitle></CardHeader>
+          <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4 p-4 rounded-xl bg-white/5 border border-white/5">
+                  <div className="grid grid-cols-2 gap-4">
+                      <div className="grid gap-2"><Label>Custo (R$)</Label><Input type="number" step="0.01" {...register('preco_custo')} className="bg-black/40 border-white/10 h-14 text-base" /></div>
+                      <div className="grid gap-2"><Label>Varejo (R$)</Label><Input type="number" step="0.01" {...register('preco_varejo')} className="bg-black/40 border-emerald-500/30 text-emerald-400 font-bold h-14 text-base" /></div>
+                  </div>
+              </div>
+              <div className="space-y-4 p-4 rounded-xl bg-white/5 border border-white/5">
+                  <div className="flex items-center justify-between"><Label htmlFor="usar_preco_atacado_unico" className="cursor-pointer">Preço Único Atacado</Label><Switch id="usar_preco_atacado_unico" checked={usarPrecoUnico} onCheckedChange={(c) => setValue('usar_preco_atacado_unico', c)} /></div>
+                  <div className={`p-4 rounded-xl border transition-all ${habilitaAtacadoGeral ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-white/5 border-white/5'}`}>
+                      <div className="flex justify-between items-start mb-2">
+                          <div><Label className="font-medium">Atacado Geral</Label><p className="text-xs text-muted-foreground">Min: {globalAtacadoMin} pçs</p></div>
+                          <Switch checked={habilitaAtacadoGeral} onCheckedChange={(c) => setValue('habilita_atacado_geral', c)} />
+                      </div>
+                      {(habilitaAtacadoGeral || usarPrecoUnico) && <Input type="number" step="0.01" {...register('preco_atacado_geral')} className="mt-2 bg-black/40 border-white/10 h-14 text-base" placeholder="R$ 0,00" />}
+                  </div>
+                  <div className={`p-4 rounded-xl border transition-all ${habilitaAtacadoGrade ? 'bg-purple-500/5 border-purple-500/20' : 'bg-white/5 border-white/5'}`}>
+                      <div className="flex justify-between items-start mb-4">
+                          <div><Label className="font-medium">Pacote Fechado</Label><p className="text-xs text-muted-foreground">Kit c/ grade definida</p></div>
+                          <Switch checked={habilitaAtacadoGrade} onCheckedChange={(c) => setValue('habilita_atacado_grade', c)} />
+                      </div>
+                      {habilitaAtacadoGrade && (
+                          <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
+                              <div className="grid gap-2"><Label className="text-xs text-purple-300">Grade do Pacote</Label><Select onValueChange={(v) => setValue('grade_atacado_id', v)} value={watch('grade_atacado_id')}><SelectTrigger className="bg-black/40 border-white/10 h-12"><SelectValue placeholder="Selecione..." /></SelectTrigger><SelectContent>{grids?.map(g => <SelectItem key={g.id} value={String(g.id)}>{g.nome}</SelectItem>)}</SelectContent></Select></div>
+                              {composicaoFields.length > 0 && <div className="border border-white/10 rounded-lg overflow-hidden"><Table><TableHeader className="bg-purple-500/10"><TableRow className="border-white/10 hover:bg-transparent"><TableHead className="h-8 text-xs text-purple-300">Tam</TableHead><TableHead className="h-8 text-xs text-right text-purple-300">Qtd</TableHead></TableRow></TableHeader><TableBody className="bg-black/20">{composicaoFields.map((field: any, idx) => (<TableRow key={field.id} className="border-white/5 hover:bg-transparent"><TableCell className="py-2 font-medium">{field.tamanho}<input type="hidden" {...register(`composicao_atacado.${idx}.tamanho`)} /></TableCell><TableCell className="py-2 text-right"><Input type="number" min="0" className="h-7 w-20 ml-auto bg-black/40 border-white/10 text-right" {...register(`composicao_atacado.${idx}.quantidade`, { valueAsNumber: true })} /></TableCell></TableRow>))}</TableBody></Table></div>}
+                              {!usarPrecoUnico && <div className="grid gap-2"><Label className="text-xs">Preço Unit. Pacote</Label><Input type="number" step="0.01" {...register('preco_atacado_grade')} className="bg-black/40 border-white/10 h-12" placeholder="R$ 0,00" /></div>}
+                              {gradeAtacadoObj && <div className="bg-black/40 rounded border border-white/10 p-3 text-sm space-y-1 mt-2"><div className="flex justify-between"><span className="text-muted-foreground">Total:</span><span className="font-bold">{totalPecasPacote} un</span></div><div className="border-t border-white/10 my-1 pt-1 flex justify-between font-bold"><span>Total Pacote:</span><span>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valorTotalPacote)}</span></div></div>}
+                          </div>
+                      )}
+                  </div>
+              </div>
+          </CardContent>
+        </Card>
 
-        <div className="space-y-6 md:space-y-8">
-          {/* FINANCEIRO & ATACADO */}
-          <Card className="bg-black/20 border-white/10 shadow-lg">
-            <CardHeader className="pb-3 border-b border-white/5"><CardTitle className="text-base flex items-center gap-2 text-white"><DollarSign className="h-4 w-4 text-emerald-500" /> 3. Financeiro</CardTitle></CardHeader>
-            <CardContent className="pt-4 space-y-6">
-                <div className="grid grid-cols-2 gap-4 p-4 rounded-xl bg-white/5 border border-white/5">
-                    <div className="grid gap-2"><Label>Custo (R$)</Label><Input type="number" step="0.01" {...register('preco_custo')} className="bg-black/40 border-white/10 h-14 text-base" /></div>
-                    <div className="grid gap-2"><Label>Varejo (R$)</Label><Input type="number" step="0.01" {...register('preco_varejo')} className="bg-black/40 border-emerald-500/30 text-emerald-400 font-bold h-14 text-base" /></div>
-                </div>
-                <Separator className="bg-white/10" />
-                <div className="flex items-center justify-between"><Label htmlFor="usar_preco_atacado_unico" className="cursor-pointer">Preço Único Atacado</Label><Switch id="usar_preco_atacado_unico" checked={usarPrecoUnico} onCheckedChange={(c) => setValue('usar_preco_atacado_unico', c)} /></div>
-                <div className={`p-4 rounded-xl border transition-all ${habilitaAtacadoGeral ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-white/5 border-white/5'}`}>
-                    <div className="flex justify-between items-start mb-2">
-                        <div><Label className="font-medium">Atacado Geral</Label><p className="text-xs text-muted-foreground">Min: {globalAtacadoMin} pçs</p></div>
-                        <Switch checked={habilitaAtacadoGeral} onCheckedChange={(c) => setValue('habilita_atacado_geral', c)} />
-                    </div>
-                    {(habilitaAtacadoGeral || usarPrecoUnico) && <Input type="number" step="0.01" {...register('preco_atacado_geral')} className="mt-2 bg-black/40 border-white/10 h-14 text-base" placeholder="R$ 0,00" />}
-                </div>
-                <div className={`p-4 rounded-xl border transition-all ${habilitaAtacadoGrade ? 'bg-purple-500/5 border-purple-500/20' : 'bg-white/5 border-white/5'}`}>
-                    <div className="flex justify-between items-start mb-4">
-                        <div><Label className="font-medium">Pacote Fechado</Label><p className="text-xs text-muted-foreground">Kit c/ grade definida</p></div>
-                        <Switch checked={habilitaAtacadoGrade} onCheckedChange={(c) => setValue('habilita_atacado_grade', c)} />
-                    </div>
-                    {habilitaAtacadoGrade && (
-                        <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
-                            <div className="grid gap-2"><Label className="text-xs text-purple-300">Grade do Pacote</Label><Select onValueChange={(v) => setValue('grade_atacado_id', v)} value={watch('grade_atacado_id')}><SelectTrigger className="bg-black/40 border-white/10 h-12"><SelectValue placeholder="Selecione..." /></SelectTrigger><SelectContent>{grids?.map(g => <SelectItem key={g.id} value={String(g.id)}>{g.nome}</SelectItem>)}</SelectContent></Select></div>
-                            {composicaoFields.length > 0 && <div className="border border-white/10 rounded-lg overflow-hidden"><Table><TableHeader className="bg-purple-500/10"><TableRow className="border-white/10 hover:bg-transparent"><TableHead className="h-8 text-xs text-purple-300">Tam</TableHead><TableHead className="h-8 text-xs text-right text-purple-300">Qtd</TableHead></TableRow></TableHeader><TableBody className="bg-black/20">{composicaoFields.map((field: any, idx) => (<TableRow key={field.id} className="border-white/5 hover:bg-transparent"><TableCell className="py-2 font-medium">{field.tamanho}<input type="hidden" {...register(`composicao_atacado.${idx}.tamanho`)} /></TableCell><TableCell className="py-2 text-right"><Input type="number" min="0" className="h-7 w-20 ml-auto bg-black/40 border-white/10 text-right" {...register(`composicao_atacado.${idx}.quantidade`, { valueAsNumber: true })} /></TableCell></TableRow>))}</TableBody></Table></div>}
-                            {!usarPrecoUnico && <div className="grid gap-2"><Label className="text-xs">Preço Unit. Pacote</Label><Input type="number" step="0.01" {...register('preco_atacado_grade')} className="bg-black/40 border-white/10 h-12" placeholder="R$ 0,00" /></div>}
-                            {gradeAtacadoObj && <div className="bg-black/40 rounded border border-white/10 p-3 text-sm space-y-1 mt-2"><div className="flex justify-between"><span className="text-muted-foreground">Total:</span><span className="font-bold">{totalPecasPacote} un</span></div><div className="border-t border-white/10 my-1 pt-1 flex justify-between font-bold"><span>Total Pacote:</span><span>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valorTotalPacote)}</span></div></div>}
-                        </div>
-                    )}
-                </div>
-            </CardContent>
-          </Card>
+        {/* SEÇÃO 4: MÍDIA E ARQUIVOS */}
+        <Card className="bg-black/20 border-white/10 shadow-lg">
+          <CardHeader className="pb-3 border-b border-white/5"><CardTitle className="text-base flex items-center gap-2 text-white"><Box className="h-4 w-4 text-emerald-500" /> 4. Mídia e Arquivos</CardTitle></CardHeader>
+          <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-3">
+              <Label className="flex items-center gap-2"><ImageIcon className="h-4 w-4 text-emerald-400" /> Imagem Principal</Label>
+              <div className={`border-2 border-dashed rounded-xl p-4 flex flex-col items-center justify-center transition-all cursor-pointer hover:bg-white/5 ${mainImagePreview ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-white/10'}`} onClick={() => mainImageInputRef.current?.click()}>
+                  <input type="file" ref={mainImageInputRef} className="hidden" accept="image/*" onChange={(e) => handleFileChange(e, setMainImageFile, setMainImagePreview, 5, 'image')} />
+                  {mainImagePreview ? <div className="relative group w-full h-48"><img src={mainImagePreview} alt="Preview" className="w-full h-full object-contain rounded-lg" /><div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-lg"><span className="text-white font-medium flex items-center"><Upload className="mr-2 h-4 w-4" /> Trocar</span></div></div> : <div className="text-center py-6 text-muted-foreground"><Upload className="mx-auto h-8 w-8 mb-2 opacity-50" /><p className="text-sm">Clique para enviar</p><p className="text-[10px] opacity-70">Max 5MB</p></div>}
+              </div>
+            </div>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center"><Label className="flex items-center gap-2"><GridIcon className="h-4 w-4 text-emerald-400" /> Galeria (Até 5)</Label><span className="text-xs text-muted-foreground">{galleryPreviews.length}/5</span></div>
+              <div className="grid grid-cols-3 gap-2">
+                  {galleryPreviews.map((preview, idx) => <div key={idx} className="relative aspect-square rounded-lg overflow-hidden border border-white/10 group"><img src={preview} alt={`Galeria ${idx}`} className="w-full h-full object-cover" /><Button type="button" variant="destructive" size="icon" className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100" onClick={() => removeGalleryImage(idx)}><X className="h-3 w-3" /></Button></div>)}
+                  {galleryPreviews.length < 5 && <div className="aspect-square rounded-lg border-2 border-dashed border-white/10 flex flex-col items-center justify-center cursor-pointer hover:bg-white/5" onClick={() => galleryInputRef.current?.click()}><input type="file" ref={galleryInputRef} className="hidden" accept="image/*" multiple onChange={handleGalleryChange} /><Upload className="h-6 w-6 text-muted-foreground mb-1" /><span className="text-[10px] text-muted-foreground">Adicionar</span></div>}
+              </div>
+            </div>
+            <div className="space-y-3 md:col-span-2">
+              <Label className="flex items-center gap-2"><Video className="h-4 w-4 text-emerald-400" /> Vídeo do Produto</Label>
+              <div className={`border-2 border-dashed rounded-xl p-4 flex flex-col items-center justify-center transition-all cursor-pointer hover:bg-white/5 ${videoPreview ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-white/10'}`} onClick={() => videoInputRef.current?.click()}>
+                  <input type="file" ref={videoInputRef} className="hidden" accept="video/*" onChange={(e) => handleFileChange(e, setVideoFile, setVideoPreview, 50, 'video')} />
+                  {videoPreview ? (
+                      <div className="relative group w-full aspect-video max-w-md mx-auto">
+                          <video src={videoPreview} className="w-full h-full object-contain rounded-lg" />
+                          <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-lg">
+                              <span className="text-white font-medium flex items-center"><Upload className="mr-2 h-4 w-4" /> Trocar Vídeo</span>
+                          </div>
+                      </div>
+                  ) : (
+                      <div className="text-center py-6 text-muted-foreground">
+                          <Upload className="mx-auto h-8 w-8 mb-2 opacity-50" />
+                          <p className="text-sm">Clique para enviar</p>
+                          <p className="text-[10px] opacity-70">Max 50MB</p>
+                      </div>
+                  )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-          {/* MÍDIA E ARQUIVOS */}
-          <Card className="bg-black/20 border-white/10 shadow-lg">
-            <CardHeader className="pb-3 border-b border-white/5"><CardTitle className="text-base flex items-center gap-2 text-white"><Box className="h-4 w-4 text-emerald-500" /> 4. Mídia e Arquivos</CardTitle></CardHeader>
-            <CardContent className="pt-4 space-y-6">
-              <div className="space-y-3">
-                <Label className="flex items-center gap-2"><ImageIcon className="h-4 w-4 text-emerald-400" /> Imagem Principal</Label>
-                <div className={`border-2 border-dashed rounded-xl p-4 flex flex-col items-center justify-center transition-all cursor-pointer hover:bg-white/5 ${mainImagePreview ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-white/10'}`} onClick={() => mainImageInputRef.current?.click()}>
-                    <input type="file" ref={mainImageInputRef} className="hidden" accept="image/*" onChange={(e) => handleFileChange(e, setMainImageFile, setMainImagePreview, 5, 'image')} />
-                    {mainImagePreview ? <div className="relative group w-full h-48"><img src={mainImagePreview} alt="Preview" className="w-full h-full object-contain rounded-lg" /><div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-lg"><span className="text-white font-medium flex items-center"><Upload className="mr-2 h-4 w-4" /> Trocar</span></div></div> : <div className="text-center py-6 text-muted-foreground"><Upload className="mx-auto h-8 w-8 mb-2 opacity-50" /><p className="text-sm">Clique para enviar</p><p className="text-[10px] opacity-70">Max 5MB</p></div>}
-                </div>
-              </div>
-              <Separator className="bg-white/10" />
-              <div className="space-y-3">
-                <div className="flex justify-between items-center"><Label className="flex items-center gap-2"><GridIcon className="h-4 w-4 text-emerald-400" /> Galeria (Até 5)</Label><span className="text-xs text-muted-foreground">{galleryPreviews.length}/5</span></div>
-                <div className="grid grid-cols-3 gap-2">
-                    {galleryPreviews.map((preview, idx) => <div key={idx} className="relative aspect-square rounded-lg overflow-hidden border border-white/10 group"><img src={preview} alt={`Galeria ${idx}`} className="w-full h-full object-cover" /><Button type="button" variant="destructive" size="icon" className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100" onClick={() => removeGalleryImage(idx)}><X className="h-3 w-3" /></Button></div>)}
-                    {galleryPreviews.length < 5 && <div className="aspect-square rounded-lg border-2 border-dashed border-white/10 flex flex-col items-center justify-center cursor-pointer hover:bg-white/5" onClick={() => galleryInputRef.current?.click()}><input type="file" ref={galleryInputRef} className="hidden" accept="image/*" multiple onChange={handleGalleryChange} /><Upload className="h-6 w-6 text-muted-foreground mb-1" /><span className="text-[10px] text-muted-foreground">Adicionar</span></div>}
-                </div>
-              </div>
-              <Separator className="bg-white/10" />
-              <div className="space-y-3">
-                <Label className="flex items-center gap-2"><Video className="h-4 w-4 text-emerald-400" /> Vídeo do Produto</Label>
-                <div className={`border-2 border-dashed rounded-xl p-4 flex flex-col items-center justify-center transition-all cursor-pointer hover:bg-white/5 ${videoPreview ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-white/10'}`} onClick={() => videoInputRef.current?.click()}>
-                    <input type="file" ref={videoInputRef} className="hidden" accept="video/*" onChange={(e) => handleFileChange(e, setVideoFile, setVideoPreview, 50, 'video')} />
-                    {videoPreview ? (
-                        <div className="relative group w-full aspect-video">
-                            <video src={videoPreview} className="w-full h-full object-contain rounded-lg" />
-                            <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-lg">
-                                <span className="text-white font-medium flex items-center"><Upload className="mr-2 h-4 w-4" /> Trocar Vídeo</span>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="text-center py-6 text-muted-foreground">
-                            <Upload className="mx-auto h-8 w-8 mb-2 opacity-50" />
-                            <p className="text-sm">Clique para enviar</p>
-                            <p className="text-[10px] opacity-70">Max 50MB</p>
-                        </div>
-                    )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        {/* SEÇÃO 5: FISCAL */}
+        <Card className="bg-black/20 border-white/10 shadow-lg">
+          <CardHeader className="pb-3 border-b border-white/5"><CardTitle className="text-base flex items-center gap-2 text-white"><FileText className="h-4 w-4 text-emerald-500" /> 5. Dados Fiscais</CardTitle></CardHeader>
+          <CardContent className="pt-4">
+            <p className="text-sm text-muted-foreground mb-4">Estes dados são preenchidos automaticamente pela subcategoria selecionada.</p>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <div><Label className="text-xs">NCM</Label><Input readOnly value={watch('ncm') || '-'} className="bg-black/40 border-white/10 mt-1" /></div>
+              <div><Label className="text-xs">CFOP</Label><Input readOnly value={watch('cfop_padrao') || '-'} className="bg-black/40 border-white/10 mt-1" /></div>
+              <div><Label className="text-xs">CST/CSOSN</Label><Input readOnly value={watch('cst_icms') || '-'} className="bg-black/40 border-white/10 mt-1" /></div>
+              <div><Label className="text-xs">Origem</Label><Input readOnly value={watch('origem') || '-'} className="bg-black/40 border-white/10 mt-1" /></div>
+              <div><Label className="text-xs">Unidade</Label><Input readOnly value={watch('unidade_medida') || '-'} className="bg-black/40 border-white/10 mt-1" /></div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
       <input type="hidden" {...register('ncm')} />
       <input type="hidden" {...register('cfop_padrao')} />

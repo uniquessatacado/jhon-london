@@ -174,10 +174,11 @@ export function useCreateProduct() {
       queryClient.invalidateQueries({ queryKey: ['products'] });
       navigate('/produtos');
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error('Erro ao criar produto:', error);
+      const description = error.response?.data?.error || error.response?.data?.message || 'Verifique os dados e tente novamente.';
       toast.error('Falha ao criar o produto.', {
-        description: 'Verifique os dados e tente novamente.',
+        description,
       });
     },
   });
@@ -194,10 +195,11 @@ export function useUpdateProduct() {
       queryClient.invalidateQueries({ queryKey: ['products'] });
       navigate('/produtos');
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error('Erro ao atualizar produto:', error);
+      const description = error.response?.data?.error || error.response?.data?.message || 'Verifique os dados e tente novamente.';
       toast.error('Falha ao atualizar o produto.', {
-        description: 'Verifique os dados e tente novamente.',
+        description,
       });
     },
   });

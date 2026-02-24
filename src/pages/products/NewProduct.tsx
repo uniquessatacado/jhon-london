@@ -338,6 +338,13 @@ export function NewProductPage() {
   };
 
   const onSubmit = (data: any) => {
+    if (!data.grade_id) {
+      toast.error('Grade do Produto é obrigatória', {
+        description: 'Por favor, selecione uma grade para o produto antes de salvar.',
+      });
+      return;
+    }
+
     if (data.variacoes && data.variacoes.length > 0) {
         for (const variant of data.variacoes) {
             if (!variant.sku && !variant.codigo_barras) {

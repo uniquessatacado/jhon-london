@@ -38,6 +38,8 @@ export function CategoryPage() {
   const { register: registerCat, handleSubmit: handleCatSubmit, reset: resetCat } = useForm<{ nome: string }>();
   const { register: registerSub, handleSubmit: handleSubSubmit, reset: resetSub, setValue: setSubValue, watch: watchSub } = useForm<Subcategory>();
 
+  const watchedSubGradeId = watchSub('grade_id');
+
   // Handlers
   const onCatSubmit = (data: { nome: string }) => {
     createCategory(data, {
@@ -288,7 +290,7 @@ export function CategoryPage() {
                     </Label>
                     <Select 
                         onValueChange={(v) => setSubValue('grade_id', v === "null" ? null : Number(v))} 
-                        defaultValue={editingSub?.grade_id ? String(editingSub.grade_id) : "null"}
+                        value={watchedSubGradeId ? String(watchedSubGradeId) : "null"}
                     >
                         <SelectTrigger><SelectValue placeholder="Nenhuma" /></SelectTrigger>
                         <SelectContent>

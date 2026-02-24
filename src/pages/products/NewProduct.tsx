@@ -24,7 +24,7 @@ export function NewProductPage() {
   const { register, control, handleSubmit, formState: { errors }, setValue, watch } = useForm<any>({
     defaultValues: {
       variacoes: [],
-      composicao_atacado: [], // Novo array para qtd por tamanho no pacote
+      composicao_atacado: [], 
       habilita_atacado_geral: false,
       habilita_atacado_grade: false,
       usar_preco_atacado_unico: true,
@@ -35,9 +35,16 @@ export function NewProductPage() {
     }
   });
 
-  const { fields, replace } = useFieldArray({
+  // Array de Variações (Estoque)
+  const { fields: variacaoFields, replace: replaceVariacoes } = useFieldArray({
     control,
     name: "variacoes"
+  });
+
+  // Array de Composição Atacado (Pacote)
+  const { fields: composicaoFields, replace: replaceComposicao } = useFieldArray({
+    control,
+    name: "composicao_atacado"
   });
   
   // Hooks de Dados
@@ -86,9 +93,9 @@ export function NewProductPage() {
             sku: '',
             codigo_barras: ''
         }));
-        replace(newVariations);
+        replaceVariacoes(newVariations);
     }
-  }, [selectedGridId, grids, replace]);
+  }, [selectedGridId, grids, replaceVariacoes]);
 
   // --- LÓGICA 2: CLASSIFICAÇÃO E FISCAL ---
   useEffect(() => {
@@ -119,14 +126,14 @@ export function NewProductPage() {
   // Inicializar composição quando trocar a grade do pacote
   useEffect(() => {
     if (gradeAtacadoObj) {
-        // Inicializa com 0 ou 1 para facilitar
+        // Inicializa com 1 para facilitar
         const initComposicao = gradeAtacadoObj.tamanhos.map(t => ({
             tamanho: t.tamanho,
             quantidade: 1 
         }));
-        setValue('composicao_atacado', initComposicao);
+        replaceComposicao(initComposicao);
     }
-  }, [selectedGradeAtacadoId, gradeAtacadoObj, setValue]);
+  }, [selectedGradeAtacadoId, gradeAtacadoObj, replaceComposicao]);
 
   const totalPecasPacote = useMemo(() => {
       if (!composicaoAtacadoWatch) return 0;
@@ -185,7 +192,7 @@ export function NewProductPage() {
                 {errors.grade_id && <p className="text-red-500 text-sm mt-1">Grade é obrigatória</p>}
             </div>
 
-            {selectedGridId && fields.length > 0 && (
+            {selectedGridId && variacaoFields.length > 0 && (
                 <div className="rounded-xl border border-white/10 overflow-hidden animate-in fade-in slide-in-from-top-4">
                     <Table>
                         <TableHeader className="bg-black/40">
@@ -197,7 +204,7 @@ export function NewProductPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody className="bg-black/20">
-                            {fields.map((field: any, index) => (
+                            {variacaoFields.map((field: any, index) => (
                                 <TableRow key={field.id} className="border-white/10 hover:bg-white/5">
                                     <TableCell className="font-bold text-lg text-white">
                                         <Badge variant="outline" className="text-emerald-400 border-emerald-500/30 bg-emerald-500/10 px-3 py-1">
@@ -242,7 +249,7 @@ export function NewProductPage() {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
           {/* SEÇÃO 2 & 3: IDENTIFICAÇÃO E CLASSIFICAÇÃO */}
           <div className="space-y-8">
               <Card className="bg-black/20 border-white/10 shadow-lg">
@@ -414,7 +421,8 @@ export function NewProductPage() {
                                     </Select>
                                 </div>
 
-                                {gradeAtacadoObj && (
+                                {/* TABELA DE COMPOSIÇÃO - AGORA USANDO FIELDS DO USEFIELDARRAY */}
+                                {composicaoFields.length > 0 && (
                                     <div className="border border-white/10 rounded-lg overflow-hidden">
                                         <Table>
                                             <TableHeader className="bg-purple-500/10">
@@ -424,11 +432,11 @@ export function NewProductPage() {
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody className="bg-black/20">
-                                                {gradeAtacadoObj.tamanhos.map((t, idx) => (
-                                                    <TableRow key={idx} className="border-white/5 hover:bg-transparent">
+                                                {composicaoFields.map((field: any, idx) => (
+                                                    <TableRow key={field.id} className="border-white/5 hover:bg-transparent">
                                                         <TableCell className="py-2 font-medium">
-                                                            {t.tamanho}
-                                                            <input type="hidden" {...register(`composicao_atacado.${idx}.tamanho`)} value={t.tamanho} />
+                                                            {field.tamanho}
+                                                            <input type="hidden" {...register(`composicao_atacado.${idx}.tamanho`)} />
                                                         </TableCell>
                                                         <TableCell className="py-2 text-right">
                                                             <Input 
@@ -477,7 +485,7 @@ export function NewProductPage() {
           </div>
       </div>
       
-      {/* Dados Fiscais (Hidden/Readonly confirmation could be added if needed, but they are auto-sent) */}
+      {/* Dados Fiscais */}
       <input type="hidden" {...register('ncm')} />
       <input type="hidden" {...register('cfop_padrao')} />
     </form>

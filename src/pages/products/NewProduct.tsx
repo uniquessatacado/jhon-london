@@ -151,6 +151,20 @@ export function NewProductPage() {
 
   useEffect(() => {
     if (productData) {
+        const variacoesComDimensoes = productData.variacoes?.map(v => {
+            const dim = productData.dimensoes_grade?.find(d => d.tamanho === v.tamanho);
+            return {
+                ...v,
+                estoque: isDuplicateMode ? 0 : v.estoque,
+                sku: isDuplicateMode ? '' : v.sku,
+                codigo_barras: isDuplicateMode ? '' : v.codigo_barras,
+                peso_kg: dim?.peso_kg || 0,
+                altura_cm: dim?.altura_cm || 0,
+                largura_cm: dim?.largura_cm || 0,
+                comprimento_cm: dim?.comprimento_cm || 0,
+            };
+        }) || [];
+
         const formData = {
             nome: isDuplicateMode ? `${productData.nome} - Cópia` : productData.nome,
             grade_id: productData.grade_id ? String(productData.grade_id) : "",
@@ -169,16 +183,7 @@ export function NewProductPage() {
             usar_preco_atacado_unico: !!productData.usar_preco_atacado_unico, 
             grade_atacado_id: productData.grade_atacado_id ? String(productData.grade_atacado_id) : '',
             preco_atacado_grade: productData.preco_atacado_grade,
-            variacoes: productData.variacoes?.map(v => ({
-                tamanho: v.tamanho,
-                estoque: isDuplicateMode ? 0 : v.estoque,
-                sku: isDuplicateMode ? '' : v.sku,
-                codigo_barras: isDuplicateMode ? '' : v.codigo_barras,
-                peso_kg: v.peso_kg || 0,
-                altura_cm: v.altura_cm || 0,
-                largura_cm: v.largura_cm || 0,
-                comprimento_cm: v.comprimento_cm || 0,
-            })) || [],
+            variacoes: variacoesComDimensoes,
             composicao_atacado: typeof productData.composicao_atacado_grade === 'string' 
                 ? JSON.parse(productData.composicao_atacado_grade || "[]") 
                 : (productData.composicao_atacado_grade || [])
@@ -253,18 +258,24 @@ export function NewProductPage() {
   }, [selectedGridObj, replaceVariacoes, variacaoFields, isLoadingData]);
 
   useEffect(() => {
-    if (selectedSubcategoryId && allSubcategories) {
-      const sub = allSubcategories.find(s => String(s.id) === String(selectedSubcategoryId));
-      const shouldFill = (!isEditMode && !isDuplicateMode) || !watch('ncm');
-      if (sub && shouldFill) {
-        setValue('ncm', sub.ncm);
-        setValue('cfop_padrao', sub.cfop_padrao);
-        setValue('cst_icms', sub.cst_icms);
-        setValue('origem', sub.origem);
-        setValue('unidade_medida', sub.unidade_medida);
-      }
+    const shouldFill = (!isEditMode && !isDuplicateMode) || !watch('ncm');
+    if (selectedSubcategoryId && shouldFill) {
+      api.get(`/subcategorias/${selectedSubcategoryId}/fiscal`).then(response => {
+        const fiscalData = response.data;
+        if (fiscalData) {
+          setValue('ncm', fiscalData.ncm);
+          setValue('cfop_padrao', fiscalData.cfop_padrao);
+          setValue('cst_icms', fiscalData.cst_icms);
+          setValue('origem', fiscalData.origem);
+          setValue('unidade_medida', fiscalData.unidade_medida);
+          toast.info("Dados fiscais preenchidos pela subcategoria.");
+        }
+      }).catch(err => {
+        console.error("Falha ao buscar dados fiscais", err);
+        toast.error("Não foi possível buscar os dados fiscais da subcategoria.");
+      });
     }
-  }, [selectedSubcategoryId, allSubcategories, setValue, isEditMode, isDuplicateMode, watch]);
+  }, [selectedSubcategoryId, setValue, isEditMode, isDuplicateMode, watch]);
 
   const gradeAtacadoObj = useMemo(() => grids?.find(g => String(g.id) === String(selectedGradeAtacadoId)), [grids, selectedGradeAtacadoId]);
 
@@ -513,17 +524,17 @@ export function NewProductPage() {
             </div>
             <div className="space-y-3 md:col-span-2">
               <Label className="flex items-center gap-2"><Video className="h-4 w-4 text-emerald-400" /> Vídeo do Produto</Label>
-              <div className={`border-2 border-dashed rounded-xl p-4 flex flex-col items-center justify-center transition-all cursor-pointer hover:bg-white/5 ${videoPreview ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-white/10'}`} onClick={() => videoInputRef.current?.click()}>
+              <div className={`border-2 border-dashed rounded-xl p-4 flex flex-col items-center justify-center transition-all ${videoPreview ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-white/10'}`}>
                   <input type="file" ref={videoInputRef} className="hidden" accept="video/*" onChange={(e) => handleFileChange(e, setVideoFile, setVideoPreview, 50, 'video')} />
                   {videoPreview ? (
                       <div className="relative group w-full aspect-video max-w-md mx-auto">
-                          <video src={videoPreview} className="w-full h-full object-contain rounded-lg" />
-                          <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-lg">
+                          <video src={videoPreview} controls className="w-full h-full object-contain rounded-lg" />
+                          <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-lg cursor-pointer" onClick={() => videoInputRef.current?.click()}>
                               <span className="text-white font-medium flex items-center"><Upload className="mr-2 h-4 w-4" /> Trocar Vídeo</span>
                           </div>
                       </div>
                   ) : (
-                      <div className="text-center py-6 text-muted-foreground">
+                      <div className="text-center py-6 text-muted-foreground cursor-pointer" onClick={() => videoInputRef.current?.click()}>
                           <Upload className="mx-auto h-8 w-8 mb-2 opacity-50" />
                           <p className="text-sm">Clique para enviar</p>
                           <p className="text-[10px] opacity-70">Max 50MB</p>

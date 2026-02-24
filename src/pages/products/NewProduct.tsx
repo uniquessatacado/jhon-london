@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,11 +21,17 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export function NewProductPage() {
   const navigate = useNavigate();
   const { id } = useParams(); // Get ID from URL for edit mode
+  const [searchParams] = useSearchParams();
+  const duplicateId = searchParams.get('duplicate_id');
+  
   const isEditMode = !!id;
+  const isDuplicateMode = !!duplicateId;
+  const fetchId = id || duplicateId;
   
   const { register, control, handleSubmit, formState: { errors, isSubmitting }, setValue, watch, reset } = useForm<any>({
     defaultValues: {
@@ -62,7 +68,7 @@ export function NewProductPage() {
   // Hooks de Mutação & Fetch
   const { mutate: createProduct, isPending: isCreating } = useCreateProduct();
   const { mutate: updateProduct, isPending: isUpdating } = useUpdateProduct();
-  const { data: productData, isLoading: isLoadingData } = useProductDetails(id);
+  const { data: productData, isLoading: isLoadingData } = useProductDetails(fetchId || undefined);
 
   // Estados Locais
   const [globalAtacadoMin, setGlobalAtacadoMin] = useState('10');
@@ -95,12 +101,12 @@ export function NewProductPage() {
       .catch(() => {});
   }, []);
 
-  // --- POPULAR DADOS NA EDIÇÃO ---
+  // --- POPULAR DADOS NA EDIÇÃO/DUPLICAÇÃO ---
   useEffect(() => {
     if (productData) {
-        // Resetar formulário com dados da API
-        reset({
-            nome: productData.nome,
+        // Preparar dados base
+        const formData = {
+            nome: isDuplicateMode ? `${productData.nome} - Cópia` : productData.nome,
             grade_id: productData.grade_id ? String(productData.grade_id) : "",
             subcategoria_id: productData.subcategoria_id ? String(productData.subcategoria_id) : "",
             marca_id: productData.marca_id ? String(productData.marca_id) : "",
@@ -117,37 +123,47 @@ export function NewProductPage() {
             usar_preco_atacado_unico: !!productData.usar_preco_atacado_unico, 
             grade_atacado_id: productData.grade_atacado_id ? String(productData.grade_atacado_id) : '',
             preco_atacado_grade: productData.preco_atacado_grade,
+            // Duplicação: ZERAR estoque e códigos
             variacoes: productData.variacoes?.map(v => ({
                 tamanho: v.tamanho,
-                estoque: v.estoque,
-                sku: v.sku,
-                codigo_barras: v.codigo_barras
+                estoque: isDuplicateMode ? 0 : v.estoque,
+                sku: isDuplicateMode ? '' : v.sku,
+                codigo_barras: isDuplicateMode ? '' : v.codigo_barras
             })) || [],
-            // Parse do JSON da composição se necessário, ou usar direto se a API já retornar objeto
             composicao_atacado: typeof productData.composicao_atacado_grade === 'string' 
                 ? JSON.parse(productData.composicao_atacado_grade || "[]") 
                 : (productData.composicao_atacado_grade || [])
-        });
+        };
 
-        // Configurar Previews
-        if (productData.imagem_principal) {
-            setMainImagePreview(productData.imagem_principal);
-        }
-        
-        if (productData.imagens_galeria && productData.imagens_galeria.length > 0) {
-            setGalleryPreviews(productData.imagens_galeria);
-            setExistingGallery(productData.imagens_galeria); 
-        }
+        reset(formData);
 
-        // Tenta video_url primeiro (padrão API), depois video (backup type)
-        const videoSrc = productData.video_url || productData.video;
-        if (videoSrc) {
-            setVideoPreview(videoSrc);
+        // Configurar Previews - APENAS SE NÃO FOR DUPLICATA
+        if (!isDuplicateMode) {
+            if (productData.imagem_principal) {
+                setMainImagePreview(productData.imagem_principal);
+            }
+            
+            if (productData.imagens_galeria && productData.imagens_galeria.length > 0) {
+                setGalleryPreviews(productData.imagens_galeria);
+                setExistingGallery(productData.imagens_galeria); 
+            }
+
+            const videoSrc = productData.video_url || productData.video;
+            if (videoSrc) {
+                setVideoPreview(videoSrc);
+            }
+        } else {
+            // Em modo duplicata, limpar previews caso existam (se re-navegar)
+            setMainImagePreview(null);
+            setGalleryPreviews([]);
+            setExistingGallery([]);
+            setVideoPreview(null);
+            toast.info("Dados do produto copiados.", { description: "Revise SKU, estoque e imagens antes de salvar." });
         }
 
         initialDataLoaded.current = true;
     }
-  }, [productData, reset]);
+  }, [productData, reset, isDuplicateMode]);
   
   // Watchers Principais
   const selectedGridId = watch('grade_id');
@@ -184,14 +200,12 @@ export function NewProductPage() {
   useEffect(() => {
     if (!selectedGridObj) return;
 
-    // Comparar os tamanhos atuais (variacoesValues) com os tamanhos da grade selecionada (selectedGridObj).
     const currentSizes = variacoesValues.map((v:any) => v.tamanho);
     const newSizes = selectedGridObj.tamanhos.map(t => t.tamanho);
     
     const isDifferent = JSON.stringify(currentSizes) !== JSON.stringify(newSizes);
     
     if (isDifferent) {
-        // Se realmente mudou a grade (ou é nova criação), reseta para zerado
         const newVariations = selectedGridObj.tamanhos.map(t => ({
             tamanho: t.tamanho,
             estoque: 0,
@@ -200,7 +214,7 @@ export function NewProductPage() {
         }));
         replaceVariacoes(newVariations);
     }
-  }, [selectedGridId, selectedGridObj, replaceVariacoes]); // variacoesValues removed from deps to avoid loop
+  }, [selectedGridId, selectedGridObj, replaceVariacoes]); 
 
   const handleBulkStockApply = () => {
     if (!bulkStockQty) return;
@@ -216,8 +230,11 @@ export function NewProductPage() {
       const sub = allSubcategories.find(s => String(s.id) === String(selectedSubcategoryId));
       const currentNcm = watch('ncm');
       
-      // Só preenche defaults se não estiver editando OU se o campo estiver vazio
-      if (sub && (!isEditMode || !currentNcm)) {
+      // Só preenche defaults se não estiver editando (e não duplicando) OU se o campo estiver vazio
+      // Se for duplicata, já vem preenchido do produto original, então respeitamos.
+      const shouldFill = (!isEditMode && !isDuplicateMode) || !currentNcm;
+
+      if (sub && shouldFill) {
         setValue('ncm', sub.ncm);
         setValue('cfop_padrao', sub.cfop_padrao);
         setValue('cst_icms', sub.cst_icms);
@@ -225,7 +242,7 @@ export function NewProductPage() {
         setValue('unidade_medida', sub.unidade_medida);
       }
     }
-  }, [selectedSubcategoryId, allSubcategories, setValue, isEditMode]);
+  }, [selectedSubcategoryId, allSubcategories, setValue, isEditMode, isDuplicateMode]);
 
   // --- LÓGICA DE PACOTE ---
   const gradeAtacadoObj = useMemo(() => {
@@ -321,7 +338,6 @@ export function NewProductPage() {
   };
 
   const onSubmit = (data: any) => {
-    // Validações Manuais
     if (data.variacoes && data.variacoes.length > 0) {
         for (const variant of data.variacoes) {
             if (!variant.sku && !variant.codigo_barras) {
@@ -338,7 +354,6 @@ export function NewProductPage() {
        return;
     }
 
-    // Adiciona arquivos ao objeto de dados antes de enviar para o hook
     const payload = {
         ...data,
         id: isEditMode ? Number(id) : undefined,
@@ -356,11 +371,11 @@ export function NewProductPage() {
   
   const isSaving = isCreating || isUpdating;
 
-  if (isEditMode && isLoadingData) {
+  if ((isEditMode || isDuplicateMode) && isLoadingData) {
       return (
           <div className="flex h-[80vh] items-center justify-center flex-col gap-4">
               <Loader2 className="h-12 w-12 animate-spin text-emerald-500" />
-              <p className="text-muted-foreground">Carregando dados do produto...</p>
+              <p className="text-muted-foreground">{isDuplicateMode ? 'Preparando duplicata...' : 'Carregando dados do produto...'}</p>
           </div>
       );
   }
@@ -375,14 +390,26 @@ export function NewProductPage() {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold">{isEditMode ? 'Editar Produto' : 'Novo Produto'}</h1>
-            <p className="text-muted-foreground">{isEditMode ? 'Alterar dados, preços e estoque.' : 'Cadastro completo com grade e variação de estoque.'}</p>
+            <h1 className="text-3xl font-bold">{isEditMode ? 'Editar Produto' : isDuplicateMode ? 'Duplicar Produto' : 'Novo Produto'}</h1>
+            <p className="text-muted-foreground">
+                {isEditMode ? 'Alterar dados, preços e estoque.' : isDuplicateMode ? 'Criação baseada em produto existente.' : 'Cadastro completo com grade e variação de estoque.'}
+            </p>
           </div>
         </div>
         <Button size="lg" type="submit" disabled={isSaving || isSubmitting} className="bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20">
           {isSaving ? 'Salvando...' : <><Check className="mr-2 h-4 w-4" /> {isEditMode ? 'Salvar Alterações' : 'Salvar Produto'}</>}
         </Button>
       </div>
+
+      {isDuplicateMode && (
+          <Alert className="bg-amber-500/10 border-amber-500/20 text-amber-200">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Modo de Duplicação</AlertTitle>
+              <AlertDescription>
+                  Você está criando um novo produto baseado em um existente. Estoque, SKU e imagens foram zerados para evitar conflitos.
+              </AlertDescription>
+          </Alert>
+      )}
 
       {/* SEÇÃO 1: GRADE E VARIAÇÕES */}
       <Card className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl border-white/10 shadow-2xl">

@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, MoreHorizontal, Pencil, Trash2, Search, Filter, X, PackageOpen, Eye, PackagePlus } from 'lucide-react';
+import { PlusCircle, MoreHorizontal, Pencil, Trash2, Search, Filter, X, PackageOpen, Eye, PackagePlus, Copy } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -17,6 +17,7 @@ import { ViewProductDialog } from '@/components/products/ViewProductDialog';
 import { StockReplenishmentDialog } from '@/components/products/StockReplenishmentDialog';
 
 export function ProductListPage() {
+  const navigate = useNavigate();
   const { data: products, isLoading, isError } = useProducts();
   const { data: categories } = useCategories();
   const { mutate: deleteProduct } = useDeleteProduct();
@@ -50,6 +51,10 @@ export function ProductListPage() {
   const handleReplenishProduct = (product: Product) => {
     setReplenishProduct(product);
     setIsReplenishOpen(true);
+  };
+
+  const handleDuplicateProduct = (product: Product) => {
+    navigate(`/produtos/novo?duplicate_id=${product.id}`);
   };
 
   const handleDeleteProduct = (id: number) => {
@@ -252,6 +257,9 @@ export function ProductListPage() {
                                   <Link to={`/produtos/editar/${product.id}`}>
                                       <Pencil className="mr-2 h-4 w-4" /> Editar
                                   </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleDuplicateProduct(product)} className="focus:bg-white/10 rounded-lg cursor-pointer">
+                                  <Copy className="mr-2 h-4 w-4" /> Duplicar
                                 </DropdownMenuItem>
                                 <AlertDialogTrigger asChild>
                                   <DropdownMenuItem className="text-red-500 focus:bg-red-500/10 focus:text-red-400 rounded-lg cursor-pointer">

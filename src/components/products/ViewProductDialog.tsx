@@ -38,7 +38,7 @@ export function ViewProductDialog({ product, open, onOpenChange }: ViewProductDi
             <div>
                <DialogTitle className="text-2xl font-bold">{product.nome}</DialogTitle>
                <DialogDescription className="text-muted-foreground flex items-center gap-2 mt-1">
-                 <Badge variant="outline" className="text-emerald-400 border-emerald-500/30">ID: {product.id}</Badge>
+                 <Badge variant="outline" className="text-emerald-400 border-emerald-500/30">SKU: {product.sku || product.variacoes?.[0]?.sku || 'N/A'}</Badge>
                  <span>•</span>
                  <span>{product.categoria_nome || 'Sem Categoria'}</span>
                </DialogDescription>
@@ -180,7 +180,7 @@ export function ViewProductDialog({ product, open, onOpenChange }: ViewProductDi
 
                 <TabsContent value="dims" className="mt-0">
                      <Card className="bg-white/5 border-white/10">
-                        <CardContent className="p-4">
+                        <CardContent className="p-0">
                             {product.dimensoes_grade && product.dimensoes_grade.length > 0 ? (
                                 <Table>
                                     <TableHeader>
@@ -205,23 +205,9 @@ export function ViewProductDialog({ product, open, onOpenChange }: ViewProductDi
                                     </TableBody>
                                 </Table>
                             ) : (
-                                <div className="grid grid-cols-4 gap-4 text-sm text-center">
-                                     <div>
-                                        <span className="block text-muted-foreground text-xs mb-1">Peso (kg)</span>
-                                        <span className="font-mono bg-black/20 p-2 rounded block">{product.peso_kg}</span>
-                                     </div>
-                                     <div>
-                                        <span className="block text-muted-foreground text-xs mb-1">Altura (cm)</span>
-                                        <span className="font-mono bg-black/20 p-2 rounded block">{product.altura_cm}</span>
-                                     </div>
-                                     <div>
-                                        <span className="block text-muted-foreground text-xs mb-1">Largura (cm)</span>
-                                        <span className="font-mono bg-black/20 p-2 rounded block">{product.largura_cm}</span>
-                                     </div>
-                                     <div>
-                                        <span className="block text-muted-foreground text-xs mb-1">Comp. (cm)</span>
-                                        <span className="font-mono bg-black/20 p-2 rounded block">{product.comprimento_cm}</span>
-                                     </div>
+                                <div className="p-8 text-center text-muted-foreground">
+                                    <Ruler className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                                    <p>Sem dimensões cadastradas para esta grade.</p>
                                 </div>
                             )}
                         </CardContent>

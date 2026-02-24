@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { Check, ArrowLeft, Info, ShoppingBag, DollarSign, Lock, Box, Grid as GridIcon, Tag, Ruler, AlertTriangle, ArrowDown, Copy } from 'lucide-react';
+import { Check, ArrowLeft, Info, ShoppingBag, DollarSign, Lock, Box, Grid as GridIcon, Tag, Ruler, AlertTriangle, ArrowDown, Copy, Barcode, ScanBarcode } from 'lucide-react';
 import { useCategories, useAllSubcategories } from '@/hooks/use-categories';
 import { useBrands } from '@/hooks/use-brands';
 import { useGrids } from '@/hooks/use-grids';
@@ -22,7 +22,7 @@ import { toast } from 'sonner';
 export function NewProductPage() {
   const navigate = useNavigate();
   
-  const { register, control, handleSubmit, formState: { errors }, setValue, watch } = useForm<any>({
+  const { register, control, handleSubmit, formState: { errors, isSubmitting }, setValue, watch, getValues } = useForm<any>({
     defaultValues: {
       variacoes: [],
       composicao_atacado: [], 
@@ -57,7 +57,7 @@ export function NewProductPage() {
 
   // Estados Locais
   const [globalAtacadoMin, setGlobalAtacadoMin] = useState('10');
-  const [bulkStockQty, setBulkStockQty] = useState(''); // Estado para o input de preenchimento rápido
+  const [bulkStockQty, setBulkStockQty] = useState(''); 
 
   useEffect(() => {
     api.get('/configuracoes/qtd_minima_atacado_geral')
@@ -79,7 +79,8 @@ export function NewProductPage() {
   const precoAtacadoGeral = watch('preco_atacado_geral') || 0;
   const precoAtacadoGrade = watch('preco_atacado_grade') || 0;
   
-  // Watcher para calcular total do pacote dinamicamente
+  // Watchers para validação em tempo real
+  const variacoesValues = watch('variacoes');
   const composicaoAtacadoWatch = watch('composicao_atacado');
 
   // --- LÓGICA 1: GRADE E VARIAÇÕES (CRÍTICO) ---
@@ -140,7 +141,6 @@ export function NewProductPage() {
   // Inicializar composição quando trocar a grade do pacote
   useEffect(() => {
     if (gradeAtacadoObj) {
-        // Inicializa com 1 para facilitar
         const initComposicao = gradeAtacadoObj.tamanhos.map(t => ({
             tamanho: t.tamanho,
             quantidade: 1 
@@ -160,6 +160,23 @@ export function NewProductPage() {
   }, [totalPecasPacote, precoAtacadoGeral, precoAtacadoGrade, usarPrecoUnico]);
 
   const onSubmit = (data: any) => {
+    // VALIDAÇÃO MANUAL: SKU OU EAN OBRIGATÓRIO
+    if (data.variacoes && data.variacoes.length > 0) {
+        for (const variant of data.variacoes) {
+            if (!variant.sku && !variant.codigo_barras) {
+                toast.error(`Erro no tamanho ${variant.tamanho}`, {
+                    description: 'É necessário informar o SKU ou o Código de Barras para salvar.',
+                    duration: 5000,
+                });
+                
+                // Scroll para a tabela
+                const tableElement = document.getElementById('variations-table');
+                tableElement?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return; // Impede o envio
+            }
+        }
+    }
+
     createProduct(data);
   };
 
@@ -177,8 +194,8 @@ export function NewProductPage() {
             <p className="text-muted-foreground">Cadastro completo com grade e variação de estoque.</p>
           </div>
         </div>
-        <Button size="lg" type="submit" disabled={isPending} className="bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20">
-          {isPending ? 'Salvando...' : <><Check className="mr-2 h-4 w-4" /> Salvar Produto</>}
+        <Button size="lg" type="submit" disabled={isPending || isSubmitting} className="bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20">
+          {isPending || isSubmitting ? 'Salvando...' : <><Check className="mr-2 h-4 w-4" /> Salvar Produto</>}
         </Button>
       </div>
 
@@ -232,50 +249,74 @@ export function NewProductPage() {
                         </Button>
                     </div>
 
-                    <div className="rounded-xl border border-white/10 overflow-hidden">
+                    <div id="variations-table" className="rounded-xl border border-white/10 overflow-hidden">
                         <Table>
                             <TableHeader className="bg-black/40">
                                 <TableRow className="border-white/10 hover:bg-transparent">
                                     <TableHead className="w-[100px] text-emerald-400 font-bold">Tamanho</TableHead>
                                     <TableHead className="w-[150px]">Estoque Inicial</TableHead>
-                                    <TableHead>SKU (Opcional)</TableHead>
-                                    <TableHead>Cód. Barras / EAN (Opcional)</TableHead>
+                                    <TableHead>
+                                        <div className="flex items-center gap-2">
+                                            <ScanBarcode className="h-4 w-4" /> SKU <span className="text-[10px] font-normal text-muted-foreground">(Interno)</span>
+                                        </div>
+                                    </TableHead>
+                                    <TableHead>
+                                        <div className="flex items-center gap-2">
+                                            <Barcode className="h-4 w-4" /> Cód. Barras / EAN
+                                        </div>
+                                    </TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody className="bg-black/20">
-                                {variacaoFields.map((field: any, index) => (
-                                    <TableRow key={field.id} className="border-white/10 hover:bg-white/5">
-                                        <TableCell className="font-bold text-lg text-white">
-                                            <Badge variant="outline" className="text-emerald-400 border-emerald-500/30 bg-emerald-500/10 px-3 py-1">
-                                                {field.tamanho}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Input 
-                                                type="number" 
-                                                {...register(`variacoes.${index}.estoque`)} 
-                                                className="bg-black/40 border-white/10 focus:bg-white/10"
-                                                placeholder="0"
-                                            />
-                                        </TableCell>
-                                        <TableCell>
-                                            <Input 
-                                                {...register(`variacoes.${index}.sku`)} 
-                                                className="bg-black/40 border-white/10 focus:bg-white/10 uppercase"
-                                                placeholder={`SKU-${field.tamanho}`}
-                                            />
-                                        </TableCell>
-                                        <TableCell>
-                                            <Input 
-                                                {...register(`variacoes.${index}.codigo_barras`)} 
-                                                className="bg-black/40 border-white/10 focus:bg-white/10"
-                                                placeholder="EAN13..."
-                                            />
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
+                                {variacaoFields.map((field: any, index) => {
+                                    // Lógica visual para SKU vs EAN
+                                    const currentEan = variacoesValues?.[index]?.codigo_barras;
+                                    const currentSku = variacoesValues?.[index]?.sku;
+                                    const isMissingBoth = !currentEan && !currentSku;
+                                    
+                                    // Se tem EAN, SKU é opcional. Se não tem EAN, SKU é obrigatório.
+                                    const skuPlaceholder = currentEan ? "Opcional (tem EAN)" : "Obrigatório s/ EAN";
+                                    const skuBorderClass = isMissingBoth ? "focus:border-red-500/50 border-red-500/30 bg-red-500/5" : "bg-black/40 border-white/10 focus:bg-white/10";
+                                    const eanBorderClass = isMissingBoth ? "focus:border-red-500/50 border-red-500/30 bg-red-500/5" : "bg-black/40 border-white/10 focus:bg-white/10";
+
+                                    return (
+                                        <TableRow key={field.id} className="border-white/10 hover:bg-white/5">
+                                            <TableCell className="font-bold text-lg text-white">
+                                                <Badge variant="outline" className="text-emerald-400 border-emerald-500/30 bg-emerald-500/10 px-3 py-1">
+                                                    {field.tamanho}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Input 
+                                                    type="number" 
+                                                    {...register(`variacoes.${index}.estoque`)} 
+                                                    className="bg-black/40 border-white/10 focus:bg-white/10"
+                                                    placeholder="0"
+                                                />
+                                            </TableCell>
+                                            <TableCell>
+                                                <Input 
+                                                    {...register(`variacoes.${index}.sku`)} 
+                                                    className={`${skuBorderClass} uppercase transition-colors`}
+                                                    placeholder={skuPlaceholder}
+                                                />
+                                            </TableCell>
+                                            <TableCell>
+                                                <Input 
+                                                    {...register(`variacoes.${index}.codigo_barras`)} 
+                                                    className={`${eanBorderClass} transition-colors`}
+                                                    placeholder="EAN-13 (Opcional c/ SKU)"
+                                                />
+                                            </TableCell>
+                                        </TableRow>
+                                    );
+                                })}
                             </TableBody>
                         </Table>
+                    </div>
+                    <div className="mt-2 text-xs text-muted-foreground flex items-center gap-2">
+                        <Info className="h-3 w-3" />
+                        <span>Regra: É obrigatório informar pelo menos um identificador (SKU ou Código de Barras) para cada tamanho.</span>
                     </div>
                 </div>
             )}

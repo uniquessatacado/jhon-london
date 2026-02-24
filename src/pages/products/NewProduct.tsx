@@ -79,7 +79,7 @@ export function NewProductPage() {
   const precoAtacadoGeral = watch('preco_atacado_geral') || 0;
   const precoAtacadoGrade = watch('preco_atacado_grade') || 0;
   
-  // CORREÇÃO CRÍTICA: useWatch para garantir reatividade total na tabela
+  // UseWatch para monitoramento em tempo real
   const composicaoAtacadoValues = useWatch({
     control,
     name: "composicao_atacado",
@@ -92,7 +92,20 @@ export function NewProductPage() {
     defaultValue: []
   });
 
-  // --- LÓGICA 1: GRADE E VARIAÇÕES (CRÍTICO) ---
+  // --- LÓGICA DE DUPLICATAS ---
+  // Calcula arrays de valores para verificar unicidade
+  const duplicateCheck = useMemo(() => {
+    const skus = variacoesValues?.map((v: any) => v.sku?.trim()).filter(Boolean) || [];
+    const eans = variacoesValues?.map((v: any) => v.codigo_barras?.trim()).filter(Boolean) || [];
+
+    const duplicateSkus = skus.filter((item: string, index: number) => skus.indexOf(item) !== index);
+    const duplicateEans = eans.filter((item: string, index: number) => eans.indexOf(item) !== index);
+
+    return { duplicateSkus, duplicateEans };
+  }, [variacoesValues]);
+
+
+  // --- LÓGICA 1: GRADE E VARIAÇÕES ---
   const selectedGridObj = useMemo(() => {
     return grids?.find(g => String(g.id) === String(selectedGridId));
   }, [grids, selectedGridId]);
@@ -150,7 +163,6 @@ export function NewProductPage() {
   // Inicializar composição quando trocar a grade do pacote
   useEffect(() => {
     if (gradeAtacadoObj) {
-        // Resetar apenas se a grade mudar
         const initComposicao = gradeAtacadoObj.tamanhos.map(t => ({
             tamanho: t.tamanho,
             quantidade: 1 
@@ -159,7 +171,7 @@ export function NewProductPage() {
     }
   }, [selectedGradeAtacadoId, gradeAtacadoObj, replaceComposicao]);
 
-  // CÁLCULO DIRETO (SEM useMemo para evitar stale state)
+  // CÁLCULO DIRETO
   const totalPecasPacote = composicaoAtacadoValues 
     ? composicaoAtacadoValues.reduce((acc: number, curr: any) => acc + (Number(curr?.quantidade) || 0), 0)
     : 0;
@@ -170,21 +182,36 @@ export function NewProductPage() {
   }, [totalPecasPacote, precoAtacadoGeral, precoAtacadoGrade, usarPrecoUnico]);
 
   const onSubmit = (data: any) => {
-    // VALIDAÇÃO MANUAL: SKU OU EAN OBRIGATÓRIO
+    // 1. VALIDAÇÃO DE CAMPOS VAZIOS (SKU/EAN)
     if (data.variacoes && data.variacoes.length > 0) {
         for (const variant of data.variacoes) {
             if (!variant.sku && !variant.codigo_barras) {
                 toast.error(`Erro no tamanho ${variant.tamanho}`, {
-                    description: 'É necessário informar o SKU ou o Código de Barras para salvar.',
-                    duration: 5000,
+                    description: 'É necessário informar o SKU ou o Código de Barras.',
                 });
-                
-                const tableElement = document.getElementById('variations-table');
-                tableElement?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                document.getElementById('variations-table')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 return;
             }
         }
     }
+
+    // 2. VALIDAÇÃO DE DUPLICATAS
+    if (duplicateCheck.duplicateSkus.length > 0) {
+        toast.error('SKUs Duplicados Detectados', {
+            description: `O SKU "${duplicateCheck.duplicateSkus[0]}" foi usado em mais de um tamanho.`,
+        });
+        document.getElementById('variations-table')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+    }
+
+    if (duplicateCheck.duplicateEans.length > 0) {
+        toast.error('Códigos de Barras Duplicados', {
+            description: `O código "${duplicateCheck.duplicateEans[0]}" foi usado em mais de um tamanho.`,
+        });
+        document.getElementById('variations-table')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+    }
+
     createProduct(data);
   };
 
@@ -277,13 +304,31 @@ export function NewProductPage() {
                             </TableHeader>
                             <TableBody className="bg-black/20">
                                 {variacaoFields.map((field: any, index) => {
-                                    const currentEan = variacoesValues?.[index]?.codigo_barras;
-                                    const currentSku = variacoesValues?.[index]?.sku;
+                                    // Valores Atuais
+                                    const currentEan = variacoesValues?.[index]?.codigo_barras?.trim();
+                                    const currentSku = variacoesValues?.[index]?.sku?.trim();
+                                    
+                                    // Verificação de Erro - Vazio
                                     const isMissingBoth = !currentEan && !currentSku;
                                     
+                                    // Verificação de Erro - Duplicado
+                                    const isSkuDuplicate = currentSku && duplicateCheck.duplicateSkus.includes(currentSku);
+                                    const isEanDuplicate = currentEan && duplicateCheck.duplicateEans.includes(currentEan);
+
+                                    // Lógica de Classes
+                                    const skuBorderClass = isMissingBoth 
+                                        ? "focus:border-red-500/50 border-red-500/30 bg-red-500/5" 
+                                        : isSkuDuplicate 
+                                            ? "border-red-500 bg-red-500/10 text-red-200 animate-pulse" 
+                                            : "bg-black/40 border-white/10 focus:bg-white/10";
+
+                                    const eanBorderClass = isMissingBoth 
+                                        ? "focus:border-red-500/50 border-red-500/30 bg-red-500/5" 
+                                        : isEanDuplicate
+                                            ? "border-red-500 bg-red-500/10 text-red-200 animate-pulse"
+                                            : "bg-black/40 border-white/10 focus:bg-white/10";
+                                    
                                     const skuPlaceholder = currentEan ? "Opcional (tem EAN)" : "Obrigatório s/ EAN";
-                                    const skuBorderClass = isMissingBoth ? "focus:border-red-500/50 border-red-500/30 bg-red-500/5" : "bg-black/40 border-white/10 focus:bg-white/10";
-                                    const eanBorderClass = isMissingBoth ? "focus:border-red-500/50 border-red-500/30 bg-red-500/5" : "bg-black/40 border-white/10 focus:bg-white/10";
 
                                     return (
                                         <TableRow key={field.id} className="border-white/10 hover:bg-white/5">
@@ -300,19 +345,21 @@ export function NewProductPage() {
                                                     placeholder="0"
                                                 />
                                             </TableCell>
-                                            <TableCell>
+                                            <TableCell className="relative">
                                                 <Input 
                                                     {...register(`variacoes.${index}.sku`)} 
-                                                    className={`${skuBorderClass} uppercase transition-colors`}
+                                                    className={`${skuBorderClass} uppercase transition-all`}
                                                     placeholder={skuPlaceholder}
                                                 />
+                                                {isSkuDuplicate && <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] text-red-400 font-bold bg-black/50 px-1 rounded">DUPLICADO</span>}
                                             </TableCell>
-                                            <TableCell>
+                                            <TableCell className="relative">
                                                 <Input 
                                                     {...register(`variacoes.${index}.codigo_barras`)} 
-                                                    className={`${eanBorderClass} transition-colors`}
+                                                    className={`${eanBorderClass} transition-all`}
                                                     placeholder="EAN-13 (Opcional c/ SKU)"
                                                 />
+                                                {isEanDuplicate && <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] text-red-400 font-bold bg-black/50 px-1 rounded">DUPLICADO</span>}
                                             </TableCell>
                                         </TableRow>
                                     );
@@ -322,7 +369,7 @@ export function NewProductPage() {
                     </div>
                     <div className="mt-2 text-xs text-muted-foreground flex items-center gap-2">
                         <Info className="h-3 w-3" />
-                        <span>Regra: É obrigatório informar pelo menos um identificador (SKU ou Código de Barras) para cada tamanho.</span>
+                        <span>Regra: É obrigatório informar pelo menos um identificador (SKU ou Código de Barras). Identificadores não podem se repetir entre tamanhos.</span>
                     </div>
                 </div>
             )}

@@ -28,7 +28,7 @@ export function NewProductPage() {
   const navigate = useNavigate();
   const params = useParams();
   
-  // Tratamento robusto do ID
+  // Tratamento robusto do ID para edição
   const id = params.id && params.id !== 'undefined' && params.id !== 'novo' ? params.id : undefined;
   const isEditMode = !!id;
 
@@ -37,7 +37,7 @@ export function NewProductPage() {
   const { mutate: updateProduct, isPending: isUpdating } = useUpdateProduct();
   const isPending = isCreating || isUpdating;
 
-  // Dados para edição - Só busca se tiver ID válido
+  // Dados para edição
   const { data: existingProduct, isLoading: isLoadingProduct } = useProduct(id);
 
   const { register, control, handleSubmit, formState: { errors, isSubmitting }, setValue, watch, reset } = useForm<any>({
@@ -57,7 +57,6 @@ export function NewProductPage() {
   // PREENCHER FORMULÁRIO NA EDIÇÃO
   useEffect(() => {
     if (existingProduct) {
-        // Mapeia os dados do backend para o formato do form
         reset({
             nome: existingProduct.nome,
             subcategoria_id: String(existingProduct.subcategoria_id),
@@ -73,7 +72,7 @@ export function NewProductPage() {
             usar_preco_atacado_unico: Boolean(existingProduct.usar_preco_atacado_unico),
             grade_atacado_id: existingProduct.grade_atacado_id ? String(existingProduct.grade_atacado_id) : undefined,
             preco_atacado_grade: existingProduct.preco_atacado_grade,
-            // Fiscal (opcional carregar, ou deixar o useEffect da subcategoria tratar)
+            // Fiscal
             ncm: existingProduct.ncm,
             cfop_padrao: existingProduct.cfop_padrao,
             cst_icms: existingProduct.cst_icms,
@@ -83,7 +82,7 @@ export function NewProductPage() {
             imagem_principal: existingProduct.imagem_principal,
         });
 
-        // Setar previews iniciais se existirem
+        // Setar previews iniciais
         if (existingProduct.imagem_principal) {
             setMainImagePreview(existingProduct.imagem_principal);
         }
@@ -93,18 +92,18 @@ export function NewProductPage() {
     }
   }, [existingProduct, reset]);
 
-  // Array de Variações
+  // Array de Variações (Estoque)
   const { fields: variacaoFields, replace: replaceVariacoes } = useFieldArray({
     control,
     name: "variacoes"
   });
 
+  // Array de Composição (Pacote Atacado)
   const { fields: composicaoFields, replace: replaceComposicao } = useFieldArray({
     control,
     name: "composicao_atacado"
   });
   
-  const { data: categories } = useCategories();
   const { data: brands } = useBrands();
   const { data: grids } = useGrids();
   const { data: allSubcategories } = useAllSubcategories();
@@ -112,6 +111,7 @@ export function NewProductPage() {
   const [globalAtacadoMin, setGlobalAtacadoMin] = useState('10');
   const [bulkStockQty, setBulkStockQty] = useState(''); 
 
+  // Estados de Arquivos
   const [mainImageFile, setMainImageFile] = useState<File | null>(null);
   const [mainImagePreview, setMainImagePreview] = useState<string | null>(null);
   const [galleryFiles, setGalleryFiles] = useState<File[]>([]);
@@ -127,14 +127,18 @@ export function NewProductPage() {
     api.get('/configuracoes/qtd_minima_atacado_geral').then(res => setGlobalAtacadoMin(res.data?.valor || '10')).catch(() => {});
   }, []);
   
+  // Watchers
   const selectedGridId = watch('grade_id');
   const selectedSubcategoryId = watch('subcategoria_id');
+  
   const habilitaAtacadoGeral = watch('habilita_atacado_geral');
   const habilitaAtacadoGrade = watch('habilita_atacado_grade');
   const usarPrecoUnico = watch('usar_preco_atacado_unico');
+  
   const selectedGradeAtacadoId = watch('grade_atacado_id');
   const precoAtacadoGeral = watch('preco_atacado_geral') || 0;
   const precoAtacadoGrade = watch('preco_atacado_grade') || 0;
+  
   const composicaoAtacadoValues = useWatch({ control, name: "composicao_atacado", defaultValue: [] });
   const variacoesValues = useWatch({ control, name: "variacoes", defaultValue: [] });
 
@@ -150,26 +154,22 @@ export function NewProductPage() {
     return grids?.find(g => String(g.id) === String(selectedGridId));
   }, [grids, selectedGridId]);
 
-  // Geração de Variações: Só gera se NÃO estiver em modo de edição OU se o usuário mudar a grade intencionalmente
+  // Lógica de Geração de Variações
   useEffect(() => {
     if (selectedGridObj) {
-        // Verifica se a grade selecionada é a mesma que veio do banco (para edição)
         const isSameGridAsLoaded = existingProduct && String(existingProduct.grade_id) === String(selectedGridId);
         
-        // Se NÃO for a mesma grade (mudou ou é novo), verifica se precisa popular
+        // Se mudou a grade ou é novo produto
         if (!isSameGridAsLoaded) {
-             // Se os campos estão vazios e não é edição, popula
              if (variacaoFields.length === 0 && !isEditMode) {
                  const newVariations = selectedGridObj.tamanhos.map(t => ({ tamanho: t.tamanho, estoque: 0, sku: '', codigo_barras: '' }));
                  replaceVariacoes(newVariations);
              }
         }
         
-        // Se estiver criando novo e selecionou grade, popula/substitui
+        // Se é novo, permite trocar livremente
         if (!isEditMode && selectedGridId) {
              const newVariations = selectedGridObj.tamanhos.map(t => ({ tamanho: t.tamanho, estoque: 0, sku: '', codigo_barras: '' }));
-             
-             // Só substitui se os tamanhos forem diferentes para não apagar o que o usuário digitou
              const currentSizes = variacaoFields.map((v: any) => v.tamanho).join(',');
              const newSizes = newVariations.map(v => v.tamanho).join(',');
              if (currentSizes !== newSizes) {
@@ -186,12 +186,9 @@ export function NewProductPage() {
   };
 
   useEffect(() => {
-    // Só auto-preenche se NÃO estiver editando ou se o usuário trocou a subcategoria manualmente
-    // Para simplificar: se a subcategoria do banco for diferente da atual, preenche
     if (selectedSubcategoryId && allSubcategories) {
       const sub = allSubcategories.find(s => String(s.id) === String(selectedSubcategoryId));
       if (sub) {
-        // Se estiver editando, só sobrescreve se o valor estiver vazio
         const currentNcm = watch('ncm');
         if (!currentNcm || !isEditMode) {
              setValue('ncm', sub.ncm);
@@ -210,7 +207,7 @@ export function NewProductPage() {
   }, [grids, selectedGradeAtacadoId]);
 
   useEffect(() => {
-    if (gradeAtacadoObj && !isEditMode) { // Só auto-preenche pacote em produto novo
+    if (gradeAtacadoObj && !isEditMode) { 
         const initComposicao = gradeAtacadoObj.tamanhos.map(t => ({ tamanho: t.tamanho, quantidade: 1 }));
         replaceComposicao(initComposicao);
     }
@@ -295,6 +292,7 @@ export function NewProductPage() {
         </Button>
       </div>
 
+      {/* 1. GRADE DE ESTOQUE */}
       <Card className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl border-white/10 shadow-2xl">
         <CardHeader className="pb-4 border-b border-white/10">
             <CardTitle className="flex items-center gap-2 text-emerald-400">
@@ -354,6 +352,7 @@ export function NewProductPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
           <div className="space-y-8">
+              {/* 2. IDENTIFICAÇÃO */}
               <Card className="bg-black/20 border-white/10 shadow-lg">
                 <CardHeader className="pb-3 border-b border-white/5">
                     <CardTitle className="text-base flex items-center gap-2 text-white"><Tag className="h-4 w-4 text-emerald-500" /> 2. Identificação</CardTitle>
@@ -367,6 +366,7 @@ export function NewProductPage() {
                 </CardContent>
               </Card>
 
+              {/* 3. MÍDIA */}
               <Card className="bg-black/20 border-white/10 shadow-lg">
                 <CardHeader className="pb-3 border-b border-white/5"><CardTitle className="text-base flex items-center gap-2 text-white"><Box className="h-4 w-4 text-emerald-500" /> Mídia</CardTitle></CardHeader>
                 <CardContent className="pt-4 space-y-6">
@@ -389,14 +389,72 @@ export function NewProductPage() {
           </div>
 
           <div className="space-y-8">
+              {/* 4. FINANCEIRO E ATACADO */}
               <Card className="bg-black/20 border-white/10 shadow-lg h-full">
-                <CardHeader className="pb-3 border-b border-white/5"><CardTitle className="text-base flex items-center gap-2 text-white"><DollarSign className="h-4 w-4 text-emerald-500" /> Financeiro</CardTitle></CardHeader>
+                <CardHeader className="pb-3 border-b border-white/5"><CardTitle className="text-base flex items-center gap-2 text-white"><DollarSign className="h-4 w-4 text-emerald-500" /> 4. Financeiro & Atacado</CardTitle></CardHeader>
                 <CardContent className="pt-4 space-y-6">
                     <div className="grid grid-cols-2 gap-4 p-4 rounded-xl bg-white/5 border border-white/5">
-                        <div className="grid gap-2"><Label>Custo</Label><Input type="number" step="0.01" {...register('preco_custo')} className="bg-black/40 border-white/10" /></div>
-                        <div className="grid gap-2"><Label>Varejo</Label><Input type="number" step="0.01" {...register('preco_varejo')} className="bg-black/40 border-emerald-500/30 text-emerald-400 font-bold" /></div>
+                        <div className="grid gap-2"><Label>Custo (R$)</Label><Input type="number" step="0.01" {...register('preco_custo')} className="bg-black/40 border-white/10" /></div>
+                        <div className="grid gap-2"><Label>Varejo (R$)</Label><Input type="number" step="0.01" {...register('preco_varejo')} className="bg-black/40 border-emerald-500/30 text-emerald-400 font-bold" /></div>
                     </div>
-                    {/* ... (Resto dos campos de Atacado mantidos iguais) ... */}
+                    
+                    <Separator className="bg-white/10" />
+                    
+                    {/* OPÇÃO DE PREÇO ÚNICO */}
+                    <div className="flex items-center justify-between">
+                         <Label htmlFor="usar_preco_atacado_unico" className="flex items-center gap-2 text-sm cursor-pointer"><Lock className="h-3 w-3" /> Preço Único Atacado</Label>
+                         <Switch id="usar_preco_atacado_unico" checked={usarPrecoUnico} onCheckedChange={(c) => setValue('usar_preco_atacado_unico', c)} />
+                    </div>
+
+                    {/* ATACADO GERAL (MISTURADO) */}
+                    <div className={`p-4 rounded-xl border transition-all ${habilitaAtacadoGeral ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-white/5 border-white/5'}`}>
+                        <div className="flex justify-between items-start mb-2">
+                            <div><Label className="font-medium">Atacado Geral</Label><p className="text-xs text-muted-foreground">Min: {globalAtacadoMin} pçs</p></div>
+                            <Switch checked={habilitaAtacadoGeral} onCheckedChange={(c) => setValue('habilita_atacado_geral', c)} />
+                        </div>
+                        {(habilitaAtacadoGeral || usarPrecoUnico) && <Input type="number" step="0.01" {...register('preco_atacado_geral')} className="mt-2 bg-black/40 border-white/10" placeholder="R$ 0,00" />}
+                    </div>
+
+                    {/* PACOTE FECHADO */}
+                    <div className={`p-4 rounded-xl border transition-all ${habilitaAtacadoGrade ? 'bg-purple-500/5 border-purple-500/20' : 'bg-white/5 border-white/5'}`}>
+                        <div className="flex justify-between items-start mb-4">
+                            <div><Label className="font-medium">Pacote Fechado</Label><p className="text-xs text-muted-foreground">Kit c/ grade definida</p></div>
+                            <Switch checked={habilitaAtacadoGrade} onCheckedChange={(c) => setValue('habilita_atacado_grade', c)} />
+                        </div>
+                        {habilitaAtacadoGrade && (
+                            <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
+                                <div className="grid gap-2">
+                                    <Label className="text-xs text-purple-300">Grade do Pacote</Label>
+                                    <Select onValueChange={(v) => setValue('grade_atacado_id', v)} value={selectedGradeAtacadoId}>
+                                        <SelectTrigger className="bg-black/40 border-white/10 h-9"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                                        <SelectContent>{grids?.map(g => <SelectItem key={g.id} value={String(g.id)}>{g.nome}</SelectItem>)}</SelectContent>
+                                    </Select>
+                                </div>
+                                {composicaoFields.length > 0 && (
+                                    <div className="border border-white/10 rounded-lg overflow-hidden">
+                                        <Table>
+                                            <TableHeader className="bg-purple-500/10"><TableRow className="border-white/10 hover:bg-transparent"><TableHead className="h-8 text-xs text-purple-300">Tam</TableHead><TableHead className="h-8 text-xs text-right text-purple-300">Qtd</TableHead></TableRow></TableHeader>
+                                            <TableBody className="bg-black/20">
+                                                {composicaoFields.map((field: any, idx) => (
+                                                    <TableRow key={field.id} className="border-white/5 hover:bg-transparent">
+                                                        <TableCell className="py-2 font-medium">{field.tamanho}<input type="hidden" {...register(`composicao_atacado.${idx}.tamanho`)} /></TableCell>
+                                                        <TableCell className="py-2 text-right"><Input type="number" min="0" className="h-7 w-20 ml-auto bg-black/40 border-white/10 text-right" {...register(`composicao_atacado.${idx}.quantidade`, { valueAsNumber: true })} /></TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </div>
+                                )}
+                                {!usarPrecoUnico && <div className="grid gap-2"><Label className="text-xs">Preço Unit. no Pacote</Label><Input type="number" step="0.01" {...register('preco_atacado_grade')} className="bg-black/40 border-white/10 h-9" placeholder="R$ 0,00" /></div>}
+                                {gradeAtacadoObj && (
+                                    <div className="bg-black/40 rounded border border-white/10 p-3 text-sm space-y-1 mt-2">
+                                        <div className="flex justify-between"><span className="text-muted-foreground">Total:</span><span className="font-bold">{totalPecasPacote} un</span></div>
+                                        <div className="border-t border-white/10 my-1 pt-1 flex justify-between font-bold"><span>Total Pacote:</span><span>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valorTotalPacote)}</span></div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
                 </CardContent>
               </Card>
           </div>

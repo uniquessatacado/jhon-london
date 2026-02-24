@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { 
   Check, ArrowLeft, Info, DollarSign, Lock, Box, Grid as GridIcon, Tag, Ruler, AlertTriangle, ArrowDown, Copy, Barcode, ScanBarcode, 
   Upload, X, Image as ImageIcon, Video, Play, Trash2, Loader2 
@@ -26,7 +27,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useMediaQuery } from '@/hooks/use-media-query';
 
 // Componente para a lista de variações no mobile
-const MobileVariationCard = ({ field, currentVariation, index, register, duplicateCheck }: any) => {
+const MobileVariationCard = ({ field, currentVariation, index, register, duplicateCheck, onEditDimensions }: any) => {
   const currentEan = currentVariation?.codigo_barras;
   const currentSku = currentVariation?.sku;
   const isMissingBoth = !currentEan && !currentSku;
@@ -35,6 +36,8 @@ const MobileVariationCard = ({ field, currentVariation, index, register, duplica
 
   const skuBorder = isMissingBoth ? "border-red-500/50 bg-red-500/5" : isSkuDuplicate ? "border-red-500 text-red-200" : "bg-black/40 border-white/10";
   const eanBorder = isMissingBoth ? "border-red-500/50 bg-red-500/5" : isEanDuplicate ? "border-red-500 text-red-200" : "bg-black/40 border-white/10";
+
+  const hasDimensions = currentVariation?.peso_kg > 0 || currentVariation?.altura_cm > 0;
 
   return (
     <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-4">
@@ -55,6 +58,9 @@ const MobileVariationCard = ({ field, currentVariation, index, register, duplica
         <Input {...register(`variacoes.${index}.codigo_barras`)} className={`${eanBorder} h-12`} placeholder="EAN-13" />
         {isEanDuplicate && <p className="text-xs text-red-400">Cód. Barras já existe</p>}
       </div>
+      <Button type="button" variant="outline" className={`w-full h-12 ${hasDimensions ? 'border-emerald-500/30 bg-emerald-500/5 text-emerald-400' : 'border-white/10'}`} onClick={() => onEditDimensions(index)}>
+        <Ruler className="mr-2 h-4 w-4" /> {hasDimensions ? 'Editar Dimensões' : 'Adicionar Dimensões'}
+      </Button>
     </div>
   );
 };
@@ -100,6 +106,7 @@ export function NewProductPage() {
   const [existingIdentifiers, setExistingIdentifiers] = useState<{skus: string[], eans: string[]}>({ skus: [], eans: [] });
   const [globalAtacadoMin, setGlobalAtacadoMin] = useState('10');
   const [bulkStockQty, setBulkStockQty] = useState('');
+  const [editingDimensionsIndex, setEditingDimensionsIndex] = useState<number | null>(null);
 
   const [mainImageFile, setMainImageFile] = useState<File | null>(null);
   const [mainImagePreview, setMainImagePreview] = useState<string | null>(null);
@@ -166,7 +173,11 @@ export function NewProductPage() {
                 tamanho: v.tamanho,
                 estoque: isDuplicateMode ? 0 : v.estoque,
                 sku: isDuplicateMode ? '' : v.sku,
-                codigo_barras: isDuplicateMode ? '' : v.codigo_barras
+                codigo_barras: isDuplicateMode ? '' : v.codigo_barras,
+                peso_kg: v.peso_kg || 0,
+                altura_cm: v.altura_cm || 0,
+                largura_cm: v.largura_cm || 0,
+                comprimento_cm: v.comprimento_cm || 0,
             })) || [],
             composicao_atacado: typeof productData.composicao_atacado_grade === 'string' 
                 ? JSON.parse(productData.composicao_atacado_grade || "[]") 
@@ -220,12 +231,26 @@ export function NewProductPage() {
 
   useEffect(() => {
     if (!selectedGridObj) return;
-    const currentSizes = variacoesValues.map((v:any) => v.tamanho);
+    const currentSizes = variacaoFields.map((v:any) => v.tamanho);
     const newSizes = selectedGridObj.tamanhos.map(t => t.tamanho);
+
     if (JSON.stringify(currentSizes) !== JSON.stringify(newSizes)) {
-        replaceVariacoes(selectedGridObj.tamanhos.map(t => ({ tamanho: t.tamanho, estoque: 0, sku: '', codigo_barras: '' })));
+        const newVariations = selectedGridObj.tamanhos.map(t => ({ 
+            tamanho: t.tamanho, 
+            estoque: 0, 
+            sku: '', 
+            codigo_barras: '',
+            peso_kg: t.peso_kg || 0,
+            altura_cm: t.altura_cm || 0,
+            largura_cm: t.largura_cm || 0,
+            comprimento_cm: t.comprimento_cm || 0,
+        }));
+        replaceVariacoes(newVariations);
+        if (!isLoadingData) {
+            toast.info("Variações e dimensões preenchidas pela grade selecionada.");
+        }
     }
-  }, [selectedGridId, selectedGridObj, replaceVariacoes, variacoesValues]); 
+  }, [selectedGridObj, replaceVariacoes, variacaoFields, isLoadingData]);
 
   useEffect(() => {
     if (selectedSubcategoryId && allSubcategories) {
@@ -343,7 +368,7 @@ export function NewProductPage() {
         <div className="space-y-6 md:space-y-8">
           {/* SEÇÃO 1: GRADE E VARIAÇÕES */}
           <Card className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl border-white/10 shadow-2xl">
-            <CardHeader className="pb-4 border-b border-white/10"><CardTitle className="flex items-center gap-2 text-emerald-400"><GridIcon className="h-5 w-5" /> 1. Grade de Estoque</CardTitle></CardHeader>
+            <CardHeader className="pb-4 border-b border-white/10"><CardTitle className="flex items-center gap-2 text-emerald-400"><GridIcon className="h-5 w-5" /> 1. Grade, Estoque & Dimensões</CardTitle></CardHeader>
             <CardContent className="pt-6 space-y-6">
                 <div>
                     <Label className="text-base font-semibold">Grade do Produto *</Label>
@@ -372,13 +397,13 @@ export function NewProductPage() {
                           <div className="space-y-4">
                             {variacaoFields.map((field: any, index) => {
                                 const currentVariation = variacoesValues?.[index];
-                                return <MobileVariationCard key={field.id} field={field} currentVariation={currentVariation} index={index} register={register} duplicateCheck={duplicateCheck} />
+                                return <MobileVariationCard key={field.id} field={field} currentVariation={currentVariation} index={index} register={register} duplicateCheck={duplicateCheck} onEditDimensions={setEditingDimensionsIndex} />
                             })}
                           </div>
                         ) : (
                           <div id="variations-table" className="rounded-xl border border-white/10 overflow-hidden">
                             <Table>
-                                <TableHeader className="bg-black/40"><TableRow className="border-white/10 hover:bg-transparent"><TableHead className="w-[100px] text-emerald-400 font-bold">Tamanho</TableHead><TableHead className="w-[150px]">Estoque</TableHead><TableHead>SKU</TableHead><TableHead>Cód. Barras</TableHead></TableRow></TableHeader>
+                                <TableHeader className="bg-black/40"><TableRow className="border-white/10 hover:bg-transparent"><TableHead className="w-[80px] text-emerald-400 font-bold">Tam.</TableHead><TableHead className="w-[90px]">Estoque</TableHead><TableHead>SKU</TableHead><TableHead>Cód. Barras</TableHead><TableHead>Peso(kg)</TableHead><TableHead>A(cm)</TableHead><TableHead>L(cm)</TableHead><TableHead>C(cm)</TableHead></TableRow></TableHeader>
                                 <TableBody className="bg-black/20">
                                     {variacaoFields.map((field: any, index) => {
                                         const currentVariation = variacoesValues?.[index];
@@ -389,9 +414,13 @@ export function NewProductPage() {
                                         return (
                                             <TableRow key={field.id} className="border-white/10 hover:bg-white/5">
                                                 <TableCell><Badge variant="outline" className="text-emerald-400 border-emerald-500/30 bg-emerald-500/10 px-3 py-1">{field.tamanho}</Badge></TableCell>
-                                                <TableCell><Input type="number" {...register(`variacoes.${index}.estoque`)} className="bg-black/40 border-white/10" /></TableCell>
-                                                <TableCell><Input {...register(`variacoes.${index}.sku`)} className={`uppercase ${isSkuDuplicate ? 'border-red-500' : 'bg-black/40 border-white/10'}`} /></TableCell>
-                                                <TableCell><Input {...register(`variacoes.${index}.codigo_barras`)} className={`${isEanDuplicate ? 'border-red-500' : 'bg-black/40 border-white/10'}`} /></TableCell>
+                                                <TableCell><Input type="number" {...register(`variacoes.${index}.estoque`)} className="bg-black/40 border-white/10 h-9" /></TableCell>
+                                                <TableCell><Input {...register(`variacoes.${index}.sku`)} className={`uppercase h-9 ${isSkuDuplicate ? 'border-red-500' : 'bg-black/40 border-white/10'}`} /></TableCell>
+                                                <TableCell><Input {...register(`variacoes.${index}.codigo_barras`)} className={`h-9 ${isEanDuplicate ? 'border-red-500' : 'bg-black/40 border-white/10'}`} /></TableCell>
+                                                <TableCell><Input type="number" step="0.01" {...register(`variacoes.${index}.peso_kg`)} className="bg-black/40 border-white/10 h-9 w-20" /></TableCell>
+                                                <TableCell><Input type="number" {...register(`variacoes.${index}.altura_cm`)} className="bg-black/40 border-white/10 h-9 w-16" /></TableCell>
+                                                <TableCell><Input type="number" {...register(`variacoes.${index}.largura_cm`)} className="bg-black/40 border-white/10 h-9 w-16" /></TableCell>
+                                                <TableCell><Input type="number" {...register(`variacoes.${index}.comprimento_cm`)} className="bg-black/40 border-white/10 h-9 w-16" /></TableCell>
                                             </TableRow>
                                         );
                                     })}
@@ -513,6 +542,38 @@ export function NewProductPage() {
       </div>
       <input type="hidden" {...register('ncm')} />
       <input type="hidden" {...register('cfop_padrao')} />
+
+      {isMobile && editingDimensionsIndex !== null && (
+        <Dialog open={editingDimensionsIndex !== null} onOpenChange={(open) => !open && setEditingDimensionsIndex(null)}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Editar Dimensões - Tamanho {variacoesValues[editingDimensionsIndex]?.tamanho}</DialogTitle>
+                    <DialogDescription>Insira as dimensões da embalagem para cálculo de frete.</DialogDescription>
+                </DialogHeader>
+                <div className="grid grid-cols-2 gap-4 py-4">
+                    <div className="grid gap-2 col-span-2">
+                        <Label>Peso (kg)</Label>
+                        <Input type="number" step="0.01" {...register(`variacoes.${editingDimensionsIndex}.peso_kg`)} className="h-12 text-lg" />
+                    </div>
+                    <div className="grid gap-2">
+                        <Label>Altura (cm)</Label>
+                        <Input type="number" {...register(`variacoes.${editingDimensionsIndex}.altura_cm`)} className="h-12 text-lg" />
+                    </div>
+                    <div className="grid gap-2">
+                        <Label>Largura (cm)</Label>
+                        <Input type="number" {...register(`variacoes.${editingDimensionsIndex}.largura_cm`)} className="h-12 text-lg" />
+                    </div>
+                    <div className="grid gap-2 col-span-2">
+                        <Label>Comprimento (cm)</Label>
+                        <Input type="number" {...register(`variacoes.${editingDimensionsIndex}.comprimento_cm`)} className="h-12 text-lg" />
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button onClick={() => setEditingDimensionsIndex(null)}>Salvar</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+      )}
     </form>
   );
 }

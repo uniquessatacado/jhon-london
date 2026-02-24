@@ -17,6 +17,10 @@ export type ProductFormDTO = {
     estoque: number;
     sku: string;
     codigo_barras: string;
+    peso_kg?: number;
+    altura_cm?: number;
+    largura_cm?: number;
+    comprimento_cm?: number;
   }[];
 
   // Fiscal
@@ -113,7 +117,11 @@ const buildProductFormData = (formData: ProductFormDTO) => {
     tamanho: v.tamanho,
     estoque: Number(v.estoque) || 0,
     sku: v.sku || '',
-    codigo_barras: v.codigo_barras || ''
+    codigo_barras: v.codigo_barras || '',
+    peso_kg: Number(v.peso_kg) || 0,
+    altura_cm: Number(v.altura_cm) || 0,
+    largura_cm: Number(v.largura_cm) || 0,
+    comprimento_cm: Number(v.comprimento_cm) || 0,
   })) || []);
   payload.append('variacoes', variacoesJson);
 

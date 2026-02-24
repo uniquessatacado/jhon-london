@@ -181,7 +181,7 @@ export function ViewProductDialog({ product, open, onOpenChange }: ViewProductDi
                 <TabsContent value="dims" className="mt-0">
                      <Card className="bg-white/5 border-white/10">
                         <CardContent className="p-0">
-                            {product.dimensoes_grade && product.dimensoes_grade.length > 0 ? (
+                            {product.variacoes && product.variacoes.length > 0 ? (
                                 <Table>
                                     <TableHeader>
                                         <TableRow className="border-white/10 hover:bg-transparent">
@@ -193,13 +193,13 @@ export function ViewProductDialog({ product, open, onOpenChange }: ViewProductDi
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {product.dimensoes_grade.map((dim, i) => (
+                                        {product.variacoes.map((v, i) => (
                                             <TableRow key={i} className="border-white/5 hover:bg-white/5">
-                                                <TableCell className="font-bold">{dim.tamanho}</TableCell>
-                                                <TableCell>{dim.peso_kg}</TableCell>
-                                                <TableCell>{dim.altura_cm}</TableCell>
-                                                <TableCell>{dim.largura_cm}</TableCell>
-                                                <TableCell>{dim.comprimento_cm}</TableCell>
+                                                <TableCell className="font-bold">{v.tamanho}</TableCell>
+                                                <TableCell>{v.peso_kg || '-'}</TableCell>
+                                                <TableCell>{v.altura_cm || '-'}</TableCell>
+                                                <TableCell>{v.largura_cm || '-'}</TableCell>
+                                                <TableCell>{v.comprimento_cm || '-'}</TableCell>
                                             </TableRow>
                                         ))}
                                     </TableBody>
@@ -207,7 +207,7 @@ export function ViewProductDialog({ product, open, onOpenChange }: ViewProductDi
                             ) : (
                                 <div className="p-8 text-center text-muted-foreground">
                                     <Ruler className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                                    <p>Sem dimensões cadastradas para esta grade.</p>
+                                    <p>Sem dimensões cadastradas para este produto.</p>
                                 </div>
                             )}
                         </CardContent>

@@ -41,6 +41,10 @@ export interface ProductVariation {
   estoque: number;
   sku: string;
   codigo_barras: string;
+  peso_kg?: number;
+  altura_cm?: number;
+  largura_cm?: number;
+  comprimento_cm?: number;
 }
 
 export interface Product {

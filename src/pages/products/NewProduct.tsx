@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Package, FileText, Ruler, Image, Check, ArrowLeft, AlertCircle, Info, ShoppingBag, DollarSign, Lock, Calculator, Box } from 'lucide-react';
-import { useCategories, useSubcategories } from '@/hooks/use-categories';
+import { useCategories, useAllSubcategories } from '@/hooks/use-categories';
 import { useBrands } from '@/hooks/use-brands';
 import { useGrids } from '@/hooks/use-grids';
 import { useCreateProduct } from '@/hooks/use-create-product';
@@ -41,6 +41,7 @@ export function NewProductPage() {
   const { data: categories } = useCategories();
   const { data: brands } = useBrands();
   const { data: grids } = useGrids();
+  const { data: allSubcategories, isLoading: isLoadingSubs } = useAllSubcategories();
   const { mutate: createProduct, isPending } = useCreateProduct();
 
   // Estado local para config global
@@ -53,7 +54,6 @@ export function NewProductPage() {
   }, []);
   
   // Watchers
-  const selectedCategoryId = watch('categoria_id');
   const selectedSubcategoryId = watch('subcategoria_id');
   const selectedGridId = watch('grade_id'); // Grade física
   
@@ -84,31 +84,28 @@ export function NewProductPage() {
       return totalPecasPacote * precoUnitario;
   }, [totalPecasPacote, precoAtacadoGeral, precoAtacadoGrade, usarPrecoUnico]);
 
-
-  // Subcategorias
-  const { data: subcategories, isLoading: isLoadingSubs } = useSubcategories(selectedCategoryId ? Number(selectedCategoryId) : null);
-
-  // EFEITO 1: Preenchimento Automático Fiscal + GRADE FÍSICA
+  // EFEITO: Preenchimento Automático Fiscal + CATEGORIA + GRADE FÍSICA
   useEffect(() => {
-    if (selectedSubcategoryId && subcategories) {
-      const sub = subcategories.find(s => String(s.id) === String(selectedSubcategoryId));
+    if (selectedSubcategoryId && allSubcategories) {
+      const sub = allSubcategories.find(s => String(s.id) === String(selectedSubcategoryId));
       if (sub) {
+        // Vincula Categoria Pai automaticamente
+        setValue('categoria_id', String(sub.categoria_id));
+
+        // Fiscal
         setValue('ncm', sub.ncm);
         setValue('cfop_padrao', sub.cfop_padrao);
         setValue('cst_icms', sub.cst_icms);
         setValue('origem', sub.origem);
         setValue('unidade_medida', sub.unidade_medida);
+        
+        // Grade Física Sugerida
         if (sub.grade_id) {
             setValue('grade_id', String(sub.grade_id));
         }
       }
     }
-  }, [selectedSubcategoryId, subcategories, setValue]);
-
-  // EFEITO 2: Resetar subcategoria se mudar categoria
-  useEffect(() => {
-    setValue('subcategoria_id', '');
-  }, [selectedCategoryId, setValue]);
+  }, [selectedSubcategoryId, allSubcategories, setValue]);
 
   const onSubmit = (data: any) => {
     const precoGeral = Number(data.preco_atacado_geral) || 0;
@@ -116,10 +113,10 @@ export function NewProductPage() {
 
     const payload = {
         ...data,
-        peso_kg: selectedGridId ? 0 : data.peso_kg,
-        altura_cm: selectedGridId ? 0 : data.altura_cm,
-        largura_cm: selectedGridId ? 0 : data.largura_cm,
-        comprimento_cm: selectedGridId ? 0 : data.comprimento_cm,
+        peso_kg: selectedGridId && selectedGridId !== 'null' ? 0 : data.peso_kg,
+        altura_cm: selectedGridId && selectedGridId !== 'null' ? 0 : data.altura_cm,
+        largura_cm: selectedGridId && selectedGridId !== 'null' ? 0 : data.largura_cm,
+        comprimento_cm: selectedGridId && selectedGridId !== 'null' ? 0 : data.comprimento_cm,
         
         preco_atacado_geral: precoGeral,
         preco_atacado_grade: precoGrade,
@@ -128,6 +125,11 @@ export function NewProductPage() {
     };
     createProduct(payload);
   };
+
+  // Helper para mostrar nome da categoria na lista de subs
+  const getCategoryName = (catId: number) => {
+    return categories?.find(c => c.id === catId)?.nome || '';
+  }
 
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
@@ -354,27 +356,23 @@ export function NewProductPage() {
                     </div>
                   </div>
 
-                  {/* Categorização */}
+                  {/* Categorização Simplificada */}
                   <div className="grid gap-4 p-4 border border-white/10 rounded-xl bg-white/5 col-span-2">
                        <h3 className="font-semibold text-emerald-400">Classificação</h3>
                        
                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                           {/* Subcategoria é o principal agora */}
                            <div className="grid gap-2">
-                            <Label>Categoria</Label>
-                            <Select onValueChange={(value) => setValue('categoria_id', value)}>
+                            <Label>Subcategoria & Categoria <span className="text-xs text-muted-foreground">(Preenche fiscal)</span></Label>
+                            <Select onValueChange={(value) => setValue('subcategoria_id', value)}>
                                 <SelectTrigger className="bg-black/20 border-white/10"><SelectValue placeholder="Selecione..." /></SelectTrigger>
                                 <SelectContent>
-                                {categories?.map(cat => <SelectItem key={cat.id} value={String(cat.id)}>{cat.nome}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                           </div>
-
-                           <div className="grid gap-2">
-                            <Label>Subcategoria <span className="text-xs text-muted-foreground">(Preenche fiscal)</span></Label>
-                            <Select onValueChange={(value) => setValue('subcategoria_id', value)} disabled={!selectedCategoryId || isLoadingSubs}>
-                                <SelectTrigger className="bg-black/20 border-white/10"><SelectValue placeholder={!selectedCategoryId ? "Selecione a categoria primeiro" : "Selecione..."} /></SelectTrigger>
-                                <SelectContent>
-                                {subcategories?.map(sub => <SelectItem key={sub.id} value={String(sub.id)}>{sub.nome}</SelectItem>)}
+                                {allSubcategories?.map(sub => (
+                                    <SelectItem key={sub.id} value={String(sub.id)}>
+                                        <span className="font-medium">{sub.nome}</span>
+                                        <span className="text-muted-foreground text-xs ml-2">({getCategoryName(sub.categoria_id)})</span>
+                                    </SelectItem>
+                                ))}
                                 </SelectContent>
                             </Select>
                            </div>
@@ -392,7 +390,7 @@ export function NewProductPage() {
                             <Label>Grade Física (Opcional)</Label>
                             <Select 
                                 onValueChange={(value) => setValue('grade_id', value)} 
-                                value={selectedGridId} // Controlado pelo formulário
+                                value={selectedGridId}
                             >
                                 <SelectTrigger className="bg-black/20 border-white/10"><SelectValue placeholder="Nenhuma" /></SelectTrigger>
                                 <SelectContent>

@@ -14,6 +14,20 @@ export function useCategories() {
   });
 }
 
+// Busca todas as subcategorias (para combos gerais)
+async function fetchAllSubcategories(): Promise<Subcategory[]> {
+  const { data } = await api.get('/subcategorias');
+  return data;
+}
+
+export function useAllSubcategories() {
+  return useQuery({
+    queryKey: ['all-subcategories'],
+    queryFn: fetchAllSubcategories,
+  });
+}
+
+// Busca subcategorias filtradas por categoria (para árvore/config)
 async function fetchSubcategories(categoryId: number | null): Promise<Subcategory[]> {
   if (!categoryId) return [];
   const { data } = await api.get(`/subcategorias?categoria_id=${categoryId}`);

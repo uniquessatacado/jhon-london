@@ -13,3 +13,17 @@ export function useProducts() {
     queryFn: fetchProducts,
   });
 }
+
+// Busca produto único por ID
+async function fetchProduct(id: string): Promise<Product> {
+  const { data } = await api.get(`/produtos/${id}`);
+  return data;
+}
+
+export function useProduct(id: string | undefined) {
+  return useQuery({
+    queryKey: ['product', id],
+    queryFn: () => fetchProduct(id!),
+    enabled: !!id, // Só executa se tiver ID
+  });
+}

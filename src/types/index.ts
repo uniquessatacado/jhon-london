@@ -36,6 +36,14 @@ export interface Grid {
   tamanhos: GridSize[];
 }
 
+export interface ProductVariation {
+  id?: number;
+  tamanho: string;
+  estoque: number;
+  sku: string;
+  codigo_barras: string;
+}
+
 export interface Product {
   id: number;
   nome: string;
@@ -85,4 +93,7 @@ export interface Product {
   
   criado_em: string;
   atualizado_em: string;
+
+  // Variações de Estoque
+  variacoes?: ProductVariation[];
 }

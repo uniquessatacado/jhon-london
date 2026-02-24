@@ -1,51 +1,46 @@
 import { useState, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, MoreHorizontal, Pencil, Trash2, Search, Filter, X, PackageOpen, Box } from 'lucide-react';
+import { PlusCircle, MoreHorizontal, Pencil, Trash2, Search, Filter, X, PackageOpen, Box, ZoomIn } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useProducts } from '@/hooks/use-products';
-import { useCategories, useSubcategories } from '@/hooks/use-categories';
+import { useCategories, useAllSubcategories } from '@/hooks/use-categories';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export function ProductListPage() {
-  const { data: products, isLoading, isError } = useProducts();
+  const navigate = useNavigate();
+  const { data: products, isLoading } = useProducts();
   const { data: categories } = useCategories();
+  const { data: allSubcategories } = useAllSubcategories();
   
   // Estados de Filtro
   const [search, setSearch] = useState('');
   const [filterCat, setFilterCat] = useState<string>('all');
-  const [filterSub, setFilterSub] = useState<string>('all');
   const [showFilters, setShowFilters] = useState(false);
-
-  // Subcategorias filtradas pela categoria selecionada no filtro
-  const { data: subcategories } = useSubcategories(filterCat !== 'all' ? Number(filterCat) : null);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
   };
 
-  // Lógica de Filtragem no Frontend (já que a API retorna tudo por enquanto)
   const filteredProducts = useMemo(() => {
     if (!products) return [];
     
     return products.filter(p => {
-        const matchSearch = p.nome.toLowerCase().includes(search.toLowerCase()) || p.sku?.toLowerCase().includes(search.toLowerCase());
-        const matchCat = filterCat === 'all' || String(p.categoria_id) === filterCat;
-        const matchSub = filterSub === 'all' || String(p.subcategoria_id) === filterSub;
+        // Busca SKU nas variações se não tiver no principal
+        const productSku = p.sku || p.variacoes?.[0]?.sku || '';
+        const searchTerm = search.toLowerCase();
         
-        return matchSearch && matchCat && matchSub;
+        const matchSearch = p.nome.toLowerCase().includes(searchTerm) || productSku.toLowerCase().includes(searchTerm);
+        const matchCat = filterCat === 'all' || String(p.categoria_id) === filterCat;
+        
+        return matchSearch && matchCat;
     });
-  }, [products, search, filterCat, filterSub]);
-
-  // Reset de subcategoria se categoria mudar
-  const handleCatChange = (val: string) => {
-    setFilterCat(val);
-    setFilterSub('all');
-  };
+  }, [products, search, filterCat]);
 
   return (
     <div className="space-y-6">
@@ -62,10 +57,8 @@ export function ProductListPage() {
         </Link>
       </div>
 
-      {/* CONTAINER PRINCIPAL - Estilo Glassmorphism Escuro */}
       <div className="rounded-3xl border border-white/10 bg-black/40 backdrop-blur-xl shadow-2xl overflow-hidden ring-1 ring-white/5">
-        
-        {/* BARRA DE FERRAMENTAS */}
+        {/* Filtros e Busca */}
         <div className="p-6 border-b border-white/10 flex flex-col md:flex-row gap-4 bg-white/[0.02]">
            <div className="relative flex-1 group">
                 <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground group-focus-within:text-emerald-500 transition-colors" />
@@ -85,12 +78,11 @@ export function ProductListPage() {
            </Button>
         </div>
         
-        {/* ÁREA DE FILTROS EXPANSÍVEL */}
         {showFilters && (
             <div className="p-6 bg-black/40 border-b border-white/10 grid grid-cols-1 md:grid-cols-3 gap-6 animate-in slide-in-from-top-2">
                 <div className="space-y-2">
                     <span className="text-xs font-medium text-emerald-500 uppercase tracking-wider">Categoria</span>
-                    <Select value={filterCat} onValueChange={handleCatChange}>
+                    <Select value={filterCat} onValueChange={setFilterCat}>
                         <SelectTrigger className="bg-white/5 border-white/10 rounded-lg"><SelectValue placeholder="Todas" /></SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">Todas</SelectItem>
@@ -98,18 +90,8 @@ export function ProductListPage() {
                         </SelectContent>
                     </Select>
                 </div>
-                <div className="space-y-2">
-                    <span className="text-xs font-medium text-emerald-500 uppercase tracking-wider">Subcategoria</span>
-                    <Select value={filterSub} onValueChange={setFilterSub} disabled={filterCat === 'all'}>
-                        <SelectTrigger className="bg-white/5 border-white/10 rounded-lg"><SelectValue placeholder="Todas" /></SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">Todas</SelectItem>
-                            {subcategories?.map(s => <SelectItem key={s.id} value={String(s.id)}>{s.nome}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                </div>
                 <div className="flex items-end">
-                    <Button variant="ghost" onClick={() => { setFilterCat('all'); setFilterSub('all'); setSearch(''); }} className="w-full text-muted-foreground hover:text-red-400 hover:bg-red-500/10 rounded-lg">
+                    <Button variant="ghost" onClick={() => { setFilterCat('all'); setSearch(''); }} className="w-full text-muted-foreground hover:text-red-400 hover:bg-red-500/10 rounded-lg">
                         <X className="mr-2 h-4 w-4" /> Limpar Filtros
                     </Button>
                 </div>
@@ -142,43 +124,69 @@ export function ProductListPage() {
                 ))
               ) : filteredProducts.length > 0 ? (
                 filteredProducts.map(product => {
-                    const catName = categories?.find(c => c.id === product.categoria_id)?.nome || '-';
+                    // Lógica segura de busca de nomes
+                    const catName = categories?.find(c => String(c.id) === String(product.categoria_id))?.nome || '-';
+                    const subName = allSubcategories?.find(s => String(s.id) === String(product.subcategoria_id))?.nome || '-';
                     
+                    // SKU Fallback (Produto -> Variação 1 -> N/A)
+                    const displaySku = product.sku || product.variacoes?.[0]?.sku || 'S/ SKU';
+                    
+                    // Estoque Total (Soma das variações)
+                    const totalEstoque = product.estoque > 0 ? product.estoque : (product.variacoes?.reduce((acc, v) => acc + (Number(v.estoque) || 0), 0) || 0);
+
                     return (
                       <TableRow key={product.id} className="border-white/5 hover:bg-white/[0.04] transition-colors group">
                         <TableCell className="pl-6 py-4">
-                            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-white/10 to-transparent border border-white/10 overflow-hidden flex items-center justify-center shadow-inner">
-                                {product.imagem_principal ? (
-                                    <img src={product.imagem_principal} alt="" className="h-full w-full object-cover" />
-                                ) : (
+                            {product.imagem_principal ? (
+                                <Dialog>
+                                    <DialogTrigger asChild>
+                                        <div className="relative h-12 w-12 rounded-xl border border-white/10 overflow-hidden cursor-zoom-in group/img shadow-md hover:shadow-emerald-500/20 transition-all">
+                                            <img src={product.imagem_principal} alt="" className="h-full w-full object-cover" />
+                                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity">
+                                                <ZoomIn className="h-4 w-4 text-white" />
+                                            </div>
+                                        </div>
+                                    </DialogTrigger>
+                                    <DialogContent className="max-w-3xl bg-transparent border-none shadow-none p-0 flex items-center justify-center">
+                                        <img 
+                                            src={product.imagem_principal} 
+                                            alt={product.nome} 
+                                            className="max-h-[85vh] max-w-full rounded-lg shadow-2xl border border-white/10 bg-black" 
+                                        />
+                                    </DialogContent>
+                                </Dialog>
+                            ) : (
+                                <div className="h-12 w-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
                                     <Box className="h-5 w-5 text-muted-foreground/50" />
-                                )}
-                            </div>
+                                </div>
+                            )}
                         </TableCell>
                         <TableCell>
                             <div className="flex flex-col gap-1">
                                 <span className="font-medium text-white group-hover:text-emerald-400 transition-colors">{product.nome}</span>
                                 <div className="flex items-center gap-2">
-                                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground bg-white/5 px-1.5 py-0.5 rounded border border-white/5">SKU: {product.sku || 'N/A'}</span>
+                                    <Badge variant="secondary" className="text-[10px] bg-white/5 text-muted-foreground hover:bg-white/10 border-white/5 font-mono">
+                                        SKU: {displaySku}
+                                    </Badge>
                                 </div>
                             </div>
                         </TableCell>
                         <TableCell>
                              <div className="flex flex-col">
                                 <span className="text-sm font-medium text-gray-300">{catName}</span>
-                                <span className="text-xs text-muted-foreground">ID Sub: {product.subcategoria_id || '-'}</span> 
+                                <span className="text-xs text-muted-foreground">{subName}</span> 
                             </div>
                         </TableCell>
                         <TableCell className="text-right">
                             <Badge 
                                 variant="outline" 
                                 className={`rounded-lg border px-3 py-1 font-mono ${
-                                    product.estoque > product.estoque_minimo 
+                                    totalEstoque > (product.estoque_minimo || 5)
                                     ? 'bg-emerald-500/5 text-emerald-400 border-emerald-500/20' 
                                     : 'bg-red-500/5 text-red-400 border-red-500/20'
                                 }`}
                             >
-                                {product.estoque} un
+                                {totalEstoque} un
                             </Badge>
                         </TableCell>
                         <TableCell className="text-right pr-6">
@@ -196,7 +204,12 @@ export function ProductListPage() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="bg-zinc-900/95 backdrop-blur-xl border-white/10 rounded-xl w-40">
                               <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                              <DropdownMenuItem className="focus:bg-white/10 rounded-lg cursor-pointer"><Pencil className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
+                              {/* LINK CORRIGIDO PARA EDIÇÃO */}
+                              <DropdownMenuItem asChild className="focus:bg-white/10 rounded-lg cursor-pointer">
+                                  <Link to={`/produtos/editar/${product.id}`} className="flex items-center w-full">
+                                    <Pencil className="mr-2 h-4 w-4" /> Editar
+                                  </Link>
+                              </DropdownMenuItem>
                               <DropdownMenuItem className="text-red-500 focus:bg-red-500/10 focus:text-red-400 rounded-lg cursor-pointer"><Trash2 className="mr-2 h-4 w-4" /> Excluir</DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -207,15 +220,9 @@ export function ProductListPage() {
               ) : (
                 <TableRow>
                   <TableCell colSpan={6} className="h-64">
-                    <div className="flex flex-col items-center justify-center text-muted-foreground animate-in fade-in zoom-in duration-500">
-                        <div className="h-16 w-16 rounded-full bg-white/5 flex items-center justify-center mb-4">
-                            <PackageOpen className="h-8 w-8 opacity-50" />
-                        </div>
-                        <p className="text-lg font-medium text-white/50">Nenhum produto encontrado</p>
-                        <p className="text-sm">Tente ajustar seus filtros ou cadastre um novo produto.</p>
-                        <Link to="/produtos/novo" className="mt-4">
-                            <Button variant="link" className="text-emerald-400">Cadastrar Agora</Button>
-                        </Link>
+                    <div className="flex flex-col items-center justify-center text-muted-foreground">
+                        <PackageOpen className="h-16 w-16 mb-4 opacity-20" />
+                        <p className="text-lg">Nenhum produto encontrado</p>
                     </div>
                   </TableCell>
                 </TableRow>

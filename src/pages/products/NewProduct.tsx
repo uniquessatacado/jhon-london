@@ -26,9 +26,9 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useMediaQuery } from '@/hooks/use-media-query';
 
 // Componente para a lista de variações no mobile
-const MobileVariationCard = ({ field, index, register, duplicateCheck }: any) => {
-  const currentEan = field.codigo_barras;
-  const currentSku = field.sku;
+const MobileVariationCard = ({ field, currentVariation, index, register, duplicateCheck }: any) => {
+  const currentEan = currentVariation?.codigo_barras;
+  const currentSku = currentVariation?.sku;
   const isMissingBoth = !currentEan && !currentSku;
   const isSkuDuplicate = currentSku && duplicateCheck.allDuplicateSkus.includes(currentSku);
   const isEanDuplicate = currentEan && duplicateCheck.allDuplicateEans.includes(currentEan);
@@ -99,6 +99,7 @@ export function NewProductPage() {
 
   const [existingIdentifiers, setExistingIdentifiers] = useState<{skus: string[], eans: string[]}>({ skus: [], eans: [] });
   const [globalAtacadoMin, setGlobalAtacadoMin] = useState('10');
+  const [bulkStockQty, setBulkStockQty] = useState('');
 
   const [mainImageFile, setMainImageFile] = useState<File | null>(null);
   const [mainImagePreview, setMainImagePreview] = useState<string | null>(null);
@@ -287,6 +288,19 @@ export function NewProductPage() {
     }
   };
 
+  const handleApplyBulkStock = () => {
+    const qty = Number(bulkStockQty);
+    if (isNaN(qty) || bulkStockQty === '') return;
+
+    const currentVariations = watch('variacoes');
+    const updatedVariations = currentVariations.map((v: any) => ({
+        ...v,
+        estoque: qty
+    }));
+    setValue('variacoes', updatedVariations);
+    setBulkStockQty('');
+  };
+
   const onSubmit = (data: any) => {
     if (!data.grade_id) return toast.error('Grade do Produto é obrigatória');
     if (data.variacoes?.some((v: any) => !v.sku && !v.codigo_barras)) return toast.error('Toda variação precisa de SKU ou Cód. Barras.');
@@ -341,9 +355,25 @@ export function NewProductPage() {
 
                 {selectedGridId && variacaoFields.length > 0 && (
                     <div className="animate-in fade-in slide-in-from-top-4">
+                        <div className="flex items-center gap-2 mb-4 p-2 rounded-lg bg-black/20 border border-white/10">
+                            <Input 
+                                type="number"
+                                placeholder="Estoque p/ todos"
+                                className="bg-transparent border-none h-8"
+                                value={bulkStockQty}
+                                onChange={(e) => setBulkStockQty(e.target.value)}
+                            />
+                            <Button type="button" size="sm" onClick={handleApplyBulkStock} className="bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30">
+                                Aplicar
+                            </Button>
+                        </div>
+
                         {isMobile ? (
                           <div className="space-y-4">
-                            {variacaoFields.map((field: any, index) => <MobileVariationCard key={field.id} field={field} index={index} register={register} duplicateCheck={duplicateCheck} />)}
+                            {variacaoFields.map((field: any, index) => {
+                                const currentVariation = variacoesValues?.[index];
+                                return <MobileVariationCard key={field.id} field={field} currentVariation={currentVariation} index={index} register={register} duplicateCheck={duplicateCheck} />
+                            })}
                           </div>
                         ) : (
                           <div id="variations-table" className="rounded-xl border border-white/10 overflow-hidden">
@@ -351,8 +381,11 @@ export function NewProductPage() {
                                 <TableHeader className="bg-black/40"><TableRow className="border-white/10 hover:bg-transparent"><TableHead className="w-[100px] text-emerald-400 font-bold">Tamanho</TableHead><TableHead className="w-[150px]">Estoque</TableHead><TableHead>SKU</TableHead><TableHead>Cód. Barras</TableHead></TableRow></TableHeader>
                                 <TableBody className="bg-black/20">
                                     {variacaoFields.map((field: any, index) => {
-                                        const isSkuDuplicate = field.sku && duplicateCheck.allDuplicateSkus.includes(field.sku);
-                                        const isEanDuplicate = field.codigo_barras && duplicateCheck.allDuplicateEans.includes(field.codigo_barras);
+                                        const currentVariation = variacoesValues?.[index];
+                                        const currentSku = currentVariation?.sku;
+                                        const currentEan = currentVariation?.codigo_barras;
+                                        const isSkuDuplicate = currentSku && duplicateCheck.allDuplicateSkus.includes(currentSku);
+                                        const isEanDuplicate = currentEan && duplicateCheck.allDuplicateEans.includes(currentEan);
                                         return (
                                             <TableRow key={field.id} className="border-white/10 hover:bg-white/5">
                                                 <TableCell><Badge variant="outline" className="text-emerald-400 border-emerald-500/30 bg-emerald-500/10 px-3 py-1">{field.tamanho}</Badge></TableCell>

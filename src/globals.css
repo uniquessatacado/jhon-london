@@ -10,8 +10,8 @@
     --card-foreground: 210 40% 98%;
     --popover: 224 71% 4%;
     --popover-foreground: 210 40% 98%;
-    --primary: 217 91% 60%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 160 84% 39%; /* Emerald Base */
+    --primary-foreground: 0 0% 100%;
     --secondary: 215 20% 20%;
     --secondary-foreground: 210 40% 98%;
     --muted: 215 20% 20%;
@@ -26,19 +26,19 @@
     --warning-foreground: 38 92% 50%;
     --border: 215 20% 20%;
     --input: 215 20% 20%;
-    --ring: 217 91% 60%;
+    --ring: 160 84% 39%;
     --radius: 1.5rem;
   }
 
   .dark {
     --background: 224 71% 4%;
     --foreground: 210 40% 98%;
-    --card: 220 40% 10%; /* Lighter card for contrast in dark mode */
+    --card: 224 71% 4%;
     --card-foreground: 210 40% 98%;
     --popover: 224 71% 4%;
     --popover-foreground: 210 40% 98%;
-    --primary: 217 91% 60%; /* Bright Blue */
-    --primary-foreground: 210 40% 98%;
+    --primary: 150 100% 50%; /* Neon Emerald Bright for Dark Mode */
+    --primary-foreground: 224 71% 4%; /* Dark text on bright button */
     --secondary: 215 20% 20%;
     --secondary-foreground: 210 40% 98%;
     --muted: 215 20% 20%;
@@ -53,7 +53,7 @@
     --warning-foreground: 38 92% 50%;
     --border: 215 20% 20%;
     --input: 215 20% 20%;
-    --ring: 217 91% 60%;
+    --ring: 150 100% 50%; /* Glow ring matches neon */
     --radius: 1.5rem;
   }
 }
@@ -65,9 +65,11 @@
 
   body {
     @apply bg-background text-foreground;
-    background-image: radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), 
-                      radial-gradient(at 50% 0%, hsla(225,39%,30%,1) 0, transparent 50%), 
-                      radial-gradient(at 100% 0%, hsla(339,49%,30%,1) 0, transparent 50%);
+    /* Fundo com ambient lighting verde e roxo suave para profundidade */
+    background-image: 
+        radial-gradient(at 0% 0%, hsla(150, 40%, 10%, 0.8) 0, transparent 50%), 
+        radial-gradient(at 100% 0%, hsla(200, 40%, 10%, 0.5) 0, transparent 50%), 
+        radial-gradient(at 50% 100%, hsla(250, 20%, 10%, 0.5) 0, transparent 50%);
     background-attachment: fixed;
     background-size: cover;
   }

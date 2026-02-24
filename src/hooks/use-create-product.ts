@@ -136,26 +136,23 @@ const buildProductFormData = (formData: ProductFormDTO) => {
 
 async function createProduct(formData: ProductFormDTO): Promise<Product> {
   const payload = buildProductFormData(formData);
-  // Envio com Content-Type automático (o browser define o boundary do multipart)
   const { data } = await api.post('/produtos', payload, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
+    headers: { 'Content-Type': 'multipart/form-data' },
   });
   return data;
 }
 
 async function updateProduct(formData: ProductFormDTO): Promise<Product> {
   if (!formData.id) throw new Error("ID do produto é obrigatório para atualização");
-  
   const payload = buildProductFormData(formData);
-  // PUT request
   const { data } = await api.put(`/produtos/${formData.id}`, payload, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
+    headers: { 'Content-Type': 'multipart/form-data' },
   });
   return data;
+}
+
+async function deleteProduct(id: number): Promise<void> {
+  await api.delete(`/produtos/${id}`);
 }
 
 export function useCreateProduct() {
@@ -194,6 +191,22 @@ export function useUpdateProduct() {
       toast.error('Falha ao atualizar o produto.', {
         description: 'Verifique os dados e tente novamente.',
       });
+    },
+  });
+}
+
+export function useDeleteProduct() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: deleteProduct,
+    onSuccess: () => {
+      toast.success('Produto excluído com sucesso!');
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+    },
+    onError: (error) => {
+      console.error('Erro ao excluir produto:', error);
+      toast.error('Falha ao excluir o produto.');
     },
   });
 }

@@ -111,10 +111,10 @@ export function NewProductPage() {
             unidade_medida: productData.unidade_medida,
             preco_custo: productData.preco_custo,
             preco_varejo: productData.preco_varejo,
-            habilita_atacado_geral: !!productData.habilita_atacado_geral, // Ensure boolean
+            habilita_atacado_geral: !!productData.habilita_atacado_geral, 
             preco_atacado_geral: productData.preco_atacado_geral,
-            habilita_atacado_grade: !!productData.habilita_atacado_grade, // Ensure boolean
-            usar_preco_atacado_unico: !!productData.usar_preco_atacado_unico, // Ensure boolean
+            habilita_atacado_grade: !!productData.habilita_atacado_grade, 
+            usar_preco_atacado_unico: !!productData.usar_preco_atacado_unico, 
             grade_atacado_id: productData.grade_atacado_id ? String(productData.grade_atacado_id) : '',
             preco_atacado_grade: productData.preco_atacado_grade,
             variacoes: productData.variacoes?.map(v => ({
@@ -123,7 +123,7 @@ export function NewProductPage() {
                 sku: v.sku,
                 codigo_barras: v.codigo_barras
             })) || [],
-            // Parse do JSON da composição
+            // Parse do JSON da composição se necessário, ou usar direto se a API já retornar objeto
             composicao_atacado: typeof productData.composicao_atacado_grade === 'string' 
                 ? JSON.parse(productData.composicao_atacado_grade || "[]") 
                 : (productData.composicao_atacado_grade || [])
@@ -139,8 +139,10 @@ export function NewProductPage() {
             setExistingGallery(productData.imagens_galeria); 
         }
 
-        if (productData.video) {
-            setVideoPreview(productData.video);
+        // Tenta video_url primeiro (padrão API), depois video (backup type)
+        const videoSrc = productData.video_url || productData.video;
+        if (videoSrc) {
+            setVideoPreview(videoSrc);
         }
 
         initialDataLoaded.current = true;
@@ -182,16 +184,7 @@ export function NewProductPage() {
   useEffect(() => {
     if (!selectedGridObj) return;
 
-    // Se estivermos em modo de edição e os dados iniciais acabaram de carregar, 
-    // verificamos se a grade salva corresponde ao que carregou.
-    // O problema é que o watch('grade_id') dispara logo após o reset.
-    // Se o reset preencheu variações, não queremos sobrescrever com zeros.
-    
-    // Solução robusta:
     // Comparar os tamanhos atuais (variacoesValues) com os tamanhos da grade selecionada (selectedGridObj).
-    // Se forem iguais em quantidade e nome, ASSUMIMOS QUE ESTÁ CERTO e não resetamos.
-    // Só resetamos se forem diferentes.
-    
     const currentSizes = variacoesValues.map((v:any) => v.tamanho);
     const newSizes = selectedGridObj.tamanhos.map(t => t.tamanho);
     

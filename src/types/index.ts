@@ -98,9 +98,14 @@ export interface Product {
   largura_cm: number;
   comprimento_cm: number;
   
+  // Array de dimensões da grade (se vier da API)
+  dimensoes_grade?: any[]; 
+
   imagem_principal: string;
   imagens_galeria: string[];
+  
   video?: string;
+  video_url?: string; // Campo extra que pode vir do backend
   
   criado_em: string;
   atualizado_em: string;

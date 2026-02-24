@@ -5,9 +5,11 @@ import { PlusCircle, MoreHorizontal, Pencil, Trash2, Search, Filter, X, PackageO
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useProducts } from '@/hooks/use-products';
+import { useCreateProduct, useDeleteProduct } from '@/hooks/use-create-product'; // Corrected import
 import { useCategories, useSubcategories } from '@/hooks/use-categories';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Product } from '@/types';
@@ -17,6 +19,7 @@ import { StockReplenishmentDialog } from '@/components/products/StockReplenishme
 export function ProductListPage() {
   const { data: products, isLoading, isError } = useProducts();
   const { data: categories } = useCategories();
+  const { mutate: deleteProduct } = useDeleteProduct();
   
   // Estados de Filtro
   const [search, setSearch] = useState('');
@@ -49,12 +52,16 @@ export function ProductListPage() {
     setIsReplenishOpen(true);
   };
 
+  const handleDeleteProduct = (id: number) => {
+    deleteProduct(id);
+  };
+
   // Lógica de Filtragem no Frontend
   const filteredProducts = useMemo(() => {
     if (!products) return [];
     
     return products.filter(p => {
-        const matchSearch = p.nome.toLowerCase().includes(search.toLowerCase()) || p.sku?.toLowerCase().includes(search.toLowerCase());
+        const matchSearch = p.nome.toLowerCase().includes(search.toLowerCase());
         const matchCat = filterCat === 'all' || String(p.categoria_id) === filterCat;
         const matchSub = filterSub === 'all' || String(p.subcategoria_id) === filterSub;
         
@@ -104,7 +111,7 @@ export function ProductListPage() {
            <div className="relative flex-1 group">
                 <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground group-focus-within:text-emerald-500 transition-colors" />
                 <Input 
-                    placeholder="Buscar por nome ou SKU..." 
+                    placeholder="Buscar por nome..." 
                     className="pl-9 bg-black/20 border-white/10 rounded-xl focus:border-emerald-500/50 focus:ring-emerald-500/20 transition-all h-10"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
@@ -155,6 +162,7 @@ export function ProductListPage() {
             <TableHeader className="bg-white/[0.03]">
               <TableRow className="border-white/5 hover:bg-transparent">
                 <TableHead className="w-[80px] pl-6">Foto</TableHead>
+                <TableHead className="text-emerald-500 font-semibold w-[50px]">ID</TableHead>
                 <TableHead className="text-emerald-500 font-semibold">Produto</TableHead>
                 <TableHead className="text-emerald-500 font-semibold">Categoria / Sub</TableHead>
                 <TableHead className="text-right text-emerald-500 font-semibold">Estoque</TableHead>
@@ -167,6 +175,7 @@ export function ProductListPage() {
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i} className="border-white/5 hover:bg-white/5">
                     <TableCell className="pl-6"><Skeleton className="h-10 w-10 rounded-lg bg-white/10" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-8 bg-white/10" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-48 bg-white/10 mb-2" /><Skeleton className="h-3 w-24 bg-white/5" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-32 bg-white/10" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-16 ml-auto bg-white/10 rounded-full" /></TableCell>
@@ -192,13 +201,11 @@ export function ProductListPage() {
                             </div>
                         </TableCell>
                         <TableCell>
+                            <span className="text-muted-foreground font-mono text-xs">#{product.id}</span>
+                        </TableCell>
+                        <TableCell>
                             <div className="flex flex-col gap-1">
                                 <span className="font-medium text-white group-hover:text-emerald-400 transition-colors">{product.nome}</span>
-                                <div className="flex items-center gap-2">
-                                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground bg-white/5 px-1.5 py-0.5 rounded border border-white/5">
-                                      SKU: {product.variacoes?.[0]?.sku || product.sku || 'N/A'}
-                                    </span>
-                                </div>
                             </div>
                         </TableCell>
                         <TableCell>
@@ -225,38 +232,54 @@ export function ProductListPage() {
                             </span>
                         </TableCell>
                         <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button aria-haspopup="true" size="icon" variant="ghost" className="h-8 w-8 hover:bg-white/10 rounded-lg text-muted-foreground hover:text-white">
-                                <MoreHorizontal className="h-4 w-4" />
-                                <span className="sr-only">Toggle menu</span>
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="bg-zinc-900/95 backdrop-blur-xl border-white/10 rounded-xl w-40">
-                              <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                              <DropdownMenuItem onClick={() => handleViewProduct(product)} className="focus:bg-white/10 rounded-lg cursor-pointer">
-                                <Eye className="mr-2 h-4 w-4" /> Visualizar
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleReplenishProduct(product)} className="focus:bg-white/10 rounded-lg cursor-pointer">
-                                <PackagePlus className="mr-2 h-4 w-4" /> Repor Estoque
-                              </DropdownMenuItem>
-                              <DropdownMenuItem asChild className="focus:bg-white/10 rounded-lg cursor-pointer">
-                                <Link to={`/produtos/editar/${product.id}`}>
-                                    <Pencil className="mr-2 h-4 w-4" /> Editar
-                                </Link>
-                              </DropdownMenuItem>
-                              <DropdownMenuItem className="text-red-500 focus:bg-red-500/10 focus:text-red-400 rounded-lg cursor-pointer">
-                                <Trash2 className="mr-2 h-4 w-4" /> Excluir
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          <AlertDialog>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button aria-haspopup="true" size="icon" variant="ghost" className="h-8 w-8 hover:bg-white/10 rounded-lg text-muted-foreground hover:text-white">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                  <span className="sr-only">Toggle menu</span>
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="bg-zinc-900/95 backdrop-blur-xl border-white/10 rounded-xl w-40">
+                                <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                                <DropdownMenuItem onClick={() => handleViewProduct(product)} className="focus:bg-white/10 rounded-lg cursor-pointer">
+                                  <Eye className="mr-2 h-4 w-4" /> Visualizar
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleReplenishProduct(product)} className="focus:bg-white/10 rounded-lg cursor-pointer">
+                                  <PackagePlus className="mr-2 h-4 w-4" /> Repor Estoque
+                                </DropdownMenuItem>
+                                <DropdownMenuItem asChild className="focus:bg-white/10 rounded-lg cursor-pointer">
+                                  <Link to={`/produtos/editar/${product.id}`}>
+                                      <Pencil className="mr-2 h-4 w-4" /> Editar
+                                  </Link>
+                                </DropdownMenuItem>
+                                <AlertDialogTrigger asChild>
+                                  <DropdownMenuItem className="text-red-500 focus:bg-red-500/10 focus:text-red-400 rounded-lg cursor-pointer">
+                                    <Trash2 className="mr-2 h-4 w-4" /> Excluir
+                                  </DropdownMenuItem>
+                                </AlertDialogTrigger>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Essa ação não pode ser desfeita. Isso excluirá permanentemente o produto "{product.nome}".
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleDeleteProduct(product.id)} className="bg-red-600 hover:bg-red-700 text-white">Excluir</AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </TableCell>
                       </TableRow>
                     );
                 })
               ) : (
                 <TableRow>
-                  <TableCell colSpan={6} className="h-64">
+                  <TableCell colSpan={7} className="h-64">
                     <div className="flex flex-col items-center justify-center text-muted-foreground animate-in fade-in zoom-in duration-500">
                         <div className="h-16 w-16 rounded-full bg-white/5 flex items-center justify-center mb-4">
                             <PackageOpen className="h-8 w-8 opacity-50" />

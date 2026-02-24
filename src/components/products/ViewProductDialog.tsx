@@ -19,6 +19,8 @@ export function ViewProductDialog({ product, open, onOpenChange }: ViewProductDi
   const formatCurrency = (val: number | undefined) => 
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0);
 
+  const videoSrc = product.video_url || product.video;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden bg-zinc-950 border-white/10 text-white">
@@ -36,7 +38,7 @@ export function ViewProductDialog({ product, open, onOpenChange }: ViewProductDi
             <div>
                <DialogTitle className="text-2xl font-bold">{product.nome}</DialogTitle>
                <DialogDescription className="text-muted-foreground flex items-center gap-2 mt-1">
-                 <Badge variant="outline" className="text-emerald-400 border-emerald-500/30">SKU: {product.sku || product.variacoes?.[0]?.sku || 'N/A'}</Badge>
+                 <Badge variant="outline" className="text-emerald-400 border-emerald-500/30">ID: {product.id}</Badge>
                  <span>•</span>
                  <span>{product.categoria_nome || 'Sem Categoria'}</span>
                </DialogDescription>
@@ -59,7 +61,7 @@ export function ViewProductDialog({ product, open, onOpenChange }: ViewProductDi
                     <TabsTrigger value="dims" className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-emerald-500 rounded-none pb-3 pt-2 px-1 text-muted-foreground data-[state=active]:text-emerald-400">
                         <Ruler className="mr-2 h-4 w-4" /> Dimensões
                     </TabsTrigger>
-                    {product.video && (
+                    {videoSrc && (
                         <TabsTrigger value="media" className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-emerald-500 rounded-none pb-3 pt-2 px-1 text-muted-foreground data-[state=active]:text-emerald-400">
                             <Video className="mr-2 h-4 w-4" /> Vídeo
                         </TabsTrigger>
@@ -81,10 +83,16 @@ export function ViewProductDialog({ product, open, onOpenChange }: ViewProductDi
                                     <span>Varejo:</span>
                                     <span className="font-mono text-emerald-400 font-bold">{formatCurrency(product.preco_varejo)}</span>
                                 </div>
-                                {product.habilita_atacado_geral && (
+                                {(product.habilita_atacado_geral || product.preco_atacado_geral > 0) && (
                                     <div className="flex justify-between items-center text-purple-300">
                                         <span>Atacado Geral:</span>
                                         <span className="font-mono">{formatCurrency(product.preco_atacado_geral)}</span>
+                                    </div>
+                                )}
+                                {(product.habilita_atacado_grade || product.preco_atacado_grade > 0) && (
+                                    <div className="flex justify-between items-center text-blue-300">
+                                        <span>Atacado Pacote:</span>
+                                        <span className="font-mono">{formatCurrency(product.preco_atacado_grade)}</span>
                                     </div>
                                 )}
                             </CardContent>
@@ -172,32 +180,59 @@ export function ViewProductDialog({ product, open, onOpenChange }: ViewProductDi
 
                 <TabsContent value="dims" className="mt-0">
                      <Card className="bg-white/5 border-white/10">
-                        <CardContent className="p-4 grid grid-cols-4 gap-4 text-sm text-center">
-                             <div>
-                                <span className="block text-muted-foreground text-xs mb-1">Peso (kg)</span>
-                                <span className="font-mono bg-black/20 p-2 rounded block">{product.peso_kg}</span>
-                             </div>
-                             <div>
-                                <span className="block text-muted-foreground text-xs mb-1">Altura (cm)</span>
-                                <span className="font-mono bg-black/20 p-2 rounded block">{product.altura_cm}</span>
-                             </div>
-                             <div>
-                                <span className="block text-muted-foreground text-xs mb-1">Largura (cm)</span>
-                                <span className="font-mono bg-black/20 p-2 rounded block">{product.largura_cm}</span>
-                             </div>
-                             <div>
-                                <span className="block text-muted-foreground text-xs mb-1">Comp. (cm)</span>
-                                <span className="font-mono bg-black/20 p-2 rounded block">{product.comprimento_cm}</span>
-                             </div>
+                        <CardContent className="p-4">
+                            {product.dimensoes_grade && product.dimensoes_grade.length > 0 ? (
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow className="border-white/10 hover:bg-transparent">
+                                            <TableHead>Tamanho</TableHead>
+                                            <TableHead>Peso (kg)</TableHead>
+                                            <TableHead>Altura (cm)</TableHead>
+                                            <TableHead>Largura (cm)</TableHead>
+                                            <TableHead>Comp. (cm)</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {product.dimensoes_grade.map((dim, i) => (
+                                            <TableRow key={i} className="border-white/5 hover:bg-white/5">
+                                                <TableCell className="font-bold">{dim.tamanho}</TableCell>
+                                                <TableCell>{dim.peso_kg}</TableCell>
+                                                <TableCell>{dim.altura_cm}</TableCell>
+                                                <TableCell>{dim.largura_cm}</TableCell>
+                                                <TableCell>{dim.comprimento_cm}</TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            ) : (
+                                <div className="grid grid-cols-4 gap-4 text-sm text-center">
+                                     <div>
+                                        <span className="block text-muted-foreground text-xs mb-1">Peso (kg)</span>
+                                        <span className="font-mono bg-black/20 p-2 rounded block">{product.peso_kg}</span>
+                                     </div>
+                                     <div>
+                                        <span className="block text-muted-foreground text-xs mb-1">Altura (cm)</span>
+                                        <span className="font-mono bg-black/20 p-2 rounded block">{product.altura_cm}</span>
+                                     </div>
+                                     <div>
+                                        <span className="block text-muted-foreground text-xs mb-1">Largura (cm)</span>
+                                        <span className="font-mono bg-black/20 p-2 rounded block">{product.largura_cm}</span>
+                                     </div>
+                                     <div>
+                                        <span className="block text-muted-foreground text-xs mb-1">Comp. (cm)</span>
+                                        <span className="font-mono bg-black/20 p-2 rounded block">{product.comprimento_cm}</span>
+                                     </div>
+                                </div>
+                            )}
                         </CardContent>
                     </Card>
                 </TabsContent>
 
-                {product.video && (
+                {videoSrc && (
                     <TabsContent value="media" className="mt-0">
                          <div className="aspect-video w-full rounded-lg overflow-hidden border border-white/10 bg-black">
                              <video 
-                                src={product.video} 
+                                src={videoSrc} 
                                 controls 
                                 className="w-full h-full"
                              />

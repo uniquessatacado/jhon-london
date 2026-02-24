@@ -92,8 +92,13 @@ export function useUpdateSubcategory() {
     mutationFn: updateSubcategory,
     onSuccess: (_, variables) => {
       toast.success('Subcategoria atualizada com sucesso!');
-      // Invalida a query usando o ID da categoria pai para atualizar a lista
-      queryClient.invalidateQueries({ queryKey: ['subcategories'] });
+      // Invalida a query específica da categoria pai para forçar o refetch
+      if (variables.categoria_id) {
+          queryClient.invalidateQueries({ queryKey: ['subcategories', variables.categoria_id] });
+      } else {
+          // Fallback para invalidar tudo se não tiver o ID por algum motivo
+          queryClient.invalidateQueries({ queryKey: ['subcategories'] });
+      }
       queryClient.invalidateQueries({ queryKey: ['categories'] }); 
     },
     onError: () => toast.error('Falha ao atualizar subcategoria.'),

@@ -4,14 +4,13 @@ import { Product } from '@/types';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 
-// DTO para o formulário (antes de converter para o payload da API)
+// DTO atualizado para suportar arquivos
 type ProductFormDTO = {
   nome: string;
   grade_id: string;
   subcategoria_id: string;
   marca_id: string;
   
-  // Array de variações que será convertido em string JSON
   variacoes: {
     tamanho: string;
     estoque: number;
@@ -39,29 +38,80 @@ type ProductFormDTO = {
   grade_atacado_id: string;
   preco_atacado_grade: number;
   
-  // NOVO: Composição do pacote (grade fechada)
   composicao_atacado: {
     tamanho: string;
     quantidade: number;
   }[];
 
-  imagens_galeria: string;
-  imagem_principal: string;
+  // Arquivos
+  imagem_principal_file?: File | null;
+  imagens_galeria_files?: File[];
+  video_file?: File | null;
 };
 
-async function createProduct(formData: Partial<ProductFormDTO>): Promise<Product> {
+async function createProduct(formData: ProductFormDTO): Promise<Product> {
   
-  // Conversão de Variações para JSON String
+  const payload = new FormData();
+
+  // Campos Simples
+  payload.append('nome', formData.nome);
+  payload.append('grade_id', String(formData.grade_id));
+  payload.append('subcategoria_id', String(formData.subcategoria_id));
+  payload.append('marca_id', String(formData.marca_id));
+  
+  // Fiscal
+  payload.append('ncm', formData.ncm);
+  payload.append('cfop_padrao', formData.cfop_padrao);
+  payload.append('cst_icms', formData.cst_icms);
+  payload.append('origem', formData.origem);
+  payload.append('unidade_medida', formData.unidade_medida);
+
+  // Financeiro
+  payload.append('preco_custo', String(Number(formData.preco_custo) || 0));
+  payload.append('preco_varejo', String(Number(formData.preco_varejo) || 0));
+  
+  // Atacado Geral
+  payload.append('habilita_atacado_geral', String(formData.habilita_atacado_geral));
+  payload.append('preco_atacado_geral', String(Number(formData.preco_atacado_geral) || 0));
+  
+  // Atacado Grade
+  payload.append('habilita_atacado_grade', String(formData.habilita_atacado_grade));
+  payload.append('usar_preco_atacado_unico', String(formData.usar_preco_atacado_unico));
+  
+  if (formData.grade_atacado_id) {
+    payload.append('grade_atacado_id', String(formData.grade_atacado_id));
+  }
+  
+  const precoAtacadoGrade = formData.usar_preco_atacado_unico 
+        ? (Number(formData.preco_atacado_geral) || 0) 
+        : (Number(formData.preco_atacado_grade) || 0);
+  payload.append('preco_atacado_grade', String(precoAtacadoGrade));
+
+  // --- ARQUIVOS ---
+  if (formData.imagem_principal_file) {
+    payload.append('imagem_principal', formData.imagem_principal_file);
+  }
+
+  if (formData.video_file) {
+    payload.append('video', formData.video_file);
+  }
+
+  if (formData.imagens_galeria_files && formData.imagens_galeria_files.length > 0) {
+    formData.imagens_galeria_files.forEach((file) => {
+      payload.append('imagens_galeria', file);
+    });
+  }
+
+  // --- OBJETOS COMPLEXOS (JSON Stringify) ---
   const variacoesJson = JSON.stringify(formData.variacoes?.map(v => ({
     tamanho: v.tamanho,
     estoque: Number(v.estoque) || 0,
     sku: v.sku || '',
     codigo_barras: v.codigo_barras || ''
   })) || []);
+  payload.append('variacoes', variacoesJson);
 
-  // Conversão da Composição do Atacado Grade para JSON String
-  // Filtra apenas se tiver grade selecionada e quantidades preenchidas
-  let composicaoJson = null;
+  let composicaoJson = "[]";
   if (formData.habilita_atacado_grade && formData.grade_atacado_id && formData.composicao_atacado) {
       const composicaoValida = formData.composicao_atacado
           .filter(c => c && c.tamanho && Number(c.quantidade) > 0)
@@ -69,53 +119,19 @@ async function createProduct(formData: Partial<ProductFormDTO>): Promise<Product
               tamanho: c.tamanho,
               quantidade: Number(c.quantidade)
           }));
-      
       if (composicaoValida.length > 0) {
           composicaoJson = JSON.stringify(composicaoValida);
       }
   }
+  payload.append('composicao_atacado_grade', composicaoJson);
 
-  const payload = {
-    nome: formData.nome,
-    grade_id: Number(formData.grade_id),
-    subcategoria_id: Number(formData.subcategoria_id),
-    marca_id: Number(formData.marca_id),
-    
-    variacoes: variacoesJson,
-
-    // Fiscal
-    ncm: formData.ncm,
-    cfop_padrao: formData.cfop_padrao,
-    cst_icms: formData.cst_icms,
-    origem: formData.origem,
-    unidade_medida: formData.unidade_medida,
-
-    // Financeiro
-    preco_custo: Number(formData.preco_custo) || 0,
-    preco_varejo: Number(formData.preco_varejo) || 0,
-    
-    // Atacado Geral
-    habilita_atacado_geral: formData.habilita_atacado_geral,
-    preco_atacado_geral: Number(formData.preco_atacado_geral) || 0,
-    
-    // Atacado Grade (Pacote)
-    habilita_atacado_grade: formData.habilita_atacado_grade,
-    usar_preco_atacado_unico: formData.usar_preco_atacado_unico,
-    grade_atacado_id: formData.grade_atacado_id ? Number(formData.grade_atacado_id) : null,
-    
-    // Enviamos o JSON da composição
-    composicao_atacado_grade: composicaoJson,
-    
-    preco_atacado_grade: formData.usar_preco_atacado_unico 
-        ? (Number(formData.preco_atacado_geral) || 0) 
-        : (Number(formData.preco_atacado_grade) || 0),
-
-    // Imagens
-    imagem_principal: formData.imagem_principal,
-    imagens_galeria: formData.imagens_galeria ? formData.imagens_galeria.split(',').map((s: string) => s.trim()) : [],
-  };
-
-  const { data } = await api.post('/produtos', payload);
+  // Envio com Content-Type automático (o browser define o boundary do multipart)
+  const { data } = await api.post('/produtos', payload, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  
   return data;
 }
 
@@ -133,7 +149,7 @@ export function useCreateProduct() {
     onError: (error) => {
       console.error('Erro ao criar produto:', error);
       toast.error('Falha ao criar o produto.', {
-        description: 'Verifique se a grade e as variações estão preenchidas corretamente.',
+        description: 'Verifique os dados e tente novamente.',
       });
     },
   });

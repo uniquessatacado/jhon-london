@@ -42,7 +42,13 @@ export interface Product {
   codigo_barras: string;
   preco_custo: number;
   preco_varejo: number;
-  preco_atacado: number;
+  preco_atacado: number; // NOVO
+  
+  // Regras de Atacado NOVAS
+  habilita_atacado_geral: boolean; 
+  habilita_atacado_grade: boolean;
+  qtd_minima_atacado_grade: number;
+
   estoque: number;
   estoque_minimo: number;
   

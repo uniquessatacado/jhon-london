@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import { Home, Package, ShoppingCart, Settings, Menu, LogOut, ChevronDown, Tag, Building, CircleUser, Server, Grid as GridIcon } from 'lucide-react';
+import { Home, Package, ShoppingCart, Settings, Menu, LogOut, ChevronDown, Tag, Building, CircleUser, Server, Grid as GridIcon, Settings2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import {
@@ -20,6 +20,7 @@ const navItems = [
 ];
 
 const settingsNavItems = [
+    { to: '/configuracoes/geral', label: 'Geral', icon: Settings2 },
     { to: '/configuracoes/categorias', label: 'Categorias', icon: Tag },
     { to: '/configuracoes/marcas', label: 'Marcas', icon: Building },
     { to: '/configuracoes/grades', label: 'Grades', icon: GridIcon },

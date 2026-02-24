@@ -9,6 +9,7 @@ import { CategoryPage } from './pages/settings/CategoryPage';
 import { BrandPage } from './pages/settings/BrandPage';
 import { ApiStatusPage } from './pages/settings/ApiStatusPage';
 import { GridPage } from './pages/settings/GridPage';
+import { GeneralSettingsPage } from './pages/settings/GeneralSettingsPage';
 
 const router = createBrowserRouter([
   {
@@ -34,6 +35,10 @@ const router = createBrowserRouter([
       {
         path: 'pdv',
         element: <PDVPage />,
+      },
+      {
+        path: 'configuracoes/geral',
+        element: <GeneralSettingsPage />,
       },
       {
         path: 'configuracoes/categorias',

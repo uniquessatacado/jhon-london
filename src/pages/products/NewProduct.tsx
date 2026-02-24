@@ -1,45 +1,69 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Package, FileText, Ruler, Image, Check, ArrowLeft, AlertCircle, Info } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Package, FileText, Ruler, Image, Check, ArrowLeft, AlertCircle, Info, ShoppingBag } from 'lucide-react';
 import { useCategories, useSubcategories } from '@/hooks/use-categories';
 import { useBrands } from '@/hooks/use-brands';
 import { useGrids } from '@/hooks/use-grids';
 import { useCreateProduct } from '@/hooks/use-create-product';
-import { Skeleton } from '@/components/ui/skeleton';
+import { api } from '@/lib/api';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export function NewProductPage() {
   const navigate = useNavigate();
-  const { register, handleSubmit, formState: { errors }, control, setValue, watch, resetField } = useForm();
+  // Using <any> to avoid strict type inference errors since defaultValues is partial
+  const { register, handleSubmit, formState: { errors }, setValue, watch } = useForm<any>({
+    defaultValues: {
+      qtd_minima_atacado_grade: 6,
+      habilita_atacado_geral: false,
+      habilita_atacado_grade: false,
+      estoque: 0,
+      estoque_minimo: 0,
+      preco_custo: 0,
+      preco_varejo: 0,
+      preco_atacado: 0
+    }
+  });
   
   // Hooks de Dados
   const { data: categories } = useCategories();
   const { data: brands } = useBrands();
   const { data: grids } = useGrids();
+  const { mutate: createProduct, isPending } = useCreateProduct();
+
+  // Estado local para config global (apenas visualização)
+  const [globalAtacadoMin, setGlobalAtacadoMin] = useState('10');
+
+  useEffect(() => {
+    // Buscar config global para mostrar no tooltip
+    api.get('/configuracoes/qtd_minima_atacado_geral')
+      .then(res => setGlobalAtacadoMin(res.data?.valor || '10'))
+      .catch(() => {});
+  }, []);
   
-  // Watchers para lógica condicional
+  // Watchers
   const selectedCategoryId = watch('categoria_id');
   const selectedSubcategoryId = watch('subcategoria_id');
   const selectedGridId = watch('grade_id');
+  
+  const habilitaAtacadoGeral = watch('habilita_atacado_geral');
+  const habilitaAtacadoGrade = watch('habilita_atacado_grade');
 
   // Buscar subcategorias quando categoria muda
   const { data: subcategories, isLoading: isLoadingSubs } = useSubcategories(selectedCategoryId ? Number(selectedCategoryId) : null);
-  const { mutate: createProduct, isPending } = useCreateProduct();
 
   // EFEITO 1: Preenchimento Automático Fiscal
   useEffect(() => {
     if (selectedSubcategoryId && subcategories) {
       const sub = subcategories.find(s => String(s.id) === String(selectedSubcategoryId));
       if (sub) {
-        // Preenche os campos fiscais mas deixa editável
         setValue('ncm', sub.ncm);
         setValue('cfop_padrao', sub.cfop_padrao);
         setValue('cst_icms', sub.cst_icms);
@@ -51,19 +75,19 @@ export function NewProductPage() {
 
   // EFEITO 2: Resetar subcategoria se mudar categoria
   useEffect(() => {
-    // Se a categoria mudar, limpa a subcategoria selecionada
     setValue('subcategoria_id', '');
   }, [selectedCategoryId, setValue]);
 
   const onSubmit = (data: any) => {
-    // Limpeza de dados antes do envio
     const payload = {
         ...data,
-        // Se tiver grade, zera dimensões manuais para evitar lixo
         peso_kg: selectedGridId ? 0 : data.peso_kg,
         altura_cm: selectedGridId ? 0 : data.altura_cm,
         largura_cm: selectedGridId ? 0 : data.largura_cm,
         comprimento_cm: selectedGridId ? 0 : data.comprimento_cm,
+        // Garantir numéricos
+        preco_atacado: Number(data.preco_atacado) || 0,
+        qtd_minima_atacado_grade: Number(data.qtd_minima_atacado_grade) || 6,
     };
     createProduct(payload);
   };
@@ -77,7 +101,7 @@ export function NewProductPage() {
           </Button>
           <div>
             <h1 className="text-3xl font-bold">Novo Produto</h1>
-            <p className="text-muted-foreground">Cadastre produtos com inteligência fiscal e de grade.</p>
+            <p className="text-muted-foreground">Cadastre produtos com inteligência fiscal e regras de atacado.</p>
           </div>
         </div>
         <Button size="lg" type="submit" disabled={isPending} className="bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20">
@@ -118,16 +142,31 @@ export function NewProductPage() {
 
                   {/* Preços e Estoque */}
                   <div className="grid gap-4 p-4 border border-white/10 rounded-xl bg-white/5">
-                      <h3 className="font-semibold text-emerald-400">Financeiro</h3>
-                      <div className="grid grid-cols-2 gap-4">
+                      <h3 className="font-semibold text-emerald-400 flex items-center gap-2">
+                        <span className="p-1 bg-emerald-500/10 rounded">R$</span> Financeiro
+                      </h3>
+                      <div className="grid grid-cols-3 gap-4">
                         <div className="grid gap-2">
                             <Label htmlFor="preco_custo">Custo (R$)</Label>
                             <Input id="preco_custo" type="number" step="0.01" {...register('preco_custo')} className="bg-black/20 border-white/10" />
                         </div>
                         <div className="grid gap-2">
-                            <Label htmlFor="preco_varejo">Venda (R$)</Label>
-                            <Input id="preco_varejo" type="number" step="0.01" {...register('preco_varejo', { required: true })} className="bg-black/20 border-white/10" />
+                            <Label htmlFor="preco_varejo">Venda Varejo (R$)</Label>
+                            <Input id="preco_varejo" type="number" step="0.01" {...register('preco_varejo', { required: true })} className="bg-black/20 border-white/10 font-bold text-emerald-400" />
                         </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="preco_atacado">Venda Atacado (R$)</Label>
+                            <Input 
+                                id="preco_atacado" 
+                                type="number" 
+                                step="0.01" 
+                                {...register('preco_atacado', { required: habilitaAtacadoGeral || habilitaAtacadoGrade })} 
+                                className={`bg-black/20 border-white/10 ${(habilitaAtacadoGeral || habilitaAtacadoGrade) ? 'border-emerald-500/50 ring-1 ring-emerald-500/20' : ''}`} 
+                                placeholder="0.00"
+                            />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4 pt-2 border-t border-white/5">
                          <div className="grid gap-2">
                             <Label htmlFor="estoque">Estoque Inicial</Label>
                             <Input id="estoque" type="number" {...register('estoque')} className="bg-black/20 border-white/10" />
@@ -139,31 +178,81 @@ export function NewProductPage() {
                       </div>
                   </div>
 
-                  {/* Categorização */}
+                  {/* Regras de Atacado */}
                   <div className="grid gap-4 p-4 border border-white/10 rounded-xl bg-white/5">
+                    <h3 className="font-semibold text-emerald-400 flex items-center gap-2">
+                        <ShoppingBag className="h-4 w-4" /> Regras de Atacado
+                    </h3>
+                    
+                    {/* Atacado Geral */}
+                    <div className="flex items-start space-x-3 p-3 rounded-lg bg-black/20 border border-white/5">
+                        <Switch 
+                            id="habilita_atacado_geral" 
+                            checked={habilitaAtacadoGeral}
+                            onCheckedChange={(c) => setValue('habilita_atacado_geral', c)}
+                        />
+                        <div className="grid gap-1">
+                            <Label htmlFor="habilita_atacado_geral" className="font-medium cursor-pointer">Habilitar Atacado Geral</Label>
+                            <p className="text-xs text-muted-foreground">
+                                Permite misturar com outros modelos. Ativa quando o carrinho tiver <strong>{globalAtacadoMin}+ peças</strong> no total.
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Atacado Grade */}
+                    <div className="flex items-start space-x-3 p-3 rounded-lg bg-black/20 border border-white/5">
+                        <Switch 
+                             id="habilita_atacado_grade" 
+                             checked={habilitaAtacadoGrade}
+                             onCheckedChange={(c) => setValue('habilita_atacado_grade', c)}
+                        />
+                        <div className="grid gap-1 flex-1">
+                            <Label htmlFor="habilita_atacado_grade" className="font-medium cursor-pointer">Habilitar Atacado por Grade</Label>
+                            <p className="text-xs text-muted-foreground">
+                                Preço de atacado válido apenas se comprar a quantidade mínima DESTE produto específico.
+                            </p>
+                            
+                            {habilitaAtacadoGrade && (
+                                <div className="mt-2 flex items-center gap-2 animate-in fade-in slide-in-from-top-1">
+                                    <Label htmlFor="qtd_minima_atacado_grade" className="text-xs whitespace-nowrap">Qtd. Mínima:</Label>
+                                    <Input 
+                                        id="qtd_minima_atacado_grade" 
+                                        type="number" 
+                                        className="h-7 w-20 bg-white/5 border-white/10 text-xs" 
+                                        {...register('qtd_minima_atacado_grade')} 
+                                    />
+                                    <span className="text-xs text-muted-foreground">peças</span>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                  </div>
+
+                  {/* Categorização */}
+                  <div className="grid gap-4 p-4 border border-white/10 rounded-xl bg-white/5 col-span-2">
                        <h3 className="font-semibold text-emerald-400">Classificação</h3>
                        
-                       <div className="grid gap-2">
-                        <Label>Categoria</Label>
-                        <Select onValueChange={(value) => setValue('categoria_id', value)}>
-                            <SelectTrigger className="bg-black/20 border-white/10"><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                            <SelectContent>
-                            {categories?.map(cat => <SelectItem key={cat.id} value={String(cat.id)}>{cat.nome}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                       </div>
+                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                           <div className="grid gap-2">
+                            <Label>Categoria</Label>
+                            <Select onValueChange={(value) => setValue('categoria_id', value)}>
+                                <SelectTrigger className="bg-black/20 border-white/10"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                                <SelectContent>
+                                {categories?.map(cat => <SelectItem key={cat.id} value={String(cat.id)}>{cat.nome}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                           </div>
 
-                       <div className="grid gap-2">
-                        <Label>Subcategoria <span className="text-xs text-muted-foreground">(Preenche fiscal)</span></Label>
-                        <Select onValueChange={(value) => setValue('subcategoria_id', value)} disabled={!selectedCategoryId || isLoadingSubs}>
-                            <SelectTrigger className="bg-black/20 border-white/10"><SelectValue placeholder={!selectedCategoryId ? "Selecione a categoria primeiro" : "Selecione..."} /></SelectTrigger>
-                            <SelectContent>
-                            {subcategories?.map(sub => <SelectItem key={sub.id} value={String(sub.id)}>{sub.nome}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                       </div>
+                           <div className="grid gap-2">
+                            <Label>Subcategoria <span className="text-xs text-muted-foreground">(Preenche fiscal)</span></Label>
+                            <Select onValueChange={(value) => setValue('subcategoria_id', value)} disabled={!selectedCategoryId || isLoadingSubs}>
+                                <SelectTrigger className="bg-black/20 border-white/10"><SelectValue placeholder={!selectedCategoryId ? "Selecione a categoria primeiro" : "Selecione..."} /></SelectTrigger>
+                                <SelectContent>
+                                {subcategories?.map(sub => <SelectItem key={sub.id} value={String(sub.id)}>{sub.nome}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                           </div>
 
-                       <div className="grid grid-cols-2 gap-4">
                            <div className="grid gap-2">
                             <Label>Marca</Label>
                             <Select onValueChange={(value) => setValue('marca_id', value)}>

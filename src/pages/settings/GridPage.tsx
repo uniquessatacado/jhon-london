@@ -2,16 +2,16 @@ import { useState } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { PlusCircle, Trash2, Ruler } from 'lucide-react';
+import { PlusCircle, Trash2, Pencil } from 'lucide-react';
 import { useGrids } from '@/hooks/use-grids';
-import { useCreateGrid, useDeleteGrid } from '@/hooks/use-grid-mutations';
+import { useCreateGrid, useUpdateGrid, useDeleteGrid } from '@/hooks/use-grid-mutations';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Grid } from '@/types';
 
 type GridForm = {
   nome: string;
@@ -27,9 +27,11 @@ type GridForm = {
 export function GridPage() {
   const { data: grids, isLoading } = useGrids();
   const { mutate: createGrid, isPending: isCreating } = useCreateGrid();
+  const { mutate: updateGrid, isPending: isUpdating } = useUpdateGrid();
   const { mutate: deleteGrid } = useDeleteGrid();
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
 
   const { register, control, handleSubmit, reset, formState: { errors } } = useForm<GridForm>({
     defaultValues: {
@@ -43,19 +45,39 @@ export function GridPage() {
     name: "tamanhos"
   });
 
-  const handleOpenDialog = () => {
-    reset({
-      nome: '',
-      tamanhos: [{ tamanho: '', peso_kg: 0, altura_cm: 0, largura_cm: 0, comprimento_cm: 0 }]
-    });
+  const handleOpenDialog = (gridToEdit?: Grid) => {
+    if (gridToEdit) {
+      setEditingId(gridToEdit.id);
+      reset({
+        nome: gridToEdit.nome,
+        // Mapeia garantindo que venha algum valor
+        tamanhos: gridToEdit.tamanhos.map(t => ({
+            tamanho: t.tamanho,
+            peso_kg: t.peso_kg || 0,
+            altura_cm: t.altura_cm || 0,
+            largura_cm: t.largura_cm || 0,
+            comprimento_cm: t.comprimento_cm || 0
+        }))
+      });
+    } else {
+      setEditingId(null);
+      reset({
+        nome: '',
+        tamanhos: [{ tamanho: '', peso_kg: 0, altura_cm: 0, largura_cm: 0, comprimento_cm: 0 }]
+      });
+    }
     setIsDialogOpen(true);
   };
 
   const onSubmit = (data: GridForm) => {
-    createGrid(data, { 
-      onSuccess: () => setIsDialogOpen(false) 
-    });
+    if (editingId) {
+      updateGrid({ id: editingId, ...data }, { onSuccess: () => setIsDialogOpen(false) });
+    } else {
+      createGrid(data, { onSuccess: () => setIsDialogOpen(false) });
+    }
   };
+
+  const isSaving = isCreating || isUpdating;
 
   return (
     <div>
@@ -64,7 +86,7 @@ export function GridPage() {
           <h1 className="text-3xl font-bold">Grades de Tamanhos</h1>
           <p className="text-muted-foreground">Cadastre grades com dimensões pré-definidas para cálculo de frete.</p>
         </div>
-        <Button onClick={handleOpenDialog} className="bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20">
+        <Button onClick={() => handleOpenDialog()} className="bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20">
           <PlusCircle className="mr-2 h-4 w-4" />
           Nova Grade
         </Button>
@@ -81,21 +103,32 @@ export function GridPage() {
                     <h3 className="font-bold text-xl">{grid.nome}</h3>
                     <p className="text-sm text-muted-foreground">{grid.tamanhos?.length || 0} variações</p>
                 </div>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button size="icon" variant="ghost" className="text-muted-foreground hover:text-red-400 hover:bg-red-500/10"><Trash2 className="h-4 w-4" /></Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Excluir Grade?</AlertDialogTitle>
-                      <AlertDialogDescription>Isso não afetará produtos já cadastrados, mas impedirá novos vínculos.</AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => deleteGrid(grid.id)} className="bg-red-600 hover:bg-red-700">Excluir</AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                <div className="flex items-center gap-1">
+                  <Button 
+                    size="icon" 
+                    variant="ghost" 
+                    className="text-muted-foreground hover:text-white hover:bg-white/10"
+                    onClick={() => handleOpenDialog(grid)}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button size="icon" variant="ghost" className="text-muted-foreground hover:text-red-400 hover:bg-red-500/10"><Trash2 className="h-4 w-4" /></Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Excluir Grade?</AlertDialogTitle>
+                        <AlertDialogDescription>Isso não afetará produtos já cadastrados, mas impedirá novos vínculos.</AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => deleteGrid(grid.id)} className="bg-red-600 hover:bg-red-700">Excluir</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
               </div>
               
               <div className="space-y-2">
@@ -103,7 +136,6 @@ export function GridPage() {
                     {grid.tamanhos?.slice(0, 5).map((t, idx) => (
                         <div key={idx} className="bg-black/20 border border-white/10 rounded px-2 py-1 text-xs flex items-center gap-2">
                             <span className="font-bold text-emerald-400">{t.tamanho}</span>
-                            <span className="text-muted-foreground text-[10px]">{t.peso_kg}kg</span>
                         </div>
                     ))}
                     {(grid.tamanhos?.length || 0) > 5 && (
@@ -119,7 +151,7 @@ export function GridPage() {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
           <DialogHeader>
-            <DialogTitle>Nova Grade de Tamanhos</DialogTitle>
+            <DialogTitle>{editingId ? 'Editar Grade' : 'Nova Grade de Tamanhos'}</DialogTitle>
             <DialogDescription>Defina os tamanhos e as dimensões de embalagem para cada um.</DialogDescription>
           </DialogHeader>
           
@@ -176,8 +208,8 @@ export function GridPage() {
 
             <DialogFooter className="mt-6">
               <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
-              <Button type="submit" disabled={isCreating}>
-                  {isCreating ? 'Salvando...' : 'Salvar Grade'}
+              <Button type="submit" disabled={isSaving}>
+                  {isSaving ? 'Salvando...' : 'Salvar Grade'}
               </Button>
             </DialogFooter>
           </form>

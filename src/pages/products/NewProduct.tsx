@@ -2,14 +2,13 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { Package, FileText, Ruler, Image, Check, ArrowLeft, AlertCircle, Info, ShoppingBag } from 'lucide-react';
+import { Package, FileText, Ruler, Image, Check, ArrowLeft, AlertCircle, Info, ShoppingBag, DollarSign, Lock } from 'lucide-react';
 import { useCategories, useSubcategories } from '@/hooks/use-categories';
 import { useBrands } from '@/hooks/use-brands';
 import { useGrids } from '@/hooks/use-grids';
@@ -21,16 +20,18 @@ import { toast } from 'sonner';
 export function NewProductPage() {
   const navigate = useNavigate();
   // Using <any> to avoid strict type inference errors since defaultValues is partial
-  const { register, handleSubmit, formState: { errors }, control, setValue, watch } = useForm<any>({
+  const { register, handleSubmit, formState: { errors }, setValue, watch } = useForm<any>({
     defaultValues: {
       qtd_minima_atacado_grade: 6,
       habilita_atacado_geral: false,
       habilita_atacado_grade: false,
+      usar_preco_atacado_unico: true, // Default true
       estoque: 0,
       estoque_minimo: 0,
       preco_custo: 0,
       preco_varejo: 0,
-      preco_atacado: 0
+      preco_atacado_geral: 0,
+      preco_atacado_grade: 0
     }
   });
   
@@ -57,6 +58,7 @@ export function NewProductPage() {
   
   const habilitaAtacadoGeral = watch('habilita_atacado_geral');
   const habilitaAtacadoGrade = watch('habilita_atacado_grade');
+  const usarPrecoUnico = watch('usar_preco_atacado_unico');
 
   // Buscar subcategorias quando categoria muda
   const { data: subcategories, isLoading: isLoadingSubs } = useSubcategories(selectedCategoryId ? Number(selectedCategoryId) : null);
@@ -91,14 +93,20 @@ export function NewProductPage() {
   }, [selectedCategoryId, setValue]);
 
   const onSubmit = (data: any) => {
+    // Lógica de Preço: Se for único, copia o geral para o grade
+    const precoGeral = Number(data.preco_atacado_geral) || 0;
+    const precoGrade = data.usar_preco_atacado_unico ? precoGeral : (Number(data.preco_atacado_grade) || 0);
+
     const payload = {
         ...data,
         peso_kg: selectedGridId ? 0 : data.peso_kg,
         altura_cm: selectedGridId ? 0 : data.altura_cm,
         largura_cm: selectedGridId ? 0 : data.largura_cm,
         comprimento_cm: selectedGridId ? 0 : data.comprimento_cm,
-        // Garantir numéricos
-        preco_atacado: Number(data.preco_atacado) || 0,
+        
+        // Garantir numéricos e lógica de preço
+        preco_atacado_geral: precoGeral,
+        preco_atacado_grade: precoGrade,
         qtd_minima_atacado_grade: Number(data.qtd_minima_atacado_grade) || 6,
     };
     createProduct(payload);
@@ -152,12 +160,12 @@ export function NewProductPage() {
                       </div>
                   </div>
 
-                  {/* Preços e Estoque */}
+                  {/* Preços Básicos (Varejo/Custo) */}
                   <div className="grid gap-4 p-4 border border-white/10 rounded-xl bg-white/5">
                       <h3 className="font-semibold text-emerald-400 flex items-center gap-2">
-                        <span className="p-1 bg-emerald-500/10 rounded">R$</span> Financeiro
+                        <DollarSign className="h-4 w-4" /> Financeiro (Varejo)
                       </h3>
-                      <div className="grid grid-cols-3 gap-4">
+                      <div className="grid grid-cols-2 gap-4">
                         <div className="grid gap-2">
                             <Label htmlFor="preco_custo">Custo (R$)</Label>
                             <Input id="preco_custo" type="number" step="0.01" {...register('preco_custo')} className="bg-black/20 border-white/10" />
@@ -165,17 +173,6 @@ export function NewProductPage() {
                         <div className="grid gap-2">
                             <Label htmlFor="preco_varejo">Venda Varejo (R$)</Label>
                             <Input id="preco_varejo" type="number" step="0.01" {...register('preco_varejo', { required: true })} className="bg-black/20 border-white/10 font-bold text-emerald-400" />
-                        </div>
-                        <div className="grid gap-2">
-                            <Label htmlFor="preco_atacado">Venda Atacado (R$)</Label>
-                            <Input 
-                                id="preco_atacado" 
-                                type="number" 
-                                step="0.01" 
-                                {...register('preco_atacado', { required: habilitaAtacadoGeral || habilitaAtacadoGrade })} 
-                                className={`bg-black/20 border-white/10 ${(habilitaAtacadoGeral || habilitaAtacadoGrade) ? 'border-emerald-500/50 ring-1 ring-emerald-500/20' : ''}`} 
-                                placeholder="0.00"
-                            />
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-4 pt-2 border-t border-white/5">
@@ -190,52 +187,105 @@ export function NewProductPage() {
                       </div>
                   </div>
 
-                  {/* Regras de Atacado */}
+                  {/* Regras e Preços de Atacado */}
                   <div className="grid gap-4 p-4 border border-white/10 rounded-xl bg-white/5">
                     <h3 className="font-semibold text-emerald-400 flex items-center gap-2">
                         <ShoppingBag className="h-4 w-4" /> Regras de Atacado
                     </h3>
                     
-                    {/* Atacado Geral */}
-                    <div className="flex items-start space-x-3 p-3 rounded-lg bg-black/20 border border-white/5">
-                        <Switch 
-                            id="habilita_atacado_geral" 
-                            checked={habilitaAtacadoGeral}
-                            onCheckedChange={(c) => setValue('habilita_atacado_geral', c)}
-                        />
-                        <div className="grid gap-1">
-                            <Label htmlFor="habilita_atacado_geral" className="font-medium cursor-pointer">Habilitar Atacado Geral</Label>
-                            <p className="text-xs text-muted-foreground">
-                                Permite misturar com outros modelos. Ativa quando o carrinho tiver <strong>{globalAtacadoMin}+ peças</strong> no total.
-                            </p>
+                    {/* Controle de Preço Único/Separado */}
+                    <div className="bg-black/20 p-3 rounded-lg border border-white/5 space-y-4">
+                        <div className="flex items-center justify-between">
+                             <Label htmlFor="usar_preco_atacado_unico" className="cursor-pointer flex items-center gap-2">
+                                {usarPrecoUnico ? <Lock className="h-3 w-3 text-emerald-500" /> : <Lock className="h-3 w-3 text-muted-foreground" />}
+                                Usar mesmo preço para ambos os tipos
+                             </Label>
+                             <Switch 
+                                id="usar_preco_atacado_unico" 
+                                checked={usarPrecoUnico}
+                                onCheckedChange={(c) => setValue('usar_preco_atacado_unico', c)}
+                             />
                         </div>
-                    </div>
-
-                    {/* Atacado Grade */}
-                    <div className="flex items-start space-x-3 p-3 rounded-lg bg-black/20 border border-white/5">
-                        <Switch 
-                             id="habilita_atacado_grade" 
-                             checked={habilitaAtacadoGrade}
-                             onCheckedChange={(c) => setValue('habilita_atacado_grade', c)}
-                        />
-                        <div className="grid gap-1 flex-1">
-                            <Label htmlFor="habilita_atacado_grade" className="font-medium cursor-pointer">Habilitar Atacado por Grade</Label>
-                            <p className="text-xs text-muted-foreground">
-                                Preço de atacado válido apenas se comprar a quantidade mínima DESTE produto específico.
-                            </p>
-                            
-                            {habilitaAtacadoGrade && (
-                                <div className="mt-2 flex items-center gap-2 animate-in fade-in slide-in-from-top-1">
-                                    <Label htmlFor="qtd_minima_atacado_grade" className="text-xs whitespace-nowrap">Qtd. Mínima:</Label>
+                        
+                        {/* Inputs de Preço */}
+                        {usarPrecoUnico ? (
+                            <div className="animate-in fade-in slide-in-from-top-1">
+                                <Label htmlFor="preco_atacado_geral">Preço Atacado (R$)</Label>
+                                <Input 
+                                    id="preco_atacado_geral" 
+                                    type="number" step="0.01" 
+                                    {...register('preco_atacado_geral')} 
+                                    className="bg-white/5 border-white/10 mt-1"
+                                    placeholder="0.00"
+                                />
+                                <p className="text-[10px] text-muted-foreground mt-1">Será aplicado tanto para atacado geral quanto grade.</p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-top-1">
+                                <div>
+                                    <Label htmlFor="preco_atacado_geral" className="text-xs">Atacado Geral (R$)</Label>
                                     <Input 
-                                        id="qtd_minima_atacado_grade" 
-                                        type="number" 
-                                        className="h-7 w-20 bg-white/5 border-white/10 text-xs" 
-                                        {...register('qtd_minima_atacado_grade')} 
+                                        id="preco_atacado_geral" 
+                                        type="number" step="0.01" 
+                                        {...register('preco_atacado_geral')} 
+                                        className="bg-white/5 border-white/10 mt-1"
                                     />
-                                    <span className="text-xs text-muted-foreground">peças</span>
                                 </div>
-                            )}
+                                <div>
+                                    <Label htmlFor="preco_atacado_grade" className="text-xs">Atacado Grade (R$)</Label>
+                                    <Input 
+                                        id="preco_atacado_grade" 
+                                        type="number" step="0.01" 
+                                        {...register('preco_atacado_grade')} 
+                                        className="bg-white/5 border-white/10 mt-1"
+                                    />
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                    
+                    <div className="space-y-3">
+                        {/* Atacado Geral */}
+                        <div className="flex items-start space-x-3">
+                            <Switch 
+                                id="habilita_atacado_geral" 
+                                checked={habilitaAtacadoGeral}
+                                onCheckedChange={(c) => setValue('habilita_atacado_geral', c)}
+                            />
+                            <div className="grid gap-1">
+                                <Label htmlFor="habilita_atacado_geral" className="font-medium cursor-pointer">Habilitar Atacado Geral</Label>
+                                <p className="text-xs text-muted-foreground">
+                                    Permite misturar modelos. Mínimo do carrinho: <strong>{globalAtacadoMin} peças</strong>.
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Atacado Grade */}
+                        <div className="flex items-start space-x-3">
+                            <Switch 
+                                id="habilita_atacado_grade" 
+                                checked={habilitaAtacadoGrade}
+                                onCheckedChange={(c) => setValue('habilita_atacado_grade', c)}
+                            />
+                            <div className="grid gap-1 flex-1">
+                                <Label htmlFor="habilita_atacado_grade" className="font-medium cursor-pointer">Habilitar Atacado por Grade</Label>
+                                <p className="text-xs text-muted-foreground">
+                                    Válido para quantidade mínima DESTE produto.
+                                </p>
+                                
+                                {habilitaAtacadoGrade && (
+                                    <div className="mt-2 flex items-center gap-2 animate-in fade-in slide-in-from-top-1">
+                                        <Label htmlFor="qtd_minima_atacado_grade" className="text-xs whitespace-nowrap">Qtd. Mínima:</Label>
+                                        <Input 
+                                            id="qtd_minima_atacado_grade" 
+                                            type="number" 
+                                            className="h-7 w-20 bg-white/5 border-white/10 text-xs" 
+                                            {...register('qtd_minima_atacado_grade')} 
+                                        />
+                                        <span className="text-xs text-muted-foreground">peças</span>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
                   </div>
@@ -276,10 +326,7 @@ export function NewProductPage() {
                            </div>
                            <div className="grid gap-2">
                             <Label>Grade (Opcional)</Label>
-                            <Select 
-                                onValueChange={(value) => setValue('grade_id', value)} 
-                                value={selectedGridId} // Controlado pelo formulário para atualizar visualmente quando for setado via código
-                            >
+                            <Select onValueChange={(value) => setValue('grade_id', value)}>
                                 <SelectTrigger className="bg-black/20 border-white/10"><SelectValue placeholder="Nenhuma" /></SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="null">Nenhuma</SelectItem>

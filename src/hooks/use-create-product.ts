@@ -15,7 +15,12 @@ async function createProduct(newProduct: Partial<CreateProductDTO>): Promise<Pro
     // Convertendo campos numéricos que podem vir como string do formulário
     preco_custo: Number(newProduct.preco_custo) || 0,
     preco_varejo: Number(newProduct.preco_varejo) || 0,
-    preco_atacado: Number(newProduct.preco_atacado) || 0,
+    
+    // Novos campos de Atacado
+    preco_atacado_geral: Number(newProduct.preco_atacado_geral) || 0,
+    preco_atacado_grade: Number(newProduct.preco_atacado_grade) || 0,
+    qtd_minima_atacado_grade: Number(newProduct.qtd_minima_atacado_grade) || 0,
+    
     estoque: Number(newProduct.estoque) || 0,
     estoque_minimo: Number(newProduct.estoque_minimo) || 0,
     peso_kg: Number(newProduct.peso_kg) || 0,
@@ -25,6 +30,11 @@ async function createProduct(newProduct: Partial<CreateProductDTO>): Promise<Pro
     categoria_id: Number(newProduct.categoria_id),
     marca_id: Number(newProduct.marca_id),
   };
+  
+  // Limpeza de campos opcionais se vierem vazios
+  if (!payload.grade_id) delete payload.grade_id;
+  if (!payload.subcategoria_id) delete payload.subcategoria_id;
+
   const { data } = await api.post('/produtos', payload);
   return data;
 }

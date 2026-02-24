@@ -7,7 +7,7 @@ export interface Subcategory {
   cst_icms: string;
   origem: string;
   unidade_medida: string;
-  grade_id?: number | null; // Novo campo para vincular grade padrão
+  grade_id?: number | null;
 }
 
 export interface Category {
@@ -22,7 +22,7 @@ export interface Brand {
 }
 
 export interface GridSize {
-  id?: number; // Opcional pois na criação não tem ID ainda
+  id?: number;
   tamanho: string;
   peso_kg: number;
   altura_cm: number;
@@ -43,9 +43,13 @@ export interface Product {
   codigo_barras: string;
   preco_custo: number;
   preco_varejo: number;
-  preco_atacado: number; // NOVO
   
-  // Regras de Atacado NOVAS
+  // NOVOS CAMPOS DE PREÇO ATACADO
+  usar_preco_atacado_unico: boolean;
+  preco_atacado_geral: number;
+  preco_atacado_grade: number;
+  
+  // Regras de Atacado
   habilita_atacado_geral: boolean; 
   habilita_atacado_grade: boolean;
   qtd_minima_atacado_grade: number;
@@ -66,7 +70,7 @@ export interface Product {
   unidade_medida: string;
   origem: string;
   
-  // Dimensões (usadas se não tiver grade)
+  // Dimensões
   peso_kg: number;
   altura_cm: number;
   largura_cm: number;

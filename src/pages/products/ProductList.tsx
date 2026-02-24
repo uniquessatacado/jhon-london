@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useProducts } from '@/hooks/use-products';
 import { useDeleteProduct } from '@/hooks/use-create-product';
-import { useCategories, useSubcategories } from '@/hooks/use-categories';
+import { useCategories, useAllSubcategories, useSubcategories } from '@/hooks/use-categories';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Product } from '@/types';
 import { ViewProductDialog } from '@/components/products/ViewProductDialog';
@@ -22,6 +22,7 @@ export function ProductListPage() {
   const navigate = useNavigate();
   const { data: products, isLoading, isError } = useProducts();
   const { data: categories } = useCategories();
+  const { data: allSubcategories } = useAllSubcategories();
   const { mutate: deleteProduct } = useDeleteProduct();
   
   const isMobile = useMediaQuery('(max-width: 768px)');
@@ -131,6 +132,15 @@ export function ProductListPage() {
           ))
         ) : filteredProducts.length > 0 ? (
           filteredProducts.map(product => {
+            let categoryName = product.categoria_nome;
+            if (!categoryName && product.subcategoria_id && allSubcategories && categories) {
+              const sub = allSubcategories.find(s => s.id === product.subcategoria_id);
+              if (sub) {
+                const cat = categories.find(c => c.id === sub.categoria_id);
+                if (cat) categoryName = cat.nome;
+              }
+            }
+
             return (
               <TableRow key={product.id} className="border-white/5 hover:bg-white/[0.04] transition-colors group">
                 <TableCell className="pl-6 py-4">
@@ -148,7 +158,7 @@ export function ProductListPage() {
                 <TableCell><span className="font-medium text-white group-hover:text-emerald-400 transition-colors">{product.nome}</span></TableCell>
                 <TableCell>
                     <span className="text-sm font-medium text-gray-300">
-                        {product.categoria_nome ? `${product.categoria_nome} / ` : ''}
+                        {categoryName ? `${categoryName} / ` : ''}
                         {product.subcategoria_nome || '-'}
                     </span>
                 </TableCell>

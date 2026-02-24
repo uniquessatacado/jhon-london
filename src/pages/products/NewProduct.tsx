@@ -151,7 +151,15 @@ export function NewProductPage() {
   }, [allProducts, isEditMode, id]);
 
   useEffect(() => {
-    if (productData) {
+    if (productData && allSubcategories) {
+        let categoryId = productData.categoria_id;
+        if (!categoryId && productData.subcategoria_id) {
+            const sub = allSubcategories.find(s => s.id === productData.subcategoria_id);
+            if (sub) {
+                categoryId = sub.categoria_id;
+            }
+        }
+
         const variacoesComDimensoes = productData.variacoes?.map(v => {
             const dim = productData.dimensoes_grade?.find(d => d.tamanho === v.tamanho);
             return {
@@ -169,7 +177,7 @@ export function NewProductPage() {
         const formData = {
             nome: isDuplicateMode ? `${productData.nome} - Cópia` : productData.nome,
             grade_id: productData.grade_id ? String(productData.grade_id) : "",
-            categoria_id: productData.categoria_id ? String(productData.categoria_id) : "",
+            categoria_id: categoryId ? String(categoryId) : "",
             subcategoria_id: productData.subcategoria_id ? String(productData.subcategoria_id) : "",
             marca_id: productData.marca_id ? String(productData.marca_id) : "",
             ncm: productData.ncm,
@@ -203,7 +211,7 @@ export function NewProductPage() {
             toast.info("Dados do produto copiados.", { description: "Revise SKU, estoque e imagens." });
         }
     }
-  }, [productData, reset, isDuplicateMode]);
+  }, [productData, reset, isDuplicateMode, allSubcategories]);
   
   const selectedGridId = watch('grade_id');
   const selectedSubcategoryId = watch('subcategoria_id');

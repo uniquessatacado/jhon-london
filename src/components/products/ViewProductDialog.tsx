@@ -8,6 +8,7 @@ import { Package, Tag, Ruler, FileText, Grid as GridIcon, Video, Loader2 } from 
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useProductDetails } from '@/hooks/use-product-details';
 import { useMemo } from 'react';
+import { useCategories, useAllSubcategories } from '@/hooks/use-categories';
 
 interface ViewProductDialogProps {
   productId: number | null;
@@ -16,6 +17,21 @@ interface ViewProductDialogProps {
 }
 
 const ViewProductDialogContent = ({ product }: { product: Product }) => {
+  const { data: categories } = useCategories();
+  const { data: allSubcategories } = useAllSubcategories();
+
+  const derivedCategoryName = useMemo(() => {
+    if (product.categoria_nome) return product.categoria_nome;
+    if (product.subcategoria_id && allSubcategories && categories) {
+      const sub = allSubcategories.find(s => s.id === product.subcategoria_id);
+      if (sub) {
+        const cat = categories.find(c => c.id === sub.categoria_id);
+        if (cat) return cat.nome;
+      }
+    }
+    return null;
+  }, [product, categories, allSubcategories]);
+
   const formatCurrency = (val: number | undefined) => 
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0);
 
@@ -54,7 +70,7 @@ const ViewProductDialogContent = ({ product }: { product: Product }) => {
              <DialogDescription className="text-muted-foreground flex items-center gap-2 mt-1">
                <Badge variant="outline" className="text-emerald-400 border-emerald-500/30">SKU: {product.sku || product.variacoes?.[0]?.sku || 'N/A'}</Badge>
                <span>•</span>
-               <span>{product.categoria_nome || 'Sem Categoria'}</span>
+               <span>{derivedCategoryName || 'Sem Categoria'}</span>
              </DialogDescription>
           </div>
         </div>
@@ -115,7 +131,7 @@ const ViewProductDialogContent = ({ product }: { product: Product }) => {
                           <CardContent className="p-4 space-y-2">
                               <span className="text-xs font-medium text-muted-foreground uppercase">Classificação</span>
                               <div className="grid grid-cols-1 gap-1">
-                                  <p><span className="text-muted-foreground">Categoria:</span> {product.categoria_nome || '-'}</p>
+                                  <p><span className="text-muted-foreground">Categoria:</span> {derivedCategoryName || '-'}</p>
                                   <p><span className="text-muted-foreground">Subcategoria:</span> {product.subcategoria_nome || '-'}</p>
                                   <p><span className="text-muted-foreground">Marca:</span> {product.marca_nome || '-'}</p>
                               </div>

@@ -3,42 +3,71 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { ArrowRight, Lock, User } from 'lucide-react';
+import { ArrowRight, Lock, User as UserIcon, Loader2, Mail } from 'lucide-react';
+import { api } from '@/lib/api';
+import { useAuth } from '@/contexts/AuthContext';
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const [user, setUser] = useState('');
+  const { login } = useAuth();
+  
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Forgot Password States
+  const [isForgotOpen, setIsForgotOpen] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [isRecovering, setIsRecovering] = useState(false);
 
-  const handleLogin = (e?: React.FormEvent) => {
-    e?.preventDefault();
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
     setIsLoading(true);
     
-    // Simulação de delay de rede para efeito visual
-    setTimeout(() => {
-        if (user === 'admin' && password === 'admin123') {
-          setError('');
-          toast.success('Acesso Autorizado', {
-            description: 'Bem-vindo ao John London ERP.',
-          });
-          navigate('/');
-        } else {
-          setError('Credenciais inválidas.');
-          toast.error('Acesso Negado', {
-            description: 'Verifique suas credenciais.',
-          });
-          setIsLoading(false);
-        }
-    }, 1000);
+    try {
+        const { data } = await api.post('/auth/login', { email, senha: password });
+        
+        login(data.token, data.user);
+        
+        toast.success('Acesso Autorizado', {
+            description: `Bem-vindo de volta, ${data.user.nome.split(' ')[0]}.`,
+        });
+        navigate('/');
+    } catch (error: any) {
+        console.error(error);
+        const msg = error.response?.data?.message || 'Credenciais inválidas.';
+        toast.error('Acesso Negado', { description: msg });
+    } finally {
+        setIsLoading(false);
+    }
+  };
+
+  const handleRecoverPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!forgotEmail) return toast.error("Digite seu e-mail.");
+    
+    setIsRecovering(true);
+    try {
+        await api.post('/auth/recuperar-senha', { email: forgotEmail });
+        toast.success('E-mail enviado!', { 
+            description: 'Verifique sua caixa de entrada para redefinir a senha.' 
+        });
+        setIsForgotOpen(false);
+        setForgotEmail('');
+    } catch (error: any) {
+        toast.error('Erro ao recuperar', { 
+            description: error.response?.data?.message || 'Tente novamente mais tarde.' 
+        });
+    } finally {
+        setIsRecovering(false);
+    }
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center relative overflow-hidden">
+    <div className="flex min-h-screen items-center justify-center relative overflow-hidden bg-background">
       {/* Background Effects */}
-      <div className="absolute inset-0 bg-background" />
       <div className="absolute top-[-20%] right-[-10%] w-[600px] h-[600px] rounded-full bg-emerald-500/10 blur-[120px] animate-pulse" />
       <div className="absolute bottom-[-20%] left-[-10%] w-[600px] h-[600px] rounded-full bg-blue-500/10 blur-[120px]" />
 
@@ -64,20 +93,31 @@ export function LoginPage() {
             <form onSubmit={handleLogin} className="space-y-6">
                 <div className="space-y-4">
                     <div className="space-y-2">
-                        <Label htmlFor="user" className="ml-1 text-xs uppercase tracking-wider text-muted-foreground">Usuário</Label>
+                        <Label htmlFor="email" className="ml-1 text-xs uppercase tracking-wider text-muted-foreground">E-mail</Label>
                         <div className="relative">
-                            <User className="absolute left-3 top-2.5 h-5 w-5 text-emerald-500/50" />
+                            <UserIcon className="absolute left-3 top-2.5 h-5 w-5 text-emerald-500/50" />
                             <Input 
-                                id="user" 
-                                placeholder="Digite seu usuário" 
+                                id="email" 
+                                type="email"
+                                placeholder="seu@email.com" 
                                 className="pl-10 bg-white/5 border-white/10 focus:border-emerald-500/50 focus:ring-emerald-500/20 rounded-xl h-12 transition-all hover:bg-white/10"
-                                value={user}
-                                onChange={(e) => setUser(e.target.value)}
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                required
                             />
                         </div>
                     </div>
                     <div className="space-y-2">
-                         <Label htmlFor="password" className="ml-1 text-xs uppercase tracking-wider text-muted-foreground">Senha</Label>
+                         <div className="flex justify-between items-center">
+                            <Label htmlFor="password" className="ml-1 text-xs uppercase tracking-wider text-muted-foreground">Senha</Label>
+                            <button 
+                                type="button" 
+                                onClick={() => setIsForgotOpen(true)}
+                                className="text-xs text-emerald-400 hover:text-emerald-300 transition-colors"
+                            >
+                                Esqueci minha senha
+                            </button>
+                         </div>
                         <div className="relative">
                             <Lock className="absolute left-3 top-2.5 h-5 w-5 text-emerald-500/50" />
                             <Input 
@@ -87,19 +127,18 @@ export function LoginPage() {
                                 className="pl-10 bg-white/5 border-white/10 focus:border-emerald-500/50 focus:ring-emerald-500/20 rounded-xl h-12 transition-all hover:bg-white/10"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
+                                required
                             />
                         </div>
                     </div>
                 </div>
 
-                {error && <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm text-center">{error}</div>}
-
                 <Button 
                     type="submit" 
-                    className="w-full h-12 rounded-xl text-base font-semibold shadow-[0_0_20px_rgba(16,185,129,0.2)] hover:shadow-[0_0_30px_rgba(16,185,129,0.4)] transition-all duration-300"
+                    className="w-full h-12 rounded-xl text-base font-semibold shadow-[0_0_20px_rgba(16,185,129,0.2)] hover:shadow-[0_0_30px_rgba(16,185,129,0.4)] transition-all duration-300 bg-emerald-500 hover:bg-emerald-600 text-white"
                     disabled={isLoading}
                 >
-                    {isLoading ? 'Acessando...' : <span className="flex items-center">Acessar Sistema <ArrowRight className="ml-2 h-4 w-4" /></span>}
+                    {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <span className="flex items-center">Acessar Sistema <ArrowRight className="ml-2 h-4 w-4" /></span>}
                 </Button>
             </form>
             
@@ -108,6 +147,41 @@ export function LoginPage() {
             </div>
         </div>
       </div>
+
+      {/* Forgot Password Modal */}
+      <Dialog open={isForgotOpen} onOpenChange={setIsForgotOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Recuperar Senha</DialogTitle>
+            <DialogDescription>
+              Digite seu e-mail para receber as instruções de redefinição.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleRecoverPassword} className="space-y-4 py-4">
+             <div className="space-y-2">
+                <Label htmlFor="forgot-email">E-mail cadastrado</Label>
+                <div className="relative">
+                    <Mail className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input 
+                        id="forgot-email" 
+                        type="email" 
+                        placeholder="exemplo@johnlondon.com" 
+                        className="pl-9"
+                        value={forgotEmail}
+                        onChange={(e) => setForgotEmail(e.target.value)}
+                        required
+                    />
+                </div>
+             </div>
+             <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setIsForgotOpen(false)}>Cancelar</Button>
+                <Button type="submit" className="bg-emerald-500 hover:bg-emerald-600" disabled={isRecovering}>
+                    {isRecovering ? 'Enviando...' : 'Enviar Email'}
+                </Button>
+             </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

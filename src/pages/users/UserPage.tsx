@@ -1,0 +1,271 @@
+import { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { PlusCircle, Pencil, Trash2, Shield, Loader2 } from 'lucide-react';
+import { api } from '@/lib/api';
+import { toast } from 'sonner';
+import { User as UserType, UserPermissions } from '@/types/auth';
+import { useAuth } from '@/contexts/AuthContext';
+
+const defaultPermissions: UserPermissions = {
+  dashboard: false,
+  produtos: false,
+  clientes: false,
+  financeiro: false,
+  cadastros: false,
+  usuarios: false,
+};
+
+export function UserPage() {
+  const { user: currentUser } = useAuth();
+  const [users, setUsers] = useState<UserType[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<UserType | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const { register, handleSubmit, reset, setValue, watch } = useForm<any>();
+  const watchRole = watch('role', 'colaborador');
+  const [permissions, setPermissions] = useState<UserPermissions>(defaultPermissions);
+
+  const fetchUsers = async () => {
+    try {
+      const { data } = await api.get('/usuarios');
+      setUsers(data);
+    } catch (error) {
+      toast.error('Erro ao carregar usuários');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const handleOpenDialog = (userToEdit: UserType | null = null) => {
+    if (userToEdit) {
+      setEditingUser(userToEdit);
+      setValue('nome', userToEdit.nome);
+      setValue('email', userToEdit.email);
+      setValue('whatsapp', userToEdit.whatsapp);
+      setValue('role', userToEdit.role);
+      setPermissions(userToEdit.permissoes || defaultPermissions);
+    } else {
+      setEditingUser(null);
+      reset({ role: 'colaborador' });
+      setPermissions(defaultPermissions);
+    }
+    setIsDialogOpen(true);
+  };
+
+  const handlePermissionChange = (key: keyof UserPermissions, checked: boolean) => {
+    setPermissions(prev => ({ ...prev, [key]: checked }));
+  };
+
+  const onSubmit = async (data: any) => {
+    setIsSaving(true);
+    try {
+      const payload = {
+        ...data,
+        permissoes: data.role === 'admin' ? defaultPermissions : permissions,
+      };
+
+      if (editingUser) {
+        if (!data.senha) delete payload.senha;
+        await api.put(`/usuarios/${editingUser.id}`, payload);
+        toast.success('Usuário atualizado!');
+      } else {
+        if (!data.senha) return toast.error('Senha é obrigatória para novos usuários');
+        await api.post('/usuarios', payload);
+        toast.success('Usuário criado!');
+      }
+      setIsDialogOpen(false);
+      fetchUsers();
+    } catch (error: any) {
+        console.error(error);
+        toast.error('Erro ao salvar usuário', { description: error.response?.data?.message });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    try {
+      await api.delete(`/usuarios/${id}`);
+      toast.success('Usuário excluído');
+      fetchUsers();
+    } catch (error: any) {
+      toast.error('Erro ao excluir', { description: error.response?.data?.message });
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Gestão de Usuários</h1>
+          <p className="text-muted-foreground">Gerencie o acesso e permissões da equipe.</p>
+        </div>
+        <Button onClick={() => handleOpenDialog()} className="bg-emerald-500 hover:bg-emerald-600 text-white">
+          <PlusCircle className="mr-2 h-4 w-4" /> Novo Usuário
+        </Button>
+      </div>
+
+      <div className="rounded-xl border border-white/10 bg-black/20 overflow-hidden">
+        <Table>
+          <TableHeader className="bg-white/5">
+            <TableRow className="border-white/5 hover:bg-transparent">
+              <TableHead>Nome</TableHead>
+              <TableHead>Email</TableHead>
+              <TableHead>Função</TableHead>
+              <TableHead>Permissões</TableHead>
+              <TableHead className="text-right">Ações</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {isLoading ? (
+               <TableRow><TableCell colSpan={5} className="text-center h-24">Carregando...</TableCell></TableRow>
+            ) : users.map((u) => (
+              <TableRow key={u.id} className="border-white/5 hover:bg-white/5">
+                <TableCell className="font-medium">{u.nome}</TableCell>
+                <TableCell>{u.email}</TableCell>
+                <TableCell>
+                  {u.role === 'admin' ? (
+                    <Badge className="bg-purple-500/20 text-purple-300 border-purple-500/50 hover:bg-purple-500/30">Admin</Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-muted-foreground">Colaborador</Badge>
+                  )}
+                </TableCell>
+                <TableCell>
+                  {u.role === 'admin' ? (
+                    <span className="text-xs text-muted-foreground italic">Acesso Total</span>
+                  ) : (
+                    <div className="flex gap-1 flex-wrap">
+                      {Object.entries(u.permissoes || {}).filter(([_, v]) => v).map(([k]) => (
+                        <Badge key={k} variant="secondary" className="text-[10px] bg-white/10 text-white">{k}</Badge>
+                      ))}
+                    </div>
+                  )}
+                </TableCell>
+                <TableCell className="text-right">
+                   <div className="flex justify-end gap-2">
+                      <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleOpenDialog(u)}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      
+                      {currentUser?.id !== u.id && (
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button size="icon" variant="ghost" className="h-8 w-8 text-red-500 hover:text-red-400 hover:bg-red-500/10">
+                                    <Trash2 className="h-4 w-4" />
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Excluir usuário?</AlertDialogTitle>
+                                    <AlertDialogDescription>O usuário {u.nome} perderá o acesso imediatamente.</AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleDelete(u.id)} className="bg-red-600 hover:bg-red-700">Excluir</AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                      )}
+                   </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{editingUser ? 'Editar Usuário' : 'Novo Usuário'}</DialogTitle>
+            <DialogDescription>Defina as credenciais e nível de acesso.</DialogDescription>
+          </DialogHeader>
+          
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                    <Label htmlFor="nome">Nome Completo</Label>
+                    <Input id="nome" {...register('nome', { required: true })} />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="whatsapp">WhatsApp (Opcional)</Label>
+                    <Input id="whatsapp" {...register('whatsapp')} placeholder="(00) 00000-0000" />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="email">E-mail de Acesso</Label>
+                    <Input id="email" type="email" {...register('email', { required: true })} />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="senha">{editingUser ? 'Nova Senha (deixe em branco para manter)' : 'Senha'}</Label>
+                    <Input id="senha" type="password" {...register('senha', { required: !editingUser })} />
+                </div>
+            </div>
+
+            <div className="space-y-2">
+                <Label>Nível de Acesso</Label>
+                <Select onValueChange={(v) => setValue('role', v)} defaultValue={editingUser?.role || 'colaborador'}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="colaborador">Colaborador (Acesso Restrito)</SelectItem>
+                        <SelectItem value="admin">Administrador (Acesso Total)</SelectItem>
+                    </SelectContent>
+                </Select>
+            </div>
+
+            {watchRole === 'colaborador' && (
+                <div className="space-y-3 pt-2 border-t border-white/10">
+                    <Label className="flex items-center gap-2"><Shield className="h-4 w-4 text-emerald-500" /> Permissões de Acesso</Label>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="flex items-center space-x-2 border border-white/10 p-3 rounded-lg bg-white/5">
+                            <Checkbox id="perm_dash" checked={permissions.dashboard} onCheckedChange={(c) => handlePermissionChange('dashboard', c as boolean)} />
+                            <label htmlFor="perm_dash" className="text-sm font-medium leading-none cursor-pointer">Dashboard (Métricas)</label>
+                        </div>
+                        <div className="flex items-center space-x-2 border border-white/10 p-3 rounded-lg bg-white/5">
+                            <Checkbox id="perm_prod" checked={permissions.produtos} onCheckedChange={(c) => handlePermissionChange('produtos', c as boolean)} />
+                            <label htmlFor="perm_prod" className="text-sm font-medium leading-none cursor-pointer">Produtos & Estoque</label>
+                        </div>
+                        <div className="flex items-center space-x-2 border border-white/10 p-3 rounded-lg bg-white/5">
+                            <Checkbox id="perm_cli" checked={permissions.clientes} onCheckedChange={(c) => handlePermissionChange('clientes', c as boolean)} />
+                            <label htmlFor="perm_cli" className="text-sm font-medium leading-none cursor-pointer">Clientes</label>
+                        </div>
+                        <div className="flex items-center space-x-2 border border-white/10 p-3 rounded-lg bg-white/5">
+                            <Checkbox id="perm_fin" checked={permissions.financeiro} onCheckedChange={(c) => handlePermissionChange('financeiro', c as boolean)} />
+                            <label htmlFor="perm_fin" className="text-sm font-medium leading-none cursor-pointer">Vendas / PDV</label>
+                        </div>
+                        <div className="flex items-center space-x-2 border border-white/10 p-3 rounded-lg bg-white/5">
+                            <Checkbox id="perm_cad" checked={permissions.cadastros} onCheckedChange={(c) => handlePermissionChange('cadastros', c as boolean)} />
+                            <label htmlFor="perm_cad" className="text-sm font-medium leading-none cursor-pointer">Cadastros (Cats/Marcas)</label>
+                        </div>
+                        <div className="flex items-center space-x-2 border border-white/10 p-3 rounded-lg bg-white/5">
+                            <Checkbox id="perm_user" checked={permissions.usuarios} onCheckedChange={(c) => handlePermissionChange('usuarios', c as boolean)} />
+                            <label htmlFor="perm_user" className="text-sm font-medium leading-none cursor-pointer">Gestão de Usuários</label>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
+                <Button type="submit" disabled={isSaving}>{isSaving ? <Loader2 className="animate-spin" /> : 'Salvar Usuário'}</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

@@ -22,8 +22,11 @@ import {
   useTopProducts 
 } from '@/hooks/use-dashboard-data';
 import { DashboardFilters } from '@/types/dashboard';
+import { useAuth } from '@/contexts/AuthContext';
+import { UserPermissions } from '@/types/auth';
 
 export function DashboardPage() {
+  const { user } = useAuth();
   const [filters, setFilters] = useState<DashboardFilters>({
     periodo: 'este_mes',
     tipo: 'tudo',
@@ -49,6 +52,12 @@ export function DashboardPage() {
   const formatCurrency = (val: number | undefined) => 
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val || 0);
 
+  // Helper para verificar permissão
+  const canSee = (key: keyof UserPermissions) => {
+    if (user?.role === 'admin') return true;
+    return user?.permissoes?.[key];
+  };
+
   return (
     <div className="space-y-6 pb-10">
       
@@ -61,98 +70,122 @@ export function DashboardPage() {
 
       {/* PRIMARY METRICS (ROW 1) */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <MetricCard 
-            title="Faturamento" 
-            value={formatCurrency(metrics?.faturamento)} 
-            icon={DollarSign} 
-            isLoading={loadingMetrics}
-            color="emerald"
-        />
-        <MetricCard 
-            title="Lucro Bruto" 
-            value={formatCurrency(metrics?.lucro_bruto)} 
-            icon={TrendingUp} 
-            isLoading={loadingMetrics}
-            color="blue"
-        />
-        <MetricCard 
-            title="Custo Total" 
-            value={formatCurrency(metrics?.custo)} 
-            icon={CreditCard} 
-            isLoading={loadingMetrics}
-            color="orange"
-        />
-        <MetricCard 
-            title="Ticket Médio" 
-            value={formatCurrency(metrics?.ticket_medio)} 
-            icon={ShoppingCart} 
-            isLoading={loadingMetrics}
-            color="purple"
-        />
+        {canSee('dash_faturamento') && (
+            <MetricCard 
+                title="Faturamento" 
+                value={formatCurrency(metrics?.faturamento)} 
+                icon={DollarSign} 
+                isLoading={loadingMetrics}
+                color="emerald"
+            />
+        )}
+        {canSee('dash_lucro') && (
+            <MetricCard 
+                title="Lucro Bruto" 
+                value={formatCurrency(metrics?.lucro_bruto)} 
+                icon={TrendingUp} 
+                isLoading={loadingMetrics}
+                color="blue"
+            />
+        )}
+        {canSee('dash_custo') && (
+            <MetricCard 
+                title="Custo Total" 
+                value={formatCurrency(metrics?.custo)} 
+                icon={CreditCard} 
+                isLoading={loadingMetrics}
+                color="orange"
+            />
+        )}
+        {canSee('dash_ticket') && (
+            <MetricCard 
+                title="Ticket Médio" 
+                value={formatCurrency(metrics?.ticket_medio)} 
+                icon={ShoppingCart} 
+                isLoading={loadingMetrics}
+                color="purple"
+            />
+        )}
       </div>
 
       {/* SECONDARY METRICS (ROW 2) */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <MetricCard 
-            title="Total de Pedidos" 
-            value={metrics?.total_pedidos || 0} 
-            icon={Package} 
-            isLoading={loadingMetrics}
-            subtext="Vendas finalizadas no período"
-            color="emerald"
-        />
-        <MetricCard 
-            title="Média Prod./Pedido" 
-            value={metrics?.media_produtos_pedido || 0} 
-            icon={Package} 
-            isLoading={loadingMetrics}
-            subtext="Itens por carrinho"
-            color="blue"
-        />
-        <MetricCard 
-            title="Visitas ao Site" 
-            value={metrics?.visitas_site || 0} 
-            icon={MousePointerClick} 
-            isLoading={loadingMetrics}
-            subtext="Sessões únicas"
-            color="purple"
-        />
+        {canSee('dash_pedidos') && (
+            <MetricCard 
+                title="Total de Pedidos" 
+                value={metrics?.total_pedidos || 0} 
+                icon={Package} 
+                isLoading={loadingMetrics}
+                subtext="Vendas finalizadas no período"
+                color="emerald"
+            />
+        )}
+        {canSee('dash_media_items') && (
+            <MetricCard 
+                title="Média Prod./Pedido" 
+                value={metrics?.media_produtos_pedido || 0} 
+                icon={Package} 
+                isLoading={loadingMetrics}
+                subtext="Itens por carrinho"
+                color="blue"
+            />
+        )}
+        {canSee('dash_visitas') && (
+            <MetricCard 
+                title="Visitas ao Site" 
+                value={metrics?.visitas_site || 0} 
+                icon={MousePointerClick} 
+                isLoading={loadingMetrics}
+                subtext="Sessões únicas"
+                color="purple"
+            />
+        )}
       </div>
 
       {/* SALES & ORDERS GRID */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[450px]">
-         <SalesList 
-            title="Últimas Vendas" 
-            sales={recentSales} 
-            isLoading={loadingRecent} 
-            type="recent"
-         />
-         <SalesList 
-            title="Maiores Pedidos" 
-            sales={biggestOrders} 
-            isLoading={loadingBiggest} 
-            type="biggest"
-         />
+         {canSee('dash_vendas_recentes') && (
+             <SalesList 
+                title="Últimas Vendas" 
+                sales={recentSales} 
+                isLoading={loadingRecent} 
+                type="recent"
+             />
+         )}
+         {canSee('dash_maiores_pedidos') && (
+             <SalesList 
+                title="Maiores Pedidos" 
+                sales={biggestOrders} 
+                isLoading={loadingBiggest} 
+                type="biggest"
+             />
+         )}
       </div>
 
       {/* CUSTOMERS GRID */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[400px]">
-          <CustomerList 
-             title="Novos Clientes" 
-             customers={newCustomers} 
-             isLoading={loadingNewCust} 
-             type="new"
-          />
-          <CustomerList 
-             title="Clientes Elite (Top 5)" 
-             customers={eliteCustomers} 
-             isLoading={loadingElite} 
-             type="elite"
-          />
+          {canSee('dash_novos_clientes') && (
+              <CustomerList 
+                 title="Novos Clientes" 
+                 customers={newCustomers} 
+                 isLoading={loadingNewCust} 
+                 type="new"
+              />
+          )}
+          {canSee('dash_clientes_elite') && (
+              <CustomerList 
+                 title="Clientes Elite (Top 5)" 
+                 customers={eliteCustomers} 
+                 isLoading={loadingElite} 
+                 type="elite"
+              />
+          )}
       </div>
 
       {/* TOP PRODUCTS */}
-      <TopProducts products={topProducts} isLoading={loadingTopProd} />
+      {canSee('dash_top_produtos') && (
+        <TopProducts products={topProducts} isLoading={loadingTopProd} />
+      )}
     </div>
   );
 }

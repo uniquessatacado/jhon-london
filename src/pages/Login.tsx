@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { ArrowRight, Lock, User as UserIcon, Loader2, Mail, MessageCircle } from 'lucide-react';
+import { ArrowRight, Lock, User as UserIcon, Loader2, Mail, MessageCircle, Eye, EyeOff } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -15,6 +15,7 @@ export function LoginPage() {
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   
   // Forgot Password States
@@ -122,13 +123,24 @@ export function LoginPage() {
                             <Lock className="absolute left-3 top-2.5 h-5 w-5 text-emerald-500/50" />
                             <Input 
                                 id="password" 
-                                type="password" 
+                                type={showPassword ? "text" : "password"}
                                 placeholder="••••••••" 
-                                className="pl-10 bg-white/5 border-white/10 focus:border-emerald-500/50 focus:ring-emerald-500/20 rounded-xl h-12 transition-all hover:bg-white/10"
+                                className="pl-10 pr-10 bg-white/5 border-white/10 focus:border-emerald-500/50 focus:ring-emerald-500/20 rounded-xl h-12 transition-all hover:bg-white/10"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 required
                             />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute right-3 top-3 text-muted-foreground hover:text-white transition-colors"
+                            >
+                                {showPassword ? (
+                                    <EyeOff className="h-5 w-5" />
+                                ) : (
+                                    <Eye className="h-5 w-5" />
+                                )}
+                            </button>
                         </div>
                     </div>
                 </div>

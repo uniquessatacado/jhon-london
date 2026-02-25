@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { ArrowRight, Lock, User as UserIcon, Loader2, Mail } from 'lucide-react';
+import { ArrowRight, Lock, User as UserIcon, Loader2, Mail, MessageCircle } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -143,9 +143,25 @@ export function LoginPage() {
             </form>
             
             <div className="text-center">
-                <p className="text-xs text-muted-foreground/50">© 2024 John London ERP System</p>
+                <p className="text-xs text-muted-foreground/50">© 2026 John London ERP System</p>
             </div>
         </div>
+      </div>
+
+      {/* Canto Inferior Direito: Créditos & Suporte */}
+      <div className="fixed bottom-6 right-6 flex flex-col items-end gap-3 z-50 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300">
+        <a 
+            href="https://wa.me/5519994554438" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-black font-semibold rounded-full shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-all hover:scale-105 active:scale-95"
+        >
+            <MessageCircle className="h-4 w-4" /> 
+            <span>Suporte</span>
+        </a>
+        <span className="text-[10px] text-white/20 font-mono tracking-widest uppercase">
+            Feito por Venduss Sars
+        </span>
       </div>
 
       {/* Forgot Password Modal */}

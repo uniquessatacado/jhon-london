@@ -17,7 +17,7 @@ import { useGrids } from '@/hooks/use-grids';
 import { useCreateProduct, useUpdateProduct } from '@/hooks/use-create-product';
 import { useProductDetails } from '@/hooks/use-product-details';
 import { useProducts } from '@/hooks/use-products';
-import { api } from '@/lib/api';
+import { api, mediaBaseUrl } from '@/lib/api';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -200,13 +200,17 @@ export function NewProductPage() {
         };
         reset(formData);
         if (!isDuplicateMode) {
-            if (productData.imagem_principal) setMainImagePreview(productData.imagem_principal);
+            if (productData.imagem_principal) setMainImagePreview(`${mediaBaseUrl}${productData.imagem_principal}`);
             if (productData.imagens_galeria?.length) {
-                setGalleryPreviews(productData.imagens_galeria);
-                setExistingGallery(productData.imagens_galeria); 
+                const fullUrls = productData.imagens_galeria.map(img => `${mediaBaseUrl}${img}`);
+                setGalleryPreviews(fullUrls);
+                setExistingGallery(fullUrls);
             }
             const videoSrc = productData.video_url || productData.video;
-            if (videoSrc) setVideoPreview(videoSrc);
+            if (videoSrc) {
+                const fullVideoUrl = videoSrc.startsWith('http') ? videoSrc : `${mediaBaseUrl}${videoSrc}`;
+                setVideoPreview(fullVideoUrl);
+            }
         } else {
             toast.info("Dados do produto copiados.", { description: "Revise SKU, estoque e imagens." });
         }

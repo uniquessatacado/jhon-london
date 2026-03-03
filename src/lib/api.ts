@@ -5,7 +5,7 @@ export const api = axios.create({
 });
 
 // URL base para imagens, para ser usada no frontend
-export const mediaBaseUrl = 'http://206.183.128.27:3003/';
+export const mediaBaseUrl = 'http://206.183.128.27:3003/api/';
 
 // Interceptor para adicionar o token em todas as requisições
 api.interceptors.request.use((config) => {

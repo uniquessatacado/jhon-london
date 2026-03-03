@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useLocation, Navigate } from 'react-router-dom';
-import { Home, Package, ShoppingCart, Settings, Menu, LogOut, ChevronDown, Tag, Building, CircleUser, Server, Grid as GridIcon, Settings2, Users } from 'lucide-react';
+import { Home, Package, ShoppingCart, Settings, Menu, LogOut, ChevronDown, Tag, Building, CircleUser, Server, Grid as GridIcon, Settings2, Users, Rocket } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import {
@@ -29,7 +29,8 @@ const settingsNavItems = [
     { to: '/configuracoes/marcas', label: 'Marcas', icon: Building, permissionKey: 'cadastros' as keyof UserPermissions },
     { to: '/configuracoes/grades', label: 'Grades', icon: GridIcon, permissionKey: 'cadastros' as keyof UserPermissions },
     { to: '/usuarios', label: 'Usuários', icon: Users, permissionKey: 'usuarios' as keyof UserPermissions },
-    { to: '/configuracoes/status-api', label: 'Status da API', icon: Server, specialPermission: 'programmer_admin' },
+    { to: '/configuracoes/liberacao-funcionalidades', label: 'Liberação', icon: Rocket, specialPermission: 'super_admin' },
+    { to: '/configuracoes/status-api', label: 'Status da API', icon: Server, specialPermission: 'super_admin' },
 ];
 
 const NavLinkItem = ({ to, icon: Icon, label }: { to: string, icon: React.ElementType, label: string }) => (
@@ -106,7 +107,7 @@ export function Layout() {
   });
 
   const allowedSettingsItems = settingsNavItems.filter(item => {
-    if (item.specialPermission === 'programmer_admin') {
+    if (item.specialPermission === 'super_admin') {
       return user.email === 'ussloja@gmail.com';
     }
     if (user.role === 'admin') return true;

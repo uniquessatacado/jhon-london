@@ -12,6 +12,15 @@ import { GridPage } from './pages/settings/GridPage';
 import { GeneralSettingsPage } from './pages/settings/GeneralSettingsPage';
 import { UserPage } from './pages/users/UserPage';
 import { CustomerListPage } from './pages/customers/CustomerListPage';
+import { UnderConstructionPage } from './pages/UnderConstructionPage';
+import { FeatureReleasePage } from './pages/settings/FeatureReleasePage';
+import { useAuth } from './contexts/AuthContext';
+
+// Componente de guarda para rotas que precisam de verificação de usuário
+const PdvRouteGuard = () => {
+  const { user } = useAuth();
+  return user?.email === 'ussloja@gmail.com' ? <PDVPage /> : <UnderConstructionPage />;
+};
 
 const router = createBrowserRouter([
   {
@@ -40,7 +49,7 @@ const router = createBrowserRouter([
       },
       {
         path: 'pdv',
-        element: <PDVPage />,
+        element: <PdvRouteGuard />,
       },
       {
         path: 'clientes',
@@ -65,6 +74,10 @@ const router = createBrowserRouter([
       {
         path: 'configuracoes/grades',
         element: <GridPage />,
+      },
+      {
+        path: 'configuracoes/liberacao-funcionalidades',
+        element: <FeatureReleasePage />,
       },
       {
         path: 'configuracoes/status-api',

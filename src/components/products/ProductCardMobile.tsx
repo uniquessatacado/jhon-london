@@ -1,7 +1,7 @@
 import { Product } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Eye, PackagePlus, Pencil, Trash2 } from 'lucide-react';
+import { Eye, PackagePlus, Pencil, Trash2, Warehouse } from 'lucide-react';
 import { mediaBaseUrl } from '@/lib/api';
 
 interface ProductCardMobileProps {
@@ -11,9 +11,10 @@ interface ProductCardMobileProps {
   onEdit: (id: number) => void;
   onDelete: (product: Product) => void;
   onImageView: (imageUrl: string) => void;
+  onViewStock: (product: Product) => void;
 }
 
-export function ProductCardMobile({ product, onView, onReplenish, onEdit, onDelete, onImageView }: ProductCardMobileProps) {
+export function ProductCardMobile({ product, onView, onReplenish, onEdit, onDelete, onImageView, onViewStock }: ProductCardMobileProps) {
   const formatCurrency = (value: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
   
   const getTotalStock = (p: Product) => {
@@ -81,8 +82,9 @@ export function ProductCardMobile({ product, onView, onReplenish, onEdit, onDele
           </div>
         </div>
       </div>
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-5 gap-2">
         <Button variant="outline" size="icon" className="h-12 w-full bg-white/5 border-white/10" onClick={() => onView(product)}><Eye className="h-5 w-5" /></Button>
+        <Button variant="outline" size="icon" className="h-12 w-full bg-white/5 border-white/10" onClick={() => onViewStock(product)}><Warehouse className="h-5 w-5" /></Button>
         <Button variant="outline" size="icon" className="h-12 w-full bg-white/5 border-white/10" onClick={() => onReplenish(product)}><PackagePlus className="h-5 w-5" /></Button>
         <Button variant="outline" size="icon" className="h-12 w-full bg-white/5 border-white/10" onClick={() => onEdit(product.id)}><Pencil className="h-5 w-5" /></Button>
         <Button variant="destructive" size="icon" className="h-12 w-full" onClick={() => onDelete(product)}><Trash2 className="h-5 w-5" /></Button>

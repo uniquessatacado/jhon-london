@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, MoreHorizontal, Pencil, Trash2, Search, Filter, X, PackageOpen, Eye, PackagePlus, Copy } from 'lucide-react';
+import { PlusCircle, MoreHorizontal, Pencil, Trash2, Search, Filter, X, PackageOpen, Eye, PackagePlus, Copy, Warehouse } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -15,6 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Product } from '@/types';
 import { ViewProductDialog } from '@/components/products/ViewProductDialog';
 import { StockReplenishmentDialog } from '@/components/products/StockReplenishmentDialog';
+import { ViewStockDialog } from '@/components/products/ViewStockDialog';
 import { useMediaQuery } from '@/hooks/use-media-query';
 import { ProductCardMobile } from '@/components/products/ProductCardMobile';
 import { mediaBaseUrl } from '@/lib/api';
@@ -39,6 +40,9 @@ export function ProductListPage() {
 
   const [replenishProduct, setReplenishProduct] = useState<Product | null>(null);
   const [isReplenishOpen, setIsReplenishOpen] = useState(false);
+
+  const [stockViewProduct, setStockViewProduct] = useState<Product | null>(null);
+  const [isStockViewOpen, setIsStockViewOpen] = useState(false);
 
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [imageToView, setImageToView] = useState<string | null>(null);
@@ -68,6 +72,11 @@ export function ProductListPage() {
   const handleReplenishProduct = (product: Product) => {
     setReplenishProduct(product);
     setIsReplenishOpen(true);
+  };
+
+  const handleViewStock = (product: Product) => {
+    setStockViewProduct(product);
+    setIsStockViewOpen(true);
   };
 
   const handleEditProduct = (id: number) => {
@@ -193,8 +202,9 @@ export function ProductListPage() {
                         <MoreHorizontal className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="bg-zinc-900/95 backdrop-blur-xl border-white/10 rounded-xl w-40">
-                      <DropdownMenuItem onClick={() => handleViewProduct(product)}><Eye className="mr-2 h-4 w-4" /> Visualizar</DropdownMenuItem>
+                    <DropdownMenuContent align="end" className="bg-zinc-900/95 backdrop-blur-xl border-white/10 rounded-xl w-48">
+                      <DropdownMenuItem onClick={() => handleViewProduct(product)}><Eye className="mr-2 h-4 w-4" /> Visualizar Detalhes</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleViewStock(product)}><Warehouse className="mr-2 h-4 w-4" /> Ver Estoque</DropdownMenuItem>
                       <DropdownMenuItem onClick={() => handleReplenishProduct(product)}><PackagePlus className="mr-2 h-4 w-4" /> Repor Estoque</DropdownMenuItem>
                       <DropdownMenuItem asChild><Link to={`/produtos/editar/${product.id}`}><Pencil className="mr-2 h-4 w-4" /> Editar</Link></DropdownMenuItem>
                       <DropdownMenuItem onClick={() => handleDuplicateProduct(product)}><Copy className="mr-2 h-4 w-4" /> Duplicar</DropdownMenuItem>
@@ -226,6 +236,7 @@ export function ProductListPage() {
             onEdit={handleEditProduct}
             onDelete={handleDeleteRequest}
             onImageView={handleOpenImageViewer}
+            onViewStock={handleViewStock}
           />
         ))
       ) : (
@@ -320,6 +331,7 @@ export function ProductListPage() {
 
       <ViewProductDialog productId={viewProductId} open={isViewOpen} onOpenChange={handleViewDialogChange} />
       <StockReplenishmentDialog product={replenishProduct} open={isReplenishOpen} onOpenChange={setIsReplenishOpen} />
+      <ViewStockDialog product={stockViewProduct} open={isStockViewOpen} onOpenChange={setIsStockViewOpen} />
       
       <AlertDialog open={!!productToDelete} onOpenChange={() => setProductToDelete(null)}>
         <AlertDialogContent>

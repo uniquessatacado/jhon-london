@@ -28,7 +28,7 @@ import { useMediaQuery } from '@/hooks/use-media-query';
 import { compressImage } from '@/lib/utils';
 
 // Componente para a lista de variações no mobile
-const MobileVariationCard = ({ field, currentVariation, index, register, duplicateCheck, onEditDimensions }: any) => {
+const MobileVariationCard = ({ field, currentVariation, index, register, duplicateCheck, onEditDimensions, isEditMode }: any) => {
   const currentEan = currentVariation?.codigo_barras;
   const currentSku = currentVariation?.sku;
   const isMissingBoth = !currentEan && !currentSku;
@@ -46,7 +46,7 @@ const MobileVariationCard = ({ field, currentVariation, index, register, duplica
         <Badge variant="outline" className="text-emerald-400 border-emerald-500/30 bg-emerald-500/10 px-4 py-2 text-lg">{field.tamanho}</Badge>
         <div className="w-32">
           <Label className="text-xs text-muted-foreground">Estoque</Label>
-          <Input type="number" {...register(`variacoes.${index}.estoque`)} className="bg-black/40 border-white/10 h-12 text-center text-lg" placeholder="0" />
+          <Input type="number" {...register(`variacoes.${index}.estoque`)} disabled={isEditMode} className="bg-black/40 border-white/10 h-12 text-center text-lg disabled:opacity-70" placeholder="0" />
         </div>
       </div>
       <div className="space-y-2">
@@ -250,7 +250,7 @@ export function NewProductPage() {
   const selectedGridObj = useMemo(() => grids?.find(g => String(g.id) === String(selectedGridId)), [grids, selectedGridId]);
 
   useEffect(() => {
-    if (!selectedGridObj) return;
+    if (!selectedGridObj || isEditMode || isDuplicateMode) return;
     const currentSizes = variacaoFields.map((v:any) => v.tamanho);
     const newSizes = selectedGridObj.tamanhos.map(t => t.tamanho);
 
@@ -270,7 +270,7 @@ export function NewProductPage() {
             toast.info("Variações e dimensões preenchidas pela grade selecionada.");
         }
     }
-  }, [selectedGridObj, replaceVariacoes, variacaoFields, isLoadingData]);
+  }, [selectedGridObj, replaceVariacoes, variacaoFields, isLoadingData, isEditMode, isDuplicateMode]);
 
   useEffect(() => {
     if (selectedSubcategoryId && allSubcategories) {
@@ -475,16 +475,18 @@ export function NewProductPage() {
             <CardContent className="pt-6 space-y-6">
                 {variacaoFields.length > 0 && (
                     <div className="animate-in fade-in slide-in-from-top-4">
-                        <div className="flex items-center gap-2 mb-4 p-2 rounded-lg bg-black/20 border border-white/10 max-w-sm">
-                            <Input type="number" placeholder="Estoque p/ todos" className="bg-transparent border-none h-8" value={bulkStockQty} onChange={(e) => setBulkStockQty(e.target.value)} />
-                            <Button type="button" size="sm" onClick={handleApplyBulkStock} className="bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30">Aplicar</Button>
-                        </div>
+                        {!isEditMode && (
+                            <div className="flex items-center gap-2 mb-4 p-2 rounded-lg bg-black/20 border border-white/10 max-w-sm">
+                                <Input type="number" placeholder="Estoque p/ todos" className="bg-transparent border-none h-8" value={bulkStockQty} onChange={(e) => setBulkStockQty(e.target.value)} />
+                                <Button type="button" size="sm" onClick={handleApplyBulkStock} className="bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30">Aplicar</Button>
+                            </div>
+                        )}
 
                         {isMobile ? (
                           <div className="space-y-4">
                             {variacaoFields.map((field: any, index) => {
                                 const currentVariation = variacoesValues?.[index];
-                                return <MobileVariationCard key={field.id} field={field} currentVariation={currentVariation} index={index} register={register} duplicateCheck={duplicateCheck} onEditDimensions={setEditingDimensionsIndex} />
+                                return <MobileVariationCard key={field.id} field={field} currentVariation={currentVariation} index={index} register={register} duplicateCheck={duplicateCheck} onEditDimensions={setEditingDimensionsIndex} isEditMode={isEditMode} />
                             })}
                           </div>
                         ) : (
@@ -501,7 +503,7 @@ export function NewProductPage() {
                                         return (
                                             <TableRow key={field.id} className="border-white/10 hover:bg-white/5">
                                                 <TableCell><Badge variant="outline" className="text-emerald-400 border-emerald-500/30 bg-emerald-500/10 px-3 py-1">{field.tamanho}</Badge></TableCell>
-                                                <TableCell><Input type="number" {...register(`variacoes.${index}.estoque`)} className="bg-black/40 border-white/10 h-9" /></TableCell>
+                                                <TableCell><Input type="number" {...register(`variacoes.${index}.estoque`)} disabled={isEditMode} className="bg-black/40 border-white/10 h-9 disabled:opacity-70" /></TableCell>
                                                 <TableCell><Input {...register(`variacoes.${index}.sku`)} className={`uppercase h-9 ${isSkuDuplicate ? 'border-red-500' : 'bg-black/40 border-white/10'}`} /></TableCell>
                                                 <TableCell><Input {...register(`variacoes.${index}.codigo_barras`)} className={`h-9 ${isEanDuplicate ? 'border-red-500' : 'bg-black/40 border-white/10'}`} /></TableCell>
                                                 <TableCell><Input type="number" step="0.01" {...register(`variacoes.${index}.peso_kg`)} className="bg-black/40 border-white/10 h-9 w-20" /></TableCell>

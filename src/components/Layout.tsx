@@ -114,11 +114,18 @@ export function Layout() {
   }
 
   const allowedNavItems = navItems.filter(item => {
+    // Super admin sees everything, always.
+    if (featureStatus.is_super_admin) {
+      return true;
+    }
+
+    // Regular admin sees everything except what's controlled by feature flags
     if (user.role === 'admin') {
       if (item.featureKey === 'pdv_liberado') return featureStatus.pdv_access;
       return true;
     }
-    // Para colaboradores, verifica permissão E se a feature está liberada
+    
+    // Collaborators check permissions AND feature flags
     const hasPermission = user.permissoes && user.permissoes[item.permissionKey];
     const featureEnabled = item.featureKey ? featureStatus.features[item.featureKey] : true;
     return hasPermission && featureEnabled;

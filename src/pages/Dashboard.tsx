@@ -13,7 +13,14 @@ import { MetricCard } from '@/components/dashboard/MetricCard';
 import { SalesList } from '@/components/dashboard/SalesList';
 import { CustomerList } from '@/components/dashboard/CustomerList';
 import { TopProducts } from '@/components/dashboard/TopProducts';
-import { useDashboardData } from '@/hooks/use-dashboard-data';
+import { 
+  useDashboardMetrics,
+  useRecentSales,
+  useBiggestOrders,
+  useNewCustomers,
+  useEliteCustomers,
+  useTopProducts
+} from '@/hooks/use-dashboard-data';
 import { DashboardFilters } from '@/types/dashboard';
 import { useAuth } from '@/contexts/AuthContext';
 import { UserPermissions } from '@/types/auth';
@@ -25,11 +32,22 @@ export function DashboardPage() {
     tipo: 'tudo',
   });
 
-  // Data Fetching
-  const { data, isLoading, refetch } = useDashboardData(filters);
+  // Data Fetching with individual hooks
+  const { data: metrics, isLoading: isLoadingMetrics, refetch: refetchMetrics } = useDashboardMetrics(filters);
+  const { data: recentSales, isLoading: isLoadingRecentSales, refetch: refetchRecentSales } = useRecentSales(filters);
+  const { data: biggestOrders, isLoading: isLoadingBiggestOrders, refetch: refetchBiggestOrders } = useBiggestOrders(filters);
+  const { data: newCustomers, isLoading: isLoadingNewCustomers, refetch: refetchNewCustomers } = useNewCustomers(filters);
+  const { data: eliteCustomers, isLoading: isLoadingEliteCustomers, refetch: refetchEliteCustomers } = useEliteCustomers(filters);
+  const { data: topProducts, isLoading: isLoadingTopProducts, refetch: refetchTopProducts } = useTopProducts(filters);
 
   const handleRefresh = () => {
-    refetch();
+    // Refetch all queries
+    refetchMetrics();
+    refetchRecentSales();
+    refetchBiggestOrders();
+    refetchNewCustomers();
+    refetchEliteCustomers();
+    refetchTopProducts();
   };
 
   const formatCurrency = (val: number | undefined) => 
@@ -56,36 +74,36 @@ export function DashboardPage() {
         {canSee('dash_faturamento') && (
             <MetricCard 
                 title="Faturamento" 
-                value={formatCurrency(data?.metrics?.faturamento)} 
+                value={formatCurrency(metrics?.faturamento)} 
                 icon={DollarSign} 
-                isLoading={isLoading}
+                isLoading={isLoadingMetrics}
                 color="emerald"
             />
         )}
         {canSee('dash_lucro') && (
             <MetricCard 
                 title="Lucro Bruto" 
-                value={formatCurrency(data?.metrics?.lucro_bruto)} 
+                value={formatCurrency(metrics?.lucro_bruto)} 
                 icon={TrendingUp} 
-                isLoading={isLoading}
+                isLoading={isLoadingMetrics}
                 color="blue"
             />
         )}
         {canSee('dash_custo') && (
             <MetricCard 
                 title="Custo Total" 
-                value={formatCurrency(data?.metrics?.custo)} 
+                value={formatCurrency(metrics?.custo)} 
                 icon={CreditCard} 
-                isLoading={isLoading}
+                isLoading={isLoadingMetrics}
                 color="orange"
             />
         )}
         {canSee('dash_ticket') && (
             <MetricCard 
                 title="Ticket Médio" 
-                value={formatCurrency(data?.metrics?.ticket_medio)} 
+                value={formatCurrency(metrics?.ticket_medio)} 
                 icon={ShoppingCart} 
-                isLoading={isLoading}
+                isLoading={isLoadingMetrics}
                 color="purple"
             />
         )}
@@ -96,9 +114,9 @@ export function DashboardPage() {
         {canSee('dash_pedidos') && (
             <MetricCard 
                 title="Total de Pedidos" 
-                value={data?.metrics?.total_pedidos || 0} 
+                value={metrics?.total_pedidos || 0} 
                 icon={Package} 
-                isLoading={isLoading}
+                isLoading={isLoadingMetrics}
                 subtext="Vendas finalizadas no período"
                 color="emerald"
             />
@@ -106,9 +124,9 @@ export function DashboardPage() {
         {canSee('dash_media_items') && (
             <MetricCard 
                 title="Média Prod./Pedido" 
-                value={data?.metrics?.media_produtos_pedido || 0} 
+                value={metrics?.media_produtos_pedido || 0} 
                 icon={Package} 
-                isLoading={isLoading}
+                isLoading={isLoadingMetrics}
                 subtext="Itens por carrinho"
                 color="blue"
             />
@@ -116,9 +134,9 @@ export function DashboardPage() {
         {canSee('dash_visitas') && (
             <MetricCard 
                 title="Visitas ao Site" 
-                value={data?.metrics?.visitas_site || 0} 
+                value={metrics?.visitas_site || 0} 
                 icon={MousePointerClick} 
-                isLoading={isLoading}
+                isLoading={isLoadingMetrics}
                 subtext="Sessões únicas"
                 color="purple"
             />
@@ -130,16 +148,16 @@ export function DashboardPage() {
          {canSee('dash_vendas_recentes') && (
              <SalesList 
                 title="Últimas Vendas" 
-                sales={data?.recentSales} 
-                isLoading={isLoading} 
+                sales={recentSales} 
+                isLoading={isLoadingRecentSales} 
                 type="recent"
              />
          )}
          {canSee('dash_maiores_pedidos') && (
              <SalesList 
                 title="Maiores Pedidos" 
-                sales={data?.biggestOrders} 
-                isLoading={isLoading} 
+                sales={biggestOrders} 
+                isLoading={isLoadingBiggestOrders} 
                 type="biggest"
              />
          )}
@@ -150,16 +168,16 @@ export function DashboardPage() {
           {canSee('dash_novos_clientes') && (
               <CustomerList 
                  title="Novos Clientes" 
-                 customers={data?.newCustomers} 
-                 isLoading={isLoading} 
+                 customers={newCustomers} 
+                 isLoading={isLoadingNewCustomers} 
                  type="new"
               />
           )}
           {canSee('dash_clientes_elite') && (
               <CustomerList 
                  title="Clientes Elite (Top 5)" 
-                 customers={data?.eliteCustomers} 
-                 isLoading={isLoading} 
+                 customers={eliteCustomers} 
+                 isLoading={isLoadingEliteCustomers} 
                  type="elite"
               />
           )}
@@ -167,7 +185,7 @@ export function DashboardPage() {
 
       {/* TOP PRODUCTS */}
       {canSee('dash_top_produtos') && (
-        <TopProducts products={data?.topProducts} isLoading={isLoading} />
+        <TopProducts products={topProducts} isLoading={isLoadingTopProducts} />
       )}
     </div>
   );

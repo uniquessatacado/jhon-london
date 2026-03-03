@@ -98,59 +98,34 @@ export function Layout() {
     return () => mainDiv?.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // 1. Handle initial loading state
   if (isLoading) {
-    return null; // Or a full-page loader
+    return null;
   }
 
-  // 2. If not loading, check for user. If no user, redirect to login.
   if (!user) {
     return <Navigate to="/login" />;
   }
 
-  // 3. If there IS a user, wait for feature status before rendering the UI.
   if (!featureStatus) {
-    return null; // Or a full-page loader
+    return null;
   }
 
-  const isSuperAdmin = featureStatus.is_super_admin;
+  // Master override: If the user is the specific super admin, grant all access.
+  const isMasterAdmin = user.email.toLowerCase() === 'ussloja@gmail.com' || featureStatus.is_super_admin;
 
-  const allowedNavItems = navItems.filter(item => {
-    // Rule 1: Super admin sees everything. Period.
-    if (isSuperAdmin) {
-      return true;
-    }
-
-    // Rule 2: For everyone else, check permissions first.
+  const allowedNavItems = isMasterAdmin ? navItems : navItems.filter(item => {
     const hasPermission = user.role === 'admin' || (user.permissoes && user.permissoes[item.permissionKey]);
-    if (!hasPermission) {
-      return false;
-    }
+    if (!hasPermission) return false;
 
-    // Rule 3: If they have permission, check if the feature is globally enabled.
     if (item.featureKey) {
-      if (item.featureKey === 'pdv_liberado') {
-        return featureStatus.pdv_access;
-      }
+      if (item.featureKey === 'pdv_liberado') return featureStatus.pdv_access;
       return featureStatus.features[item.featureKey];
     }
-
-    // If no feature key, and they have permission, show it (e.g., Dashboard).
     return true;
   });
 
-  const allowedSettingsItems = settingsNavItems.filter(item => {
-    // Rule 1: Super admin sees all settings.
-    if (isSuperAdmin) {
-      return true;
-    }
-
-    // Rule 2: Hide special super_admin pages from everyone else.
-    if (item.specialPermission === 'super_admin') {
-      return false;
-    }
-
-    // Rule 3: For regular settings, check permissions.
+  const allowedSettingsItems = isMasterAdmin ? settingsNavItems : settingsNavItems.filter(item => {
+    if (item.specialPermission === 'super_admin') return false;
     return user.role === 'admin' || (user.permissoes && item.permissionKey && user.permissoes[item.permissionKey]);
   });
 

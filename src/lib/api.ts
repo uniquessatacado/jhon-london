@@ -1,11 +1,11 @@
 import axios from 'axios';
 
 export const api = axios.create({
-  baseURL: 'http://206.183.128.27:3003/api',
+  baseURL: 'https://api.jl.venduss.com/api',
 });
 
 // URL base para imagens, para ser usada no frontend
-export const mediaBaseUrl = 'http://206.183.128.27:3003/api/';
+export const mediaBaseUrl = 'https://api.jl.venduss.com/api/';
 
 // Interceptor para adicionar o token em todas as requisições
 api.interceptors.request.use((config) => {

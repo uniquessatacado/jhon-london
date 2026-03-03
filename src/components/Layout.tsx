@@ -98,8 +98,20 @@ export function Layout() {
     return () => mainDiv?.removeEventListener('scroll', handleScroll);
   }, []);
 
-  if (isLoading || !featureStatus) return null;
-  if (!user) return <Navigate to="/login" />;
+  // 1. Handle initial loading state
+  if (isLoading) {
+    return null; // Or a full-page loader
+  }
+
+  // 2. If not loading, check for user. If no user, redirect to login.
+  if (!user) {
+    return <Navigate to="/login" />;
+  }
+
+  // 3. If there IS a user, wait for feature status before rendering the UI.
+  if (!featureStatus) {
+    return null; // Or a full-page loader
+  }
 
   const allowedNavItems = navItems.filter(item => {
     if (user.role === 'admin') {

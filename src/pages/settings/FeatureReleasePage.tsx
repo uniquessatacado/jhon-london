@@ -1,40 +1,50 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { Rocket, Save } from 'lucide-react';
+import { Rocket, Save, Loader2 } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { api } from '@/lib/api';
 
-const features = [
-  { id: 'dashboard', label: 'Dashboard', description: 'Página inicial com métricas e visão geral.' },
-  { id: 'produtos', label: 'Produtos', description: 'Gerenciamento de catálogo, estoque e preços.' },
-  { id: 'clientes', label: 'Clientes', description: 'Cadastro e gerenciamento da base de clientes.' },
-  { id: 'pdv', label: 'PDV / Vendas', description: 'Frente de caixa para realização de vendas.' },
-  { id: 'cadastros', label: 'Cadastros Gerais', description: 'Acesso às configurações de categorias, marcas, etc.' },
-  { id: 'usuarios', label: 'Gestão de Usuários', description: 'Gerenciar acesso e permissões da equipe.' },
-];
+const featureMap: { [key: string]: { label: string; description: string } } = {
+  pdv_liberado: { label: 'PDV / Vendas', description: 'Frente de caixa para realização de vendas.' },
+  clientes_liberado: { label: 'Clientes', description: 'Cadastro e gerenciamento da base de clientes.' },
+  produtos_liberado: { label: 'Produtos', description: 'Gerenciamento de catálogo, estoque e preços.' },
+  // Adicione outras chaves da API aqui conforme necessário
+};
 
 export function FeatureReleasePage() {
-  const [featureStates, setFeatureStates] = useState(() => {
-    const initialState: { [key: string]: boolean } = {};
-    features.forEach(f => {
-      initialState[f.id] = true; // Default to enabled
-    });
-    return initialState;
-  });
+  const { featureStatus, refetchFeatureStatus } = useAuth();
+  const [localFeatures, setLocalFeatures] = useState<{ [key: string]: boolean }>({});
+  const [isSaving, setIsSaving] = useState(false);
 
-  const handleToggle = (featureId: string, isEnabled: boolean) => {
-    setFeatureStates(prev => ({ ...prev, [featureId]: isEnabled }));
+  useEffect(() => {
+    if (featureStatus) {
+      setLocalFeatures(featureStatus.features);
+    }
+  }, [featureStatus]);
+
+  const handleToggle = async (featureKey: string, isEnabled: boolean) => {
+    setLocalFeatures(prev => ({ ...prev, [featureKey]: isEnabled }));
+    setIsSaving(true);
+    try {
+      await api.put(`/features/${featureKey}`, { valor: isEnabled });
+      toast.success(`'${featureMap[featureKey]?.label || featureKey}' atualizado com sucesso!`);
+      refetchFeatureStatus(); // Atualiza o estado global
+    } catch (error) {
+      toast.error('Falha ao atualizar a funcionalidade.');
+      // Reverte a mudança visual em caso de erro
+      setLocalFeatures(prev => ({ ...prev, [featureKey]: !isEnabled }));
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handleSaveChanges = () => {
-    // TODO: Implement backend call to save these settings
-    console.log('Saving feature flags:', featureStates);
-    toast.success('Configurações salvas (simulação)', {
-      description: 'No futuro, isso atualizará o acesso para todos os usuários.',
-    });
-  };
+  if (!featureStatus) {
+    return <div className="flex justify-center items-center h-64"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+  }
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -53,28 +63,22 @@ export function FeatureReleasePage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {features.map(feature => (
-            <div key={feature.id} className="flex items-center justify-between p-4 rounded-lg bg-black/20 border border-white/10">
+          {Object.keys(featureMap).map(key => (
+            <div key={key} className="flex items-center justify-between p-4 rounded-lg bg-black/20 border border-white/10">
               <div>
-                <Label htmlFor={`feature-${feature.id}`} className="text-base font-medium">{feature.label}</Label>
-                <p className="text-sm text-muted-foreground">{feature.description}</p>
+                <Label htmlFor={`feature-${key}`} className="text-base font-medium">{featureMap[key].label}</Label>
+                <p className="text-sm text-muted-foreground">{featureMap[key].description}</p>
               </div>
               <Switch
-                id={`feature-${feature.id}`}
-                checked={featureStates[feature.id]}
-                onCheckedChange={(checked) => handleToggle(feature.id, checked)}
+                id={`feature-${key}`}
+                checked={localFeatures[key] ?? false}
+                onCheckedChange={(checked) => handleToggle(key, checked)}
+                disabled={isSaving}
               />
             </div>
           ))}
         </CardContent>
       </Card>
-
-      <div className="flex justify-end">
-        <Button onClick={handleSaveChanges} className="bg-emerald-500 hover:bg-emerald-600">
-          <Save className="mr-2 h-4 w-4" />
-          Salvar Alterações
-        </Button>
-      </div>
     </div>
   );
 }

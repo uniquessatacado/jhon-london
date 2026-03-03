@@ -18,8 +18,9 @@ import { useAuth } from './contexts/AuthContext';
 
 // Componente de guarda para rotas que precisam de verificação de usuário
 const PdvRouteGuard = () => {
-  const { user } = useAuth();
-  return user?.email === 'ussloja@gmail.com' ? <PDVPage /> : <UnderConstructionPage />;
+  const { featureStatus } = useAuth();
+  if (!featureStatus) return null; // ou um loader
+  return featureStatus.pdv_access ? <PDVPage /> : <UnderConstructionPage />;
 };
 
 const router = createBrowserRouter([

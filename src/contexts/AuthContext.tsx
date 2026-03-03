@@ -2,13 +2,25 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 import { api } from '@/lib/api';
 import { User } from '@/types/auth';
 
+interface FeatureFlags {
+  [key: string]: boolean;
+}
+
+interface FeatureStatus {
+  is_super_admin: boolean;
+  features: FeatureFlags;
+  pdv_access: boolean;
+}
+
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  featureStatus: FeatureStatus | null;
   login: (token: string, userData: User) => void;
   logout: () => void;
   updateUser: (userData: User) => void;
+  refetchFeatureStatus: () => void;
 }
 
 const AuthContext = createContext<AuthContextType>({} as AuthContextType);
@@ -16,6 +28,18 @@ const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [featureStatus, setFeatureStatus] = useState<FeatureStatus | null>(null);
+
+  const fetchFeatureStatus = async () => {
+    try {
+      const { data } = await api.get('/features/status');
+      setFeatureStatus(data);
+    } catch (error) {
+      console.error("Failed to fetch feature status", error);
+      // Em caso de erro, definimos um estado padrão seguro
+      setFeatureStatus({ is_super_admin: false, features: {}, pdv_access: false });
+    }
+  };
 
   useEffect(() => {
     const token = localStorage.getItem('jl_token');
@@ -26,6 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const parsedUser = JSON.parse(storedUser);
         setUser(parsedUser);
         api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        fetchFeatureStatus();
       } catch (e) {
         localStorage.removeItem('jl_token');
         localStorage.removeItem('jl_user');
@@ -39,6 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('jl_user', JSON.stringify(userData));
     api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
     setUser(userData);
+    fetchFeatureStatus();
   };
 
   const logout = () => {
@@ -46,6 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('jl_user');
     delete api.defaults.headers.common['Authorization'];
     setUser(null);
+    setFeatureStatus(null);
   };
 
   const updateUser = (userData: User) => {
@@ -54,7 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, isLoading, login, logout, updateUser }}>
+    <AuthContext.Provider value={{ user, isAuthenticated: !!user, isLoading, featureStatus, login, logout, updateUser, refetchFeatureStatus: fetchFeatureStatus }}>
       {children}
     </AuthContext.Provider>
   );

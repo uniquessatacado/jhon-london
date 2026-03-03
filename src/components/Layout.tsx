@@ -18,9 +18,9 @@ import { UserPermissions } from '@/types/auth';
 
 const navItems = [
   { to: '/', icon: Home, label: 'Dashboard', permissionKey: 'dashboard' as keyof UserPermissions },
-  { to: '/produtos', icon: Package, label: 'Produtos', permissionKey: 'produtos' as keyof UserPermissions },
-  { to: '/clientes', icon: Users, label: 'Clientes', permissionKey: 'clientes' as keyof UserPermissions },
-  { to: '/pdv', icon: ShoppingCart, label: 'PDV', permissionKey: 'financeiro' as keyof UserPermissions },
+  { to: '/produtos', icon: Package, label: 'Produtos', permissionKey: 'produtos' as keyof UserPermissions, featureKey: 'produtos_liberado' },
+  { to: '/clientes', icon: Users, label: 'Clientes', permissionKey: 'clientes' as keyof UserPermissions, featureKey: 'clientes_liberado' },
+  { to: '/pdv', icon: ShoppingCart, label: 'PDV', permissionKey: 'financeiro' as keyof UserPermissions, featureKey: 'pdv_liberado' },
 ];
 
 const settingsNavItems = [
@@ -77,7 +77,7 @@ const AnimatedLogo = () => {
 };
 
 export function Layout() {
-  const { user, logout, isLoading } = useAuth();
+  const { user, logout, isLoading, featureStatus } = useAuth();
   const location = useLocation();
   const isSettingsOpen = location.pathname.startsWith('/configuracoes') || location.pathname.startsWith('/usuarios');
   const [scrolled, setScrolled] = useState(false);
@@ -98,17 +98,23 @@ export function Layout() {
     return () => mainDiv?.removeEventListener('scroll', handleScroll);
   }, []);
 
-  if (isLoading) return null;
+  if (isLoading || !featureStatus) return null;
   if (!user) return <Navigate to="/login" />;
 
   const allowedNavItems = navItems.filter(item => {
-    if (user.role === 'admin') return true;
-    return user.permissoes && user.permissoes[item.permissionKey];
+    if (user.role === 'admin') {
+      if (item.featureKey === 'pdv_liberado') return featureStatus.pdv_access;
+      return true;
+    }
+    // Para colaboradores, verifica permissão E se a feature está liberada
+    const hasPermission = user.permissoes && user.permissoes[item.permissionKey];
+    const featureEnabled = item.featureKey ? featureStatus.features[item.featureKey] : true;
+    return hasPermission && featureEnabled;
   });
 
   const allowedSettingsItems = settingsNavItems.filter(item => {
     if (item.specialPermission === 'super_admin') {
-      return user.email === 'ussloja@gmail.com';
+      return featureStatus.is_super_admin;
     }
     if (user.role === 'admin') return true;
     return user.permissoes && item.permissionKey && user.permissoes[item.permissionKey];

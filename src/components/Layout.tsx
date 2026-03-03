@@ -113,30 +113,26 @@ export function Layout() {
     return null; // Or a full-page loader
   }
 
-  const allowedNavItems = navItems.filter(item => {
-    // Super admin sees everything, always.
-    if (featureStatus.is_super_admin) {
-      return true;
-    }
+  const isSuperAdmin = featureStatus.is_super_admin;
 
-    // Regular admin sees everything except what's controlled by feature flags
-    if (user.role === 'admin') {
+  const allowedNavItems = navItems.filter(item => {
+    if (isSuperAdmin) return true;
+
+    const hasPermission = user.role === 'admin' || (user.permissoes && user.permissoes[item.permissionKey]);
+    if (!hasPermission) return false;
+
+    if (item.featureKey) {
       if (item.featureKey === 'pdv_liberado') return featureStatus.pdv_access;
-      return true;
+      return featureStatus.features[item.featureKey];
     }
-    
-    // Collaborators check permissions AND feature flags
-    const hasPermission = user.permissoes && user.permissoes[item.permissionKey];
-    const featureEnabled = item.featureKey ? featureStatus.features[item.featureKey] : true;
-    return hasPermission && featureEnabled;
+    return true;
   });
 
   const allowedSettingsItems = settingsNavItems.filter(item => {
     if (item.specialPermission === 'super_admin') {
-      return featureStatus.is_super_admin;
+      return isSuperAdmin;
     }
-    if (user.role === 'admin') return true;
-    return user.permissoes && item.permissionKey && user.permissoes[item.permissionKey];
+    return user.role === 'admin' || (user.permissoes && item.permissionKey && user.permissoes[item.permissionKey]);
   });
 
   const canAccessSettings = allowedSettingsItems.length > 0;

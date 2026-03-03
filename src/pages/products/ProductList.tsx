@@ -17,6 +17,7 @@ import { ViewProductDialog } from '@/components/products/ViewProductDialog';
 import { StockReplenishmentDialog } from '@/components/products/StockReplenishmentDialog';
 import { useMediaQuery } from '@/hooks/use-media-query';
 import { ProductCardMobile } from '@/components/products/ProductCardMobile';
+import { mediaBaseUrl } from '@/lib/api';
 
 export function ProductListPage() {
   const navigate = useNavigate();
@@ -146,7 +147,7 @@ export function ProductListPage() {
                 <TableCell className="pl-6 py-4">
                     <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-white/10 to-transparent border border-white/10 overflow-hidden flex items-center justify-center shadow-inner">
                         {product.imagem_principal ? (
-                            <img src={product.imagem_principal} alt="" className="h-full w-full object-cover" />
+                            <img src={`${mediaBaseUrl}${product.imagem_principal}`} alt="" className="h-full w-full object-cover" />
                         ) : (
                             <div className="flex items-center justify-center w-full h-full bg-emerald-500/10 text-emerald-500 font-bold text-xs">
                                 {getInitials(product.nome)}

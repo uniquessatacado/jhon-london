@@ -9,6 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useProductDetails } from '@/hooks/use-product-details';
 import { useMemo } from 'react';
 import { useCategories, useAllSubcategories } from '@/hooks/use-categories';
+import { mediaBaseUrl } from '@/lib/api';
 
 interface ViewProductDialogProps {
   productId: number | null;
@@ -58,7 +59,7 @@ const ViewProductDialogContent = ({ product }: { product: Product }) => {
         <div className="flex items-start gap-4">
           <div className="h-16 w-16 rounded-lg bg-white/10 overflow-hidden border border-white/10 flex-shrink-0">
              {product.imagem_principal ? (
-               <img src={product.imagem_principal} alt={product.nome} className="h-full w-full object-cover" />
+               <img src={`${mediaBaseUrl}${product.imagem_principal}`} alt={product.nome} className="h-full w-full object-cover" />
              ) : (
                <div className="h-full w-full flex items-center justify-center text-muted-foreground bg-white/5">
                  <Package className="h-8 w-8 opacity-50" />
@@ -143,7 +144,7 @@ const ViewProductDialogContent = ({ product }: { product: Product }) => {
                           <h4 className="font-medium mb-2 text-sm text-muted-foreground">Galeria</h4>
                           <div className="flex gap-2 overflow-x-auto pb-2">
                               {product.imagens_galeria.map((img, idx) => (
-                                  <img key={idx} src={img} className="h-24 w-24 rounded-md object-cover border border-white/10" alt={`Galeria ${idx}`} />
+                                  <img key={idx} src={`${mediaBaseUrl}${img}`} className="h-24 w-24 rounded-md object-cover border border-white/10" alt={`Galeria ${idx}`} />
                               ))}
                           </div>
                       </div>
@@ -249,7 +250,7 @@ const ViewProductDialogContent = ({ product }: { product: Product }) => {
                   <TabsContent value="media" className="mt-0">
                        <div className="aspect-video w-full rounded-lg overflow-hidden border border-white/10 bg-black">
                            <video 
-                              src={videoSrc} 
+                              src={`${mediaBaseUrl}${videoSrc}`} 
                               controls 
                               className="w-full h-full"
                            />

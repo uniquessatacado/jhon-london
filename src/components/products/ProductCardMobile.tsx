@@ -2,6 +2,7 @@ import { Product } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Eye, PackagePlus, Pencil, Trash2 } from 'lucide-react';
+import { mediaBaseUrl } from '@/lib/api';
 
 interface ProductCardMobileProps {
   product: Product;
@@ -33,7 +34,7 @@ export function ProductCardMobile({ product, onView, onReplenish, onEdit, onDele
       <div className="flex gap-4">
         <div className="w-24 h-24 flex-shrink-0 rounded-xl bg-gradient-to-br from-white/10 to-transparent border border-white/10 overflow-hidden flex items-center justify-center shadow-inner">
           {product.imagem_principal ? (
-            <img src={product.imagem_principal} alt={product.nome} className="h-full w-full object-cover" />
+            <img src={`${mediaBaseUrl}${product.imagem_principal}`} alt={product.nome} className="h-full w-full object-cover" />
           ) : (
             <div className="flex items-center justify-center w-full h-full bg-emerald-500/10 text-emerald-500 font-bold text-xl">
               {getInitials(product.nome)}

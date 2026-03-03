@@ -117,7 +117,7 @@ export function Layout() {
         <div className="flex h-24 items-center justify-center border-b border-white/5 px-4 bg-gradient-to-b from-white/5 to-transparent">
            <AnimatedLogo />
         </div>
-        <div className="flex-1 overflow-y-auto py-6 px-4 space-y-2 scrollbar-thin scrollbar-thumb-white/10">
+        <div className="flex-1 overflow-y-auto py-6 px-4 space-y-2 no-scrollbar">
           <nav className="grid items-start gap-2">
             {allowedNavItems.map(item => <NavLinkItem key={item.to} {...item} />)}
              

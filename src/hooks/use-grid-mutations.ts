@@ -65,9 +65,11 @@ export function useUpdateGrid() {
       toast.success('Grade atualizada com sucesso!');
       queryClient.invalidateQueries({ queryKey: ['grids'] });
     },
-    onError: (err) => {
-      console.error(err);
-      toast.error('Falha ao atualizar grade.');
+    onError: (error: any) => {
+      console.error('Falha ao atualizar grade:', error.response?.data);
+      toast.error('Falha ao atualizar grade.', {
+        description: error.response?.data?.message || 'Erro desconhecido.'
+      });
     },
   });
 }
@@ -85,8 +87,11 @@ export function useDeleteGrid() {
       toast.success('Grade excluída com sucesso!');
       queryClient.invalidateQueries({ queryKey: ['grids'] });
     },
-    onError: () => {
-      toast.error('Falha ao excluir grade.');
+    onError: (error: any) => {
+      console.error('Falha ao excluir grade:', error.response?.data);
+      toast.error('Falha ao excluir grade.', {
+        description: error.response?.data?.message || 'Erro desconhecido.'
+      });
     },
   });
 }

@@ -53,7 +53,7 @@ export function TopProducts({ products, isLoading }: TopProductsProps) {
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60" />
                     
                     <div className="absolute bottom-2 left-3 right-3">
-                         <p className="text-sm font-medium text-white truncate">{product.nome}</p>
+                         <p className="text-sm font-medium text-white truncate">{product.nome || 'Produto sem nome'}</p>
                     </div>
                 </div>
 

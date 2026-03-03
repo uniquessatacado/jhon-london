@@ -16,10 +16,15 @@ export function PDVPage() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
-  const filteredProducts = products?.filter(p => 
-    p.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.variacoes?.some(v => v.sku.toLowerCase().includes(searchTerm.toLowerCase()) || v.codigo_barras.includes(searchTerm))
-  ).slice(0, 50);
+  const filteredProducts = products?.filter(p => {
+    const term = searchTerm.toLowerCase();
+    const nameMatch = p.nome?.toLowerCase().includes(term) ?? false;
+    const variationMatch = p.variacoes?.some(v => 
+        (v.sku?.toLowerCase().includes(term) ?? false) ||
+        (v.codigo_barras?.toLowerCase().includes(term) ?? false)
+    ) ?? false;
+    return nameMatch || variationMatch;
+  }).slice(0, 50);
 
   const addToCart = (product: Product, variation: ProductVariation) => {
     const existingItem = cart.find(item => item.productId === product.id && item.variation.tamanho === variation.tamanho);

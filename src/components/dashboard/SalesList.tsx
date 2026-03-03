@@ -42,10 +42,10 @@ export function SalesList({ title, sales, isLoading, type = 'recent' }: SalesLis
               <div key={sale.id} className="p-4 hover:bg-white/5 transition-colors flex items-center justify-between group">
                 <div className="flex items-start gap-3">
                     <div className="h-10 w-10 rounded-full bg-white/5 flex items-center justify-center text-xs font-bold text-muted-foreground border border-white/10 group-hover:border-emerald-500/30 group-hover:text-emerald-400 transition-colors">
-                        {sale.cliente_nome.substring(0, 2).toUpperCase()}
+                        {(sale.cliente_nome || '??').substring(0, 2).toUpperCase()}
                     </div>
                     <div>
-                        <p className="text-sm font-medium text-white group-hover:text-emerald-400 transition-colors">{sale.cliente_nome}</p>
+                        <p className="text-sm font-medium text-white group-hover:text-emerald-400 transition-colors">{sale.cliente_nome || 'Cliente não identificado'}</p>
                         <p className="text-xs text-muted-foreground">
                             {type === 'recent' ? new Date(sale.data).toLocaleDateString('pt-BR') : `${sale.itens_count} itens`}
                         </p>

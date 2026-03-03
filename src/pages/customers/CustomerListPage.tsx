@@ -86,10 +86,10 @@ export function CustomerListPage() {
               ))
             ) : customers?.map((customer) => (
               <TableRow key={customer.id} className="border-white/5 hover:bg-white/5">
-                <TableCell className="font-medium">{customer.nome}</TableCell>
-                <TableCell>{customer.cpf_cnpj}</TableCell>
-                <TableCell>{customer.whatsapp}</TableCell>
-                <TableCell>{customer.cidade}/{customer.estado}</TableCell>
+                <TableCell className="font-medium">{customer.nome || '-'}</TableCell>
+                <TableCell>{customer.cpf_cnpj || '-'}</TableCell>
+                <TableCell>{customer.whatsapp || '-'}</TableCell>
+                <TableCell>{customer.cidade || '-'}/{customer.estado || '-'}</TableCell>
                 <TableCell><Badge variant="secondary" className="capitalize">{customer.tipo_cliente}</Badge></TableCell>
                 <TableCell>
                   <Badge variant={customer.ativo ? 'default' : 'destructive'} className={customer.ativo ? 'bg-emerald-500/20 text-emerald-300' : ''}>

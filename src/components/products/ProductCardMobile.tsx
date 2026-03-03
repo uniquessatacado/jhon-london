@@ -56,7 +56,7 @@ export function ProductCardMobile({ product, onView, onReplenish, onEdit, onDele
         <div className="flex-1 flex flex-col justify-between">
           <div>
             <h3 className="font-bold text-lg text-white leading-tight">{product.nome}</h3>
-            <p className="text-xs text-muted-foreground mt-1">{product.categoria_nome} • {product.marca_nome}</p>
+            <p className="text-xs text-muted-foreground mt-1">{product.categoria_nome || 'N/A'} • {product.marca_nome || 'N/A'}</p>
           </div>
           <div className="flex items-end justify-between mt-2">
             <div>

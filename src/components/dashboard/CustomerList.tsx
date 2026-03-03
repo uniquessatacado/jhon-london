@@ -39,11 +39,11 @@ export function CustomerList({ title, customers, isLoading, type = 'new' }: Cust
               <div key={customer.id} className="p-4 hover:bg-white/5 transition-colors flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     <div className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold border border-white/10 ${type === 'elite' && index === 0 ? 'bg-amber-500/20 text-amber-400 border-amber-500/50' : 'bg-white/5 text-muted-foreground'}`}>
-                        {type === 'elite' ? index + 1 : customer.nome.substring(0, 1)}
+                        {type === 'elite' ? index + 1 : (customer.nome || '?').substring(0, 1)}
                     </div>
                     <div className="overflow-hidden">
-                        <p className="text-sm font-medium text-white truncate">{customer.nome}</p>
-                        <p className="text-xs text-muted-foreground truncate">{customer.cidade ? `${customer.cidade}/${customer.estado}` : customer.email}</p>
+                        <p className="text-sm font-medium text-white truncate">{customer.nome || 'N/A'}</p>
+                        <p className="text-xs text-muted-foreground truncate">{customer.cidade ? `${customer.cidade}/${customer.estado}` : (customer.email || 'N/A')}</p>
                     </div>
                 </div>
                 {type === 'elite' && customer.total_gasto && (

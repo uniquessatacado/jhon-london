@@ -37,8 +37,11 @@ export function useUpdateBrand() {
       toast.success('Marca atualizada com sucesso!');
       queryClient.invalidateQueries({ queryKey: ['brands'] });
     },
-    onError: () => {
-      toast.error('Falha ao atualizar marca.');
+    onError: (error: any) => {
+      console.error('Falha ao atualizar marca:', error.response?.data);
+      toast.error('Falha ao atualizar marca.', {
+        description: error.response?.data?.message || 'Erro desconhecido.'
+      });
     },
   });
 }
@@ -56,8 +59,11 @@ export function useDeleteBrand() {
       toast.success('Marca excluída com sucesso!');
       queryClient.invalidateQueries({ queryKey: ['brands'] });
     },
-    onError: () => {
-      toast.error('Falha ao excluir marca.');
+    onError: (error: any) => {
+      console.error('Falha ao excluir marca:', error.response?.data);
+      toast.error('Falha ao excluir marca.', {
+        description: error.response?.data?.message || 'Erro desconhecido.'
+      });
     },
   });
 }

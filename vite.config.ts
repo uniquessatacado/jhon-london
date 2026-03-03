@@ -7,7 +7,13 @@ export default defineConfig(() => ({
   server: {
     host: "0.0.0.0",
     port: 8080,
-    allowedHosts: ['jl.venduss.com', 'api.jl.venduss.com', 'localhost', '*.venduss.com']
+    allowedHosts: ['jl.venduss.com', 'api.jl.venduss.com', 'localhost', '*.venduss.com'],
+    proxy: {
+      '/api': {
+        target: 'https://api.jl.venduss.com',
+        changeOrigin: true,
+      },
+    },
   },
   plugins: [dyadComponentTagger(), react()],
   resolve: {

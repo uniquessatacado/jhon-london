@@ -132,14 +132,21 @@ export interface Customer {
   id: number;
   nome: string;
   cpf_cnpj: string;
-  email: string;
-  telefone: string;
-  endereco: {
-    cep: string;
-    logradouro: string;
-    numero: string;
-    bairro: string;
-    cidade: string;
-    uf: string;
-  };
+  whatsapp: string;
+  email?: string;
+  tipo_pessoa: 'F' | 'J';
+  rg_ie?: string;
+  data_nascimento?: string | null;
+  cep: string;
+  logradouro: string;
+  numero: string;
+  complemento?: string;
+  bairro: string;
+  cidade: string;
+  estado: string;
+  observacoes?: string;
+  tipo_cliente: 'varejo' | 'atacado' | 'ambos';
+  ativo: boolean;
+  criado_em?: string;
+  atualizado_em?: string;
 }

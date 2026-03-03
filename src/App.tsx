@@ -11,6 +11,7 @@ import { ApiStatusPage } from './pages/settings/ApiStatusPage';
 import { GridPage } from './pages/settings/GridPage';
 import { GeneralSettingsPage } from './pages/settings/GeneralSettingsPage';
 import { UserPage } from './pages/users/UserPage';
+import { CustomerListPage } from './pages/customers/CustomerListPage';
 
 const router = createBrowserRouter([
   {
@@ -40,6 +41,10 @@ const router = createBrowserRouter([
       {
         path: 'pdv',
         element: <PDVPage />,
+      },
+      {
+        path: 'clientes',
+        element: <CustomerListPage />,
       },
       {
         path: 'usuarios',

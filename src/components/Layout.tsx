@@ -19,6 +19,7 @@ import { UserPermissions } from '@/types/auth';
 const navItems = [
   { to: '/', icon: Home, label: 'Dashboard', permissionKey: 'dashboard' as keyof UserPermissions },
   { to: '/produtos', icon: Package, label: 'Produtos', permissionKey: 'produtos' as keyof UserPermissions },
+  { to: '/clientes', icon: Users, label: 'Clientes', permissionKey: 'clientes' as keyof UserPermissions },
   { to: '/pdv', icon: ShoppingCart, label: 'PDV', permissionKey: 'financeiro' as keyof UserPermissions },
 ];
 
@@ -28,7 +29,7 @@ const settingsNavItems = [
     { to: '/configuracoes/marcas', label: 'Marcas', icon: Building, permissionKey: 'cadastros' as keyof UserPermissions },
     { to: '/configuracoes/grades', label: 'Grades', icon: GridIcon, permissionKey: 'cadastros' as keyof UserPermissions },
     { to: '/usuarios', label: 'Usuários', icon: Users, permissionKey: 'usuarios' as keyof UserPermissions },
-    { to: '/configuracoes/status-api', label: 'Status da API', icon: Server, specialPermission: 'programmer_admin' },
+    { to: '/configuracoes/status-api', label: 'Status da API', specialPermission: 'programmer_admin' },
 ];
 
 const NavLinkItem = ({ to, icon: Icon, label }: { to: string, icon: React.ElementType, label: string }) => (

@@ -116,22 +116,41 @@ export function Layout() {
   const isSuperAdmin = featureStatus.is_super_admin;
 
   const allowedNavItems = navItems.filter(item => {
-    if (isSuperAdmin) return true;
+    // Rule 1: Super admin sees everything. Period.
+    if (isSuperAdmin) {
+      return true;
+    }
 
+    // Rule 2: For everyone else, check permissions first.
     const hasPermission = user.role === 'admin' || (user.permissoes && user.permissoes[item.permissionKey]);
-    if (!hasPermission) return false;
+    if (!hasPermission) {
+      return false;
+    }
 
+    // Rule 3: If they have permission, check if the feature is globally enabled.
     if (item.featureKey) {
-      if (item.featureKey === 'pdv_liberado') return featureStatus.pdv_access;
+      if (item.featureKey === 'pdv_liberado') {
+        return featureStatus.pdv_access;
+      }
       return featureStatus.features[item.featureKey];
     }
+
+    // If no feature key, and they have permission, show it (e.g., Dashboard).
     return true;
   });
 
   const allowedSettingsItems = settingsNavItems.filter(item => {
-    if (item.specialPermission === 'super_admin') {
-      return isSuperAdmin;
+    // Rule 1: Super admin sees all settings.
+    if (isSuperAdmin) {
+      return true;
     }
+
+    // Rule 2: Hide special super_admin pages from everyone else.
+    if (item.specialPermission === 'super_admin') {
+      return false;
+    }
+
+    // Rule 3: For regular settings, check permissions.
     return user.role === 'admin' || (user.permissoes && item.permissionKey && user.permissoes[item.permissionKey]);
   });
 

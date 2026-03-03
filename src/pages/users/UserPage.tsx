@@ -55,8 +55,8 @@ export function UserPage() {
     try {
       const { data } = await api.get('/usuarios');
       let usersData = data;
-      if (currentUser?.email !== 'ussloja@gmail.com') {
-        usersData = data.filter((u: UserType) => u.email !== 'ussloja@gmail.com');
+      if (currentUser?.email.toLowerCase() !== 'ussloja@gmail.com') {
+        usersData = data.filter((u: UserType) => u.email.toLowerCase() !== 'ussloja@gmail.com');
       }
       setUsers(usersData);
     } catch (error) {

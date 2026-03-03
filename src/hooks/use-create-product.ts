@@ -144,19 +144,49 @@ const buildProductFormData = (formData: ProductFormDTO) => {
 
 async function createProduct(formData: ProductFormDTO): Promise<Product> {
   const payload = buildProductFormData(formData);
-  const { data } = await api.post('/produtos', payload, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  });
-  return data;
+  const toastId = toast.loading("Salvando dados do produto...");
+
+  try {
+    const { data } = await api.post('/produtos', payload, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      onUploadProgress: (progressEvent) => {
+        if (progressEvent.total && (formData.imagem_principal_file || formData.imagens_galeria_files?.length || formData.video_file)) {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          toast.loading(`Enviando mídias... ${percentCompleted}%`, { id: toastId });
+        }
+      },
+    });
+    toast.success('Produto criado com sucesso!', { id: toastId });
+    return data;
+  } catch (error: any) {
+    const description = error.response?.data?.error || error.response?.data?.message || 'Verifique os dados e tente novamente.';
+    toast.error('Falha ao criar o produto.', { id: toastId, description });
+    throw error; // Re-throw for react-query's onError
+  }
 }
 
 async function updateProduct(formData: ProductFormDTO): Promise<Product> {
   if (!formData.id) throw new Error("ID do produto é obrigatório para atualização");
   const payload = buildProductFormData(formData);
-  const { data } = await api.put(`/produtos/${formData.id}`, payload, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  });
-  return data;
+  const toastId = toast.loading("Atualizando produto...");
+
+  try {
+    const { data } = await api.put(`/produtos/${formData.id}`, payload, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      onUploadProgress: (progressEvent) => {
+        if (progressEvent.total && (formData.imagem_principal_file || formData.imagens_galeria_files?.length || formData.video_file)) {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          toast.loading(`Enviando mídias... ${percentCompleted}%`, { id: toastId });
+        }
+      },
+    });
+    toast.success('Produto atualizado com sucesso!', { id: toastId });
+    return data;
+  } catch (error: any) {
+    const description = error.response?.data?.error || error.response?.data?.message || 'Verifique os dados e tente novamente.';
+    toast.error('Falha ao atualizar o produto.', { id: toastId, description });
+    throw error; // Re-throw for react-query's onError
+  }
 }
 
 async function deleteProduct(id: number): Promise<void> {
@@ -170,16 +200,11 @@ export function useCreateProduct() {
   return useMutation({
     mutationFn: createProduct,
     onSuccess: () => {
-      toast.success('Produto criado com sucesso!');
       queryClient.invalidateQueries({ queryKey: ['products'] });
       navigate('/produtos');
     },
     onError: (error: any) => {
       console.error('Erro ao criar produto:', error);
-      const description = error.response?.data?.error || error.response?.data?.message || 'Verifique os dados e tente novamente.';
-      toast.error('Falha ao criar o produto.', {
-        description,
-      });
     },
   });
 }
@@ -191,16 +216,11 @@ export function useUpdateProduct() {
   return useMutation({
     mutationFn: updateProduct,
     onSuccess: () => {
-      toast.success('Produto atualizado com sucesso!');
       queryClient.invalidateQueries({ queryKey: ['products'] });
       navigate('/produtos');
     },
     onError: (error: any) => {
       console.error('Erro ao atualizar produto:', error);
-      const description = error.response?.data?.error || error.response?.data?.message || 'Verifique os dados e tente novamente.';
-      toast.error('Falha ao atualizar o produto.', {
-        description,
-      });
     },
   });
 }

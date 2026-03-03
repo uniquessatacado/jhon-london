@@ -152,7 +152,8 @@ export function NewProductPage() {
   }, [allProducts, isEditMode, id]);
 
   useEffect(() => {
-    if (productData && allSubcategories) {
+    // Wait for all data to be loaded before populating the form
+    if (productData && allSubcategories && brands && grids) {
         let categoryId = productData.categoria_id;
         if (!categoryId && productData.subcategoria_id) {
             const sub = allSubcategories.find(s => s.id === productData.subcategoria_id);
@@ -216,7 +217,7 @@ export function NewProductPage() {
             toast.info("Dados do produto copiados.", { description: "Revise SKU, estoque e imagens." });
         }
     }
-  }, [productData, reset, isDuplicateMode, allSubcategories]);
+  }, [productData, reset, isDuplicateMode, allSubcategories, brands, grids]);
   
   const selectedGridId = watch('grade_id');
   const selectedSubcategoryId = watch('subcategoria_id');

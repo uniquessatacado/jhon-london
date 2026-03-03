@@ -18,7 +18,7 @@ export interface Category {
 
 export interface Brand {
   id: number;
-  nome: string;
+  nome:string;
 }
 
 export interface GridSize {
@@ -113,4 +113,33 @@ export interface Product {
   
   criado_em: string;
   atualizado_em: string;
+}
+
+// --- PDV Types ---
+export interface CartItem {
+  productId: number;
+  productName: string;
+  variation: {
+    tamanho: string;
+    sku: string;
+  };
+  quantity: number;
+  unitPrice: number;
+  image: string;
+}
+
+export interface Customer {
+  id: number;
+  nome: string;
+  cpf_cnpj: string;
+  email: string;
+  telefone: string;
+  endereco: {
+    cep: string;
+    logradouro: string;
+    numero: string;
+    bairro: string;
+    cidade: string;
+    uf: string;
+  };
 }

@@ -128,7 +128,7 @@ export function CustomerFormDialog({ open, onOpenChange, customer }: CustomerFor
     if (customer) {
       updateCustomer({ id: customer.id, ...payload }, { onSuccess: () => onOpenChange(false) });
     } else {
-      createCustomer(payload, { onSuccess: () => onOpenChange(false) });
+      createCustomer(payload as any, { onSuccess: () => onOpenChange(false) });
     }
   };
 

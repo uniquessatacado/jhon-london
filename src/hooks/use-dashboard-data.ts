@@ -15,75 +15,43 @@ const buildParams = (filters: DashboardFilters) => {
   return { params };
 };
 
-const queryConfig = {
-  staleTime: 1000 * 60 * 5, // 5 minutes
-  placeholderData: (previousData: any) => previousData,
-};
+// Combined data fetcher using Promise.all
+async function fetchAllDashboardData(filters: DashboardFilters) {
+  const params = buildParams(filters);
 
-// --- Individual Hooks ---
+  const [
+    metricsRes,
+    recentSalesRes,
+    biggestOrdersRes,
+    newCustomersRes,
+    eliteCustomersRes,
+    topProductsRes
+  ] = await Promise.all([
+    api.get<DashboardMetrics>('/dashboard/metricas', params),
+    api.get<Sale[]>('/dashboard/ultimas-vendas', params),
+    api.get<Sale[]>('/dashboard/maiores-pedidos', params),
+    api.get<Customer[]>('/dashboard/novos-clientes', params),
+    api.get<Customer[]>('/dashboard/elite-clientes', params),
+    api.get<ProductMetric[]>('/dashboard/produtos-mais-vendidos', params)
+  ]);
 
-export function useDashboardMetrics(filters: DashboardFilters) {
-  return useQuery({
-    queryKey: ['dashboard-metrics', filters],
-    queryFn: async () => {
-      const { data } = await api.get<DashboardMetrics>('/dashboard/metricas', buildParams(filters));
-      return data;
-    },
-    ...queryConfig,
-  });
+  return {
+    metrics: metricsRes.data,
+    recentSales: recentSalesRes.data,
+    biggestOrders: biggestOrdersRes.data,
+    newCustomers: newCustomersRes.data,
+    eliteCustomers: eliteCustomersRes.data,
+    topProducts: topProductsRes.data,
+  };
 }
 
-export function useRecentSales(filters: DashboardFilters) {
+export function useDashboardData(filters: DashboardFilters) {
   return useQuery({
-    queryKey: ['dashboard-recent-sales', filters],
-    queryFn: async () => {
-      const { data } = await api.get<Sale[]>('/dashboard/ultimas-vendas', buildParams(filters));
-      return data;
-    },
-    ...queryConfig,
-  });
-}
-
-export function useBiggestOrders(filters: DashboardFilters) {
-  return useQuery({
-    queryKey: ['dashboard-biggest-orders', filters],
-    queryFn: async () => {
-      const { data } = await api.get<Sale[]>('/dashboard/maiores-pedidos', buildParams(filters));
-      return data;
-    },
-    ...queryConfig,
-  });
-}
-
-export function useNewCustomers(filters: DashboardFilters) {
-  return useQuery({
-    queryKey: ['dashboard-new-customers', filters],
-    queryFn: async () => {
-      const { data } = await api.get<Customer[]>('/dashboard/novos-clientes', buildParams(filters));
-      return data;
-    },
-    ...queryConfig,
-  });
-}
-
-export function useEliteCustomers(filters: DashboardFilters) {
-  return useQuery({
-    queryKey: ['dashboard-elite-customers', filters],
-    queryFn: async () => {
-      const { data } = await api.get<Customer[]>('/dashboard/elite-clientes', buildParams(filters));
-      return data;
-    },
-    ...queryConfig,
-  });
-}
-
-export function useTopProducts(filters: DashboardFilters) {
-  return useQuery({
-    queryKey: ['dashboard-top-products', filters],
-    queryFn: async () => {
-      const { data } = await api.get<ProductMetric[]>('/dashboard/produtos-mais-vendidos', buildParams(filters));
-      return data;
-    },
-    ...queryConfig,
+    queryKey: ['dashboard-all', filters],
+    queryFn: () => fetchAllDashboardData(filters),
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    gcTime: 5 * 60 * 1000, // 5 minutes in v5
+    refetchOnWindowFocus: false,
+    placeholderData: (previousData) => previousData,
   });
 }

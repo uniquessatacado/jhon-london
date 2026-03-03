@@ -21,12 +21,9 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401 || error.response?.status === 403) {
-      // Evita loop infinito se já estiver no login
-      if (!window.location.pathname.includes('/login')) {
-        localStorage.removeItem('jl_token');
-        localStorage.removeItem('jl_user');
-        window.location.href = '/login';
-      }
+      // Dispara um evento global para o AuthContext lidar com o logout.
+      // Isso evita múltiplos redirecionamentos forçados.
+      window.dispatchEvent(new Event('auth-error'));
     }
     return Promise.reject(error);
   }

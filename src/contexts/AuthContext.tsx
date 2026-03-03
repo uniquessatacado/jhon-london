@@ -41,6 +41,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const logout = () => {
+    localStorage.removeItem('jl_token');
+    localStorage.removeItem('jl_user');
+    delete api.defaults.headers.common['Authorization'];
+    setUser(null);
+    setFeatureStatus(null);
+  };
+
   useEffect(() => {
     const token = localStorage.getItem('jl_token');
     const storedUser = localStorage.getItem('jl_user');
@@ -52,11 +60,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
         fetchFeatureStatus();
       } catch (e) {
-        localStorage.removeItem('jl_token');
-        localStorage.removeItem('jl_user');
+        logout();
       }
     }
     setIsLoading(false);
+
+    // Listener para o evento de erro de autenticação
+    const handleAuthError = () => {
+      logout();
+    };
+    window.addEventListener('auth-error', handleAuthError);
+
+    return () => {
+      window.removeEventListener('auth-error', handleAuthError);
+    };
   }, []);
 
   const login = (token: string, userData: User) => {
@@ -65,14 +82,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
     setUser(userData);
     fetchFeatureStatus();
-  };
-
-  const logout = () => {
-    localStorage.removeItem('jl_token');
-    localStorage.removeItem('jl_user');
-    delete api.defaults.headers.common['Authorization'];
-    setUser(null);
-    setFeatureStatus(null);
   };
 
   const updateUser = (userData: User) => {

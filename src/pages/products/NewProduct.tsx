@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
-import { useForm, useFieldArray, useWatch } from 'react-hook-form';
+import { useForm, useFieldArray, useWatch, Controller } from 'react-hook-form';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -445,24 +445,42 @@ export function NewProductPage() {
                    </div>
                    <div className="grid gap-2">
                       <Label>Subcategoria *</Label>
-                      <Select onValueChange={(value) => setValue('subcategoria_id', value)} value={watch('subcategoria_id')}>
-                          <SelectTrigger className={`bg-black/40 h-14 text-base ${errors.subcategoria_id ? 'border-red-500' : 'border-white/10'}`}><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                          <SelectContent>{allSubcategories?.map(sub => (<SelectItem key={sub.id} value={String(sub.id)}>{sub.nome}</SelectItem>))}</SelectContent>
-                      </Select>
+                      <Controller
+                        name="subcategoria_id"
+                        control={control}
+                        render={({ field }) => (
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <SelectTrigger className={`bg-black/40 h-14 text-base ${errors.subcategoria_id ? 'border-red-500' : 'border-white/10'}`}><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                            <SelectContent>{allSubcategories?.map(sub => (<SelectItem key={sub.id} value={String(sub.id)}>{sub.nome}</SelectItem>))}</SelectContent>
+                          </Select>
+                        )}
+                      />
                    </div>
                    <div className="grid gap-2">
                       <Label>Marca *</Label>
-                      <Select onValueChange={(value) => setValue('marca_id', value)} value={watch('marca_id')}>
-                          <SelectTrigger className={`bg-black/40 h-14 text-base ${errors.marca_id ? 'border-red-500' : 'border-white/10'}`}><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                          <SelectContent>{brands?.map(brand => <SelectItem key={brand.id} value={String(brand.id)}>{brand.nome}</SelectItem>)}</SelectContent>
-                      </Select>
+                      <Controller
+                        name="marca_id"
+                        control={control}
+                        render={({ field }) => (
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <SelectTrigger className={`bg-black/40 h-14 text-base ${errors.marca_id ? 'border-red-500' : 'border-white/10'}`}><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                            <SelectContent>{brands?.map(brand => <SelectItem key={brand.id} value={String(brand.id)}>{brand.nome}</SelectItem>)}</SelectContent>
+                          </Select>
+                        )}
+                      />
                    </div>
                    <div className="grid gap-2">
                       <Label>Grade do Produto *</Label>
-                      <Select onValueChange={(v) => setValue('grade_id', v)} value={watch('grade_id')}>
-                          <SelectTrigger className={`bg-black/40 h-14 text-base ${errors.grade_id ? 'border-red-500' : 'border-white/10'}`}><SelectValue placeholder="Escolha uma grade..." /></SelectTrigger>
-                          <SelectContent>{grids?.map(g => <SelectItem key={g.id} value={String(g.id)}>{g.nome}</SelectItem>)}</SelectContent>
-                      </Select>
+                      <Controller
+                        name="grade_id"
+                        control={control}
+                        render={({ field }) => (
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <SelectTrigger className={`bg-black/40 h-14 text-base ${errors.grade_id ? 'border-red-500' : 'border-white/10'}`}><SelectValue placeholder="Escolha uma grade..." /></SelectTrigger>
+                            <SelectContent>{grids?.map(g => <SelectItem key={g.id} value={String(g.id)}>{g.nome}</SelectItem>)}</SelectContent>
+                          </Select>
+                        )}
+                      />
                    </div>
               </div>
           </CardContent>
@@ -549,7 +567,19 @@ export function NewProductPage() {
                       </div>
                       {habilitaAtacadoGrade && (
                           <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
-                              <div className="grid gap-2"><Label className="text-xs text-purple-300">Grade do Pacote</Label><Select onValueChange={(v) => setValue('grade_atacado_id', v)} value={watch('grade_atacado_id')}><SelectTrigger className="bg-black/40 border-white/10 h-12"><SelectValue placeholder="Selecione..." /></SelectTrigger><SelectContent>{grids?.map(g => <SelectItem key={g.id} value={String(g.id)}>{g.nome}</SelectItem>)}</SelectContent></Select></div>
+                              <div className="grid gap-2">
+                                <Label className="text-xs text-purple-300">Grade do Pacote</Label>
+                                <Controller
+                                  name="grade_atacado_id"
+                                  control={control}
+                                  render={({ field }) => (
+                                    <Select onValueChange={field.onChange} value={field.value}>
+                                      <SelectTrigger className="bg-black/40 border-white/10 h-12"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                                      <SelectContent>{grids?.map(g => <SelectItem key={g.id} value={String(g.id)}>{g.nome}</SelectItem>)}</SelectContent>
+                                    </Select>
+                                  )}
+                                />
+                              </div>
                               {composicaoFields.length > 0 && <div className="border border-white/10 rounded-lg overflow-hidden"><Table><TableHeader className="bg-purple-500/10"><TableRow className="border-white/10 hover:bg-transparent"><TableHead className="h-8 text-xs text-purple-300">Tam</TableHead><TableHead className="h-8 text-xs text-right text-purple-300">Qtd</TableHead></TableRow></TableHeader><TableBody className="bg-black/20">{composicaoFields.map((field: any, idx) => (<TableRow key={field.id} className="border-white/5 hover:bg-transparent"><TableCell className="py-2 font-medium">{field.tamanho}<input type="hidden" {...register(`composicao_atacado.${idx}.tamanho`)} /></TableCell><TableCell className="py-2 text-right"><Input type="number" min="0" className="h-7 w-20 ml-auto bg-black/40 border-white/10 text-right" {...register(`composicao_atacado.${idx}.quantidade`, { valueAsNumber: true })} /></TableCell></TableRow>))}</TableBody></Table></div>}
                               {!usarPrecoUnico && <div className="grid gap-2"><Label className="text-xs">Preço Unit. Pacote</Label><Input type="number" step="0.01" {...register('preco_atacado_grade')} className="bg-black/40 border-white/10 h-12" placeholder="R$ 0,00" /></div>}
                               {gradeAtacadoObj && <div className="bg-black/40 rounded border border-white/10 p-3 text-sm space-y-1 mt-2"><div className="flex justify-between"><span className="text-muted-foreground">Total:</span><span className="font-bold">{totalPecasPacote} un</span></div><div className="border-t border-white/10 my-1 pt-1 flex justify-between font-bold"><span>Total Pacote:</span><span>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valorTotalPacote)}</span></div></div>}

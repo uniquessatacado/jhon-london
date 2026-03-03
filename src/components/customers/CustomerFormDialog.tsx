@@ -32,26 +32,39 @@ interface CustomerFormDialogProps {
 const formSchema = z.object({
   nome: z.string().min(3, 'Nome é obrigatório'),
   tipo_pessoa: z.enum(['F', 'J']),
-  cpf_cnpj: z.string().refine((doc) => {
-    const cleanDoc = doc.replace(/\D/g, '');
-    if (cleanDoc.length === 11) return validateCPF(cleanDoc);
-    if (cleanDoc.length === 14) return validateCNPJ(cleanDoc);
-    return false;
-  }, 'CPF/CNPJ inválido'),
+  cpf_cnpj: z.string().optional().or(z.literal('')),
   whatsapp: z.string().min(15, 'WhatsApp é obrigatório'),
   email: z.string().email('Email inválido').optional().or(z.literal('')),
   rg_ie: z.string().optional(),
   data_nascimento: z.date().optional().nullable(),
-  cep: z.string().min(9, 'CEP é obrigatório'),
-  logradouro: z.string().min(1, 'Logradouro é obrigatório'),
-  numero: z.string().min(1, 'Número é obrigatório'),
+  cep: z.string().optional().or(z.literal('')),
+  logradouro: z.string().optional().or(z.literal('')),
+  numero: z.string().optional().or(z.literal('')),
   complemento: z.string().optional(),
-  bairro: z.string().min(1, 'Bairro é obrigatório'),
-  cidade: z.string().min(1, 'Cidade é obrigatória'),
-  estado: z.string().min(2, 'Estado é obrigatório'),
+  bairro: z.string().optional().or(z.literal('')),
+  cidade: z.string().optional().or(z.literal('')),
+  estado: z.string().optional().or(z.literal('')),
   tipo_cliente: z.enum(['varejo', 'atacado', 'ambos']),
   observacoes: z.string().optional(),
   ativo: z.boolean(),
+}).superRefine((data, ctx) => {
+  if (data.tipo_pessoa === 'J') {
+    if (!data.cpf_cnpj || !validateCNPJ(data.cpf_cnpj.replace(/\D/g, ''))) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "CNPJ válido é obrigatório para Pessoa Jurídica.",
+        path: ["cpf_cnpj"],
+      });
+    }
+  } else { // tipo_pessoa === 'F'
+    if (data.cpf_cnpj && data.cpf_cnpj.replace(/\D/g, '').length > 0 && !validateCPF(data.cpf_cnpj.replace(/\D/g, ''))) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "CPF inválido.",
+        path: ["cpf_cnpj"],
+      });
+    }
+  }
 });
 
 export function CustomerFormDialog({ open, onOpenChange, customer }: CustomerFormDialogProps) {
@@ -183,16 +196,16 @@ export function CustomerFormDialog({ open, onOpenChange, customer }: CustomerFor
                 />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="grid gap-2">
-                    <Label htmlFor="cpf_cnpj">{tipoPessoa === 'F' ? 'CPF *' : 'CNPJ *'}</Label>
+                    <Label htmlFor="cpf_cnpj">{tipoPessoa === 'F' ? 'CPF' : 'CNPJ *'}</Label>
                     <Controller
                       name="cpf_cnpj"
                       control={form.control}
                       render={({ field }) => (
                         <IMaskInput
                           mask={tipoPessoa === 'F' ? '000.000.000-00' : '00.000.000/0000-00'}
-                          value={field.value}
+                          value={field.value || ''}
                           onAccept={(value) => field.onChange(value)}
-                          as={Input}
+                          as={Input as any}
                           id="cpf_cnpj"
                         />
                       )}
@@ -237,7 +250,7 @@ export function CustomerFormDialog({ open, onOpenChange, customer }: CustomerFor
                           mask="(00) 00000-0000"
                           value={field.value}
                           onAccept={(value) => field.onChange(value)}
-                          as={Input}
+                          as={Input as any}
                           id="whatsapp"
                         />
                       )}
@@ -254,7 +267,7 @@ export function CustomerFormDialog({ open, onOpenChange, customer }: CustomerFor
               <TabsContent value="address" className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="grid gap-2 md:col-span-1">
-                    <Label htmlFor="cep">CEP *</Label>
+                    <Label htmlFor="cep">CEP</Label>
                     <div className="relative">
                       <Controller
                         name="cep"
@@ -262,10 +275,10 @@ export function CustomerFormDialog({ open, onOpenChange, customer }: CustomerFor
                         render={({ field }) => (
                           <IMaskInput
                             mask="00000-000"
-                            value={field.value}
+                            value={field.value || ''}
                             onAccept={(value) => field.onChange(value)}
                             onBlur={(e) => handleCepBlur(e.currentTarget.value)}
-                            as={Input}
+                            as={Input as any}
                             id="cep"
                           />
                         )}
@@ -276,13 +289,13 @@ export function CustomerFormDialog({ open, onOpenChange, customer }: CustomerFor
                   </div>
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="logradouro">Logradouro *</Label>
+                  <Label htmlFor="logradouro">Logradouro</Label>
                   <Input id="logradouro" {...form.register('logradouro')} />
                   {form.formState.errors.logradouro && <p className="text-red-500 text-xs">{form.formState.errors.logradouro.message}</p>}
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="grid gap-2">
-                    <Label htmlFor="numero">Número *</Label>
+                    <Label htmlFor="numero">Número</Label>
                     <Input id="numero" {...form.register('numero')} />
                     {form.formState.errors.numero && <p className="text-red-500 text-xs">{form.formState.errors.numero.message}</p>}
                   </div>
@@ -293,17 +306,17 @@ export function CustomerFormDialog({ open, onOpenChange, customer }: CustomerFor
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="grid gap-2">
-                    <Label htmlFor="bairro">Bairro *</Label>
+                    <Label htmlFor="bairro">Bairro</Label>
                     <Input id="bairro" {...form.register('bairro')} />
                     {form.formState.errors.bairro && <p className="text-red-500 text-xs">{form.formState.errors.bairro.message}</p>}
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="cidade">Cidade *</Label>
+                    <Label htmlFor="cidade">Cidade</Label>
                     <Input id="cidade" {...form.register('cidade')} />
                     {form.formState.errors.cidade && <p className="text-red-500 text-xs">{form.formState.errors.cidade.message}</p>}
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="estado">Estado *</Label>
+                    <Label htmlFor="estado">Estado</Label>
                     <Input id="estado" {...form.register('estado')} />
                     {form.formState.errors.estado && <p className="text-red-500 text-xs">{form.formState.errors.estado.message}</p>}
                   </div>

@@ -152,7 +152,6 @@ export function NewProductPage() {
   }, [allProducts, isEditMode, id]);
 
   useEffect(() => {
-    // Wait for all data to be loaded before populating the form
     if (productData && allSubcategories && brands && grids) {
         let categoryId = productData.categoria_id;
         if (!categoryId && productData.subcategoria_id) {
@@ -178,10 +177,10 @@ export function NewProductPage() {
 
         const formData = {
             nome: isDuplicateMode ? `${productData.nome} - Cópia` : productData.nome,
-            grade_id: productData.grade_id ? String(productData.grade_id) : "",
-            categoria_id: categoryId ? String(categoryId) : "",
-            subcategoria_id: productData.subcategoria_id ? String(productData.subcategoria_id) : "",
-            marca_id: productData.marca_id ? String(productData.marca_id) : "",
+            grade_id: String(productData.grade_id || ''),
+            categoria_id: String(categoryId || ''),
+            subcategoria_id: String(productData.subcategoria_id || ''),
+            marca_id: String(productData.marca_id || ''),
             ncm: productData.ncm,
             cfop_padrao: productData.cfop_padrao,
             cst_icms: productData.cst_icms,
@@ -193,7 +192,7 @@ export function NewProductPage() {
             preco_atacado_geral: productData.preco_atacado_geral,
             habilita_atacado_grade: !!productData.habilita_atacado_grade, 
             usar_preco_atacado_unico: !!productData.usar_preco_atacado_unico, 
-            grade_atacado_id: productData.grade_atacado_id ? String(productData.grade_atacado_id) : '',
+            grade_atacado_id: String(productData.grade_atacado_id || ''),
             preco_atacado_grade: productData.preco_atacado_grade,
             variacoes: variacoesComDimensoes,
             composicao_atacado: typeof productData.composicao_atacado_grade === 'string' 

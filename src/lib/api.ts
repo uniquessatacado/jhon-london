@@ -5,7 +5,7 @@ export const api = axios.create({
 });
 
 // URL base para imagens, para ser usada no frontend
-export const mediaBaseUrl = 'https://api.jl.venduss.com/api/';
+export const mediaBaseUrl = 'https://api.jl.venduss.com/uploads/';
 
 // Interceptor para adicionar o token em todas as requisições
 api.interceptors.request.use((config) => {

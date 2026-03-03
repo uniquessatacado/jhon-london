@@ -7,7 +7,7 @@ export default defineConfig(() => ({
   server: {
     host: "0.0.0.0",
     port: 8080,
-    allowedHosts: ['jl.venduss.com', 'api.jl.venduss.com', 'localhost']
+    allowedHosts: ['jl.venduss.com', 'api.jl.venduss.com', 'localhost', '*.venduss.com']
   },
   plugins: [dyadComponentTagger(), react()],
   resolve: {

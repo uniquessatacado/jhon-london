@@ -26,6 +26,13 @@ export function ProductCardMobile({ product, onView, onReplenish, onEdit, onDele
     return name.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase().substring(0, 2);
   };
 
+  const getImageUrl = (imagePath: string) => {
+    if (!imagePath) return null;
+    if (imagePath.startsWith('http')) return imagePath;
+    return `${mediaBaseUrl}${imagePath}`;
+  };
+
+  const imageUrl = getImageUrl(product.imagem_principal);
   const totalEstoque = getTotalStock(product);
   const stockIsLow = totalEstoque <= product.estoque_minimo;
 
@@ -33,8 +40,8 @@ export function ProductCardMobile({ product, onView, onReplenish, onEdit, onDele
     <div className="bg-black/40 border border-white/10 rounded-2xl shadow-lg p-4 flex flex-col gap-4">
       <div className="flex gap-4">
         <div className="w-24 h-24 flex-shrink-0 rounded-xl bg-gradient-to-br from-white/10 to-transparent border border-white/10 overflow-hidden flex items-center justify-center shadow-inner">
-          {product.imagem_principal ? (
-            <img src={`${mediaBaseUrl}${product.imagem_principal}`} alt={product.nome} className="h-full w-full object-cover" />
+          {imageUrl ? (
+            <img src={imageUrl} alt={product.nome} className="h-full w-full object-cover" />
           ) : (
             <div className="flex items-center justify-center w-full h-full bg-emerald-500/10 text-emerald-500 font-bold text-xl">
               {getInitials(product.nome)}

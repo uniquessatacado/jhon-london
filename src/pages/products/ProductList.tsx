@@ -45,6 +45,12 @@ export function ProductListPage() {
 
   const formatCurrency = (value: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
+  const getImageUrl = (imagePath: string) => {
+    if (!imagePath) return null;
+    if (imagePath.startsWith('http')) return imagePath;
+    return `${mediaBaseUrl}${imagePath}`;
+  };
+
   const handleViewProduct = (product: Product) => {
     setViewProductId(product.id);
     setIsViewOpen(true);
@@ -141,13 +147,14 @@ export function ProductListPage() {
                 if (cat) categoryName = cat.nome;
               }
             }
+            const imageUrl = getImageUrl(product.imagem_principal);
 
             return (
               <TableRow key={product.id} className="border-white/5 hover:bg-white/[0.04] transition-colors group">
                 <TableCell className="pl-6 py-4">
                     <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-white/10 to-transparent border border-white/10 overflow-hidden flex items-center justify-center shadow-inner">
-                        {product.imagem_principal ? (
-                            <img src={`${mediaBaseUrl}${product.imagem_principal}`} alt="" className="h-full w-full object-cover" />
+                        {imageUrl ? (
+                            <img src={imageUrl} alt="" className="h-full w-full object-cover" />
                         ) : (
                             <div className="flex items-center justify-center w-full h-full bg-emerald-500/10 text-emerald-500 font-bold text-xs">
                                 {getInitials(product.nome)}

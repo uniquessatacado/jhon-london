@@ -75,6 +75,12 @@ export function PDVPage() {
     toast.info("Função de checkout ainda não implementada.");
   };
 
+  const getImageUrl = (imagePath: string) => {
+    if (!imagePath) return null;
+    if (imagePath.startsWith('http')) return imagePath;
+    return `${mediaBaseUrl}${imagePath}`;
+  }
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-120px)]">
       {/* Coluna Esquerda: Busca e Produtos */}
@@ -104,20 +110,29 @@ export function PDVPage() {
             <ScrollArea className="absolute inset-0">
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 p-4">
                 {isLoading && Array.from({ length: 10 }).map((_, i) => <div key={i} className="aspect-square rounded-xl bg-white/5 animate-pulse" />)}
-                {filteredProducts?.map(product => (
-                  <button 
-                    key={product.id} 
-                    onClick={() => handleProductSelect(product)}
-                    className="aspect-square rounded-xl bg-white/5 border border-white/10 overflow-hidden relative group text-left flex flex-col justify-end p-2 hover:border-emerald-500/50 transition-all"
-                  >
-                    <img src={`${mediaBaseUrl}${product.imagem_principal}`} alt={product.nome} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
-                    <div className="relative z-10">
-                      <p className="text-xs font-bold text-white truncate">{product.nome}</p>
-                      <p className="text-xs text-emerald-400 font-mono">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(product.preco_varejo)}</p>
-                    </div>
-                  </button>
-                ))}
+                {filteredProducts?.map(product => {
+                  const imageUrl = getImageUrl(product.imagem_principal);
+                  return (
+                    <button 
+                      key={product.id} 
+                      onClick={() => handleProductSelect(product)}
+                      className="aspect-square rounded-xl bg-white/5 border border-white/10 overflow-hidden relative group text-left flex flex-col justify-end p-2 hover:border-emerald-500/50 transition-all"
+                    >
+                      {imageUrl ? (
+                        <img src={imageUrl} alt={product.nome} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                      ) : (
+                        <div className="absolute inset-0 w-full h-full bg-zinc-800 flex items-center justify-center">
+                          <Package className="h-10 w-10 text-zinc-600" />
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+                      <div className="relative z-10">
+                        <p className="text-xs font-bold text-white truncate">{product.nome}</p>
+                        <p className="text-xs text-emerald-400 font-mono">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(product.preco_varejo)}</p>
+                      </div>
+                    </button>
+                  )
+                })}
               </div>
             </ScrollArea>
           </CardContent>

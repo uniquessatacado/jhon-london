@@ -25,6 +25,7 @@ import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useMediaQuery } from '@/hooks/use-media-query';
+import { compressImage } from '@/lib/utils';
 
 // Componente para a lista de variações no mobile
 const MobileVariationCard = ({ field, currentVariation, index, register, duplicateCheck, onEditDimensions }: any) => {
@@ -200,9 +201,9 @@ export function NewProductPage() {
         };
         reset(formData);
         if (!isDuplicateMode) {
-            if (productData.imagem_principal) setMainImagePreview(`${mediaBaseUrl}${productData.imagem_principal}`);
+            if (productData.imagem_principal) setMainImagePreview(productData.imagem_principal.startsWith('http') ? productData.imagem_principal : `${mediaBaseUrl}${productData.imagem_principal}`);
             if (productData.imagens_galeria?.length) {
-                const fullUrls = productData.imagens_galeria.map(img => `${mediaBaseUrl}${img}`);
+                const fullUrls = productData.imagens_galeria.map(img => img.startsWith('http') ? img : `${mediaBaseUrl}${img}`);
                 setGalleryPreviews(fullUrls);
                 setExistingGallery(fullUrls);
             }
@@ -315,24 +316,47 @@ export function NewProductPage() {
   const totalPecasPacote = composicaoAtacadoValues?.reduce((acc: number, curr: any) => acc + (Number(curr?.quantidade) || 0), 0) || 0;
   const valorTotalPacote = useMemo(() => (usarPrecoUnico ? Number(precoAtacadoGeral) : Number(precoAtacadoGrade)) * totalPecasPacote, [totalPecasPacote, precoAtacadoGeral, precoAtacadoGrade, usarPrecoUnico]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, setFile: Function, setPreview: Function, maxSizeMB: number, type: 'image' | 'video') => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, setFile: Function, setPreview: Function, type: 'image' | 'video') => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > maxSizeMB * 1024 * 1024) return toast.error(`Arquivo muito grande. Máximo ${maxSizeMB}MB.`);
-    if (!file.type.startsWith(`${type}/`)) return toast.error(`Apenas arquivos do tipo ${type} são permitidos.`);
-    setFile(file);
-    setPreview(URL.createObjectURL(file));
+
+    if (type === 'image') {
+        if (file.size > 2 * 1024 * 1024) {
+            toast.info("A imagem é grande, comprimindo...");
+        }
+        try {
+            const compressedFile = await compressImage(file, 2, 1200);
+            setFile(compressedFile);
+            setPreview(URL.createObjectURL(compressedFile));
+        } catch (error) {
+            toast.error("Falha ao comprimir imagem.");
+            console.error(error);
+        }
+    } else { // Video
+        if (file.size > 50 * 1024 * 1024) return toast.error(`Vídeo muito grande. Máximo 50MB.`);
+        setFile(file);
+        setPreview(URL.createObjectURL(file));
+    }
   };
 
-  const handleGalleryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleGalleryChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (galleryPreviews.length + files.length > 5) return toast.error("Limite máximo de 5 imagens na galeria.");
-    const validFiles = files.filter(file => {
-      if (file.size > 5 * 1024 * 1024) { toast.error(`Imagem ${file.name} ignorada (> 5MB)`); return false; }
-      return true;
+    
+    const compressionPromises = files.map(file => {
+        if (file.size > 2 * 1024 * 1024) {
+            return compressImage(file, 2, 1200);
+        }
+        return Promise.resolve(file);
     });
-    setGalleryFiles(prev => [...prev, ...validFiles]);
-    setGalleryPreviews(prev => [...prev, ...validFiles.map(f => URL.createObjectURL(f))]);
+
+    try {
+        const compressedFiles = await Promise.all(compressionPromises);
+        setGalleryFiles(prev => [...prev, ...compressedFiles]);
+        setGalleryPreviews(prev => [...prev, ...compressedFiles.map(f => URL.createObjectURL(f))]);
+    } catch (error) {
+        toast.error("Erro ao processar imagens da galeria.");
+    }
   };
 
   const removeGalleryImage = (index: number) => {
@@ -541,8 +565,8 @@ export function NewProductPage() {
             <div className="space-y-3">
               <Label className="flex items-center gap-2"><ImageIcon className="h-4 w-4 text-emerald-400" /> Imagem Principal</Label>
               <div className={`border-2 border-dashed rounded-xl p-4 flex flex-col items-center justify-center transition-all cursor-pointer hover:bg-white/5 ${mainImagePreview ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-white/10'}`} onClick={() => mainImageInputRef.current?.click()}>
-                  <input type="file" ref={mainImageInputRef} className="hidden" accept="image/*" onChange={(e) => handleFileChange(e, setMainImageFile, setMainImagePreview, 5, 'image')} />
-                  {mainImagePreview ? <div className="relative group w-full h-48"><img src={mainImagePreview} alt="Preview" className="w-full h-full object-contain rounded-lg" /><div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-lg"><span className="text-white font-medium flex items-center"><Upload className="mr-2 h-4 w-4" /> Trocar</span></div></div> : <div className="text-center py-6 text-muted-foreground"><Upload className="mx-auto h-8 w-8 mb-2 opacity-50" /><p className="text-sm">Clique para enviar</p><p className="text-[10px] opacity-70">Max 5MB</p></div>}
+                  <input type="file" ref={mainImageInputRef} className="hidden" accept="image/*" onChange={(e) => handleFileChange(e, setMainImageFile, setMainImagePreview, 'image')} />
+                  {mainImagePreview ? <div className="relative group w-full h-48"><img src={mainImagePreview} alt="Preview" className="w-full h-full object-contain rounded-lg" /><div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-lg"><span className="text-white font-medium flex items-center"><Upload className="mr-2 h-4 w-4" /> Trocar</span></div></div> : <div className="text-center py-6 text-muted-foreground"><Upload className="mx-auto h-8 w-8 mb-2 opacity-50" /><p className="text-sm">Clique para enviar</p><p className="text-[10px] opacity-70">Max 2MB (comprimido)</p></div>}
               </div>
             </div>
             <div className="space-y-3">
@@ -555,7 +579,7 @@ export function NewProductPage() {
             <div className="space-y-3 md:col-span-2">
               <Label className="flex items-center gap-2"><Video className="h-4 w-4 text-emerald-400" /> Vídeo do Produto</Label>
               <div className={`border-2 border-dashed rounded-xl p-4 flex flex-col items-center justify-center transition-all ${videoPreview ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-white/10'}`}>
-                  <input type="file" ref={videoInputRef} className="hidden" accept="video/*" onChange={(e) => handleFileChange(e, setVideoFile, setVideoPreview, 50, 'video')} />
+                  <input type="file" ref={videoInputRef} className="hidden" accept="video/*" onChange={(e) => handleFileChange(e, setVideoFile, setVideoPreview, 'video')} />
                   {videoPreview ? (
                       <div className="relative group w-full aspect-video max-w-md mx-auto">
                           <video src={videoPreview} controls className="w-full h-full object-contain rounded-lg" />

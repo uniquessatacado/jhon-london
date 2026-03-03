@@ -16,21 +16,19 @@ import { useAuth } from '@/contexts/AuthContext';
 import { UserProfileDialog } from '@/components/users/UserProfileDialog';
 import { UserPermissions } from '@/types/auth';
 
-// Mapeamento de rotas para chaves de permissão
-// Se permissionKey for undefined, é visível para todos (ou apenas admin se não tratado)
 const navItems = [
   { to: '/', icon: Home, label: 'Dashboard', permissionKey: 'dashboard' as keyof UserPermissions },
   { to: '/produtos', icon: Package, label: 'Produtos', permissionKey: 'produtos' as keyof UserPermissions },
   { to: '/pdv', icon: ShoppingCart, label: 'PDV', permissionKey: 'financeiro' as keyof UserPermissions },
-  { to: '/usuarios', icon: Users, label: 'Usuários', permissionKey: 'usuarios' as keyof UserPermissions },
 ];
 
 const settingsNavItems = [
-    { to: '/configuracoes/geral', label: 'Geral', icon: Settings2 },
-    { to: '/configuracoes/categorias', label: 'Categorias', icon: Tag },
-    { to: '/configuracoes/marcas', label: 'Marcas', icon: Building },
-    { to: '/configuracoes/grades', label: 'Grades', icon: GridIcon },
-    { to: '/configuracoes/status-api', label: 'Status da API', icon: Server },
+    { to: '/configuracoes/geral', label: 'Geral', icon: Settings2, permissionKey: 'cadastros' as keyof UserPermissions },
+    { to: '/configuracoes/categorias', label: 'Categorias', icon: Tag, permissionKey: 'cadastros' as keyof UserPermissions },
+    { to: '/configuracoes/marcas', label: 'Marcas', icon: Building, permissionKey: 'cadastros' as keyof UserPermissions },
+    { to: '/configuracoes/grades', label: 'Grades', icon: GridIcon, permissionKey: 'cadastros' as keyof UserPermissions },
+    { to: '/usuarios', label: 'Usuários', icon: Users, permissionKey: 'usuarios' as keyof UserPermissions },
+    { to: '/configuracoes/status-api', label: 'Status da API', icon: Server, specialPermission: 'programmer_admin' },
 ];
 
 const NavLinkItem = ({ to, icon: Icon, label }: { to: string, icon: React.ElementType, label: string }) => (
@@ -79,7 +77,7 @@ const AnimatedLogo = () => {
 export function Layout() {
   const { user, logout, isLoading } = useAuth();
   const location = useLocation();
-  const isSettingsOpen = location.pathname.startsWith('/configuracoes');
+  const isSettingsOpen = location.pathname.startsWith('/configuracoes') || location.pathname.startsWith('/usuarios');
   const [scrolled, setScrolled] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
@@ -101,18 +99,24 @@ export function Layout() {
   if (isLoading) return null;
   if (!user) return <Navigate to="/login" />;
 
-  // Filter Nav Items based on Permissions
   const allowedNavItems = navItems.filter(item => {
     if (user.role === 'admin') return true;
     return user.permissoes && user.permissoes[item.permissionKey];
   });
 
-  const canAccessSettings = user.role === 'admin' || (user.permissoes && user.permissoes.cadastros);
+  const allowedSettingsItems = settingsNavItems.filter(item => {
+    if (item.specialPermission === 'programmer_admin') {
+      return user.email === 'ussloja@gmail.com';
+    }
+    if (user.role === 'admin') return true;
+    return user.permissoes && item.permissionKey && user.permissoes[item.permissionKey];
+  });
+
+  const canAccessSettings = allowedSettingsItems.length > 0;
 
   return (
     <div className="flex h-screen w-full bg-background overflow-hidden p-2 md:p-4 gap-4">
       
-      {/* Sidebar Flutuante (Desktop) */}
       <aside className="hidden md:flex flex-col w-72 rounded-3xl bg-white/5 backdrop-blur-xl border border-white/5 shadow-2xl overflow-hidden transition-all duration-300">
         <div className="flex h-24 items-center justify-center border-b border-white/5 px-4 bg-gradient-to-b from-white/5 to-transparent">
            <AnimatedLogo />
@@ -132,7 +136,7 @@ export function Layout() {
                 </CollapsibleTrigger>
                 <CollapsibleContent className="pl-4 pt-2 space-y-1">
                     <div className="border-l border-white/10 pl-2 space-y-1">
-                      {settingsNavItems.map(item => <NavLinkItem key={item.to} {...item} />)}
+                      {allowedSettingsItems.map(item => <NavLinkItem key={item.to} {...item} />)}
                     </div>
                 </CollapsibleContent>
               </Collapsible>
@@ -152,10 +156,8 @@ export function Layout() {
         </div>
       </aside>
 
-      {/* Main Content Area */}
       <div className="flex-1 flex flex-col h-full rounded-3xl bg-white/5 backdrop-blur-md border border-white/5 shadow-2xl overflow-hidden relative">
         
-        {/* Header Glass */}
         <header className={`flex h-16 items-center gap-4 px-6 transition-all duration-300 z-10 sticky top-0 ${scrolled ? 'bg-background/40 backdrop-blur-md border-b border-white/5' : 'bg-transparent'}`}>
           <Sheet>
             <SheetTrigger asChild>
@@ -174,7 +176,7 @@ export function Layout() {
                    <>
                      <div className="h-px bg-white/10 my-4" />
                      <span className="px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Configurações</span>
-                     {settingsNavItems.map(item => <NavLinkItem key={item.to} {...item} />)}
+                     {allowedSettingsItems.map(item => <NavLinkItem key={item.to} {...item} />)}
                    </>
                  )}
               </nav>
@@ -205,7 +207,6 @@ export function Layout() {
           </DropdownMenu>
         </header>
 
-        {/* Scrollable Content */}
         <main id="main-content" className="flex-1 overflow-y-auto p-4 md:p-8 scroll-smooth">
           <div className="mx-auto max-w-7xl animate-in fade-in slide-in-from-bottom-4 duration-700">
             <Outlet />

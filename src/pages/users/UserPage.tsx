@@ -54,7 +54,11 @@ export function UserPage() {
   const fetchUsers = async () => {
     try {
       const { data } = await api.get('/usuarios');
-      setUsers(data);
+      let usersData = data;
+      if (currentUser?.email !== 'ussloja@gmail.com') {
+        usersData = data.filter((u: UserType) => u.email !== 'ussloja@gmail.com');
+      }
+      setUsers(usersData);
     } catch (error) {
       toast.error('Erro ao carregar usuários');
     } finally {

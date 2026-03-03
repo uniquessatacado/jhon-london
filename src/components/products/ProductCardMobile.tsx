@@ -10,9 +10,10 @@ interface ProductCardMobileProps {
   onReplenish: (product: Product) => void;
   onEdit: (id: number) => void;
   onDelete: (product: Product) => void;
+  onImageView: (imageUrl: string) => void;
 }
 
-export function ProductCardMobile({ product, onView, onReplenish, onEdit, onDelete }: ProductCardMobileProps) {
+export function ProductCardMobile({ product, onView, onReplenish, onEdit, onDelete, onImageView }: ProductCardMobileProps) {
   const formatCurrency = (value: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
   
   const getTotalStock = (p: Product) => {
@@ -39,7 +40,11 @@ export function ProductCardMobile({ product, onView, onReplenish, onEdit, onDele
   return (
     <div className="bg-black/40 border border-white/10 rounded-2xl shadow-lg p-4 flex flex-col gap-4">
       <div className="flex gap-4">
-        <div className="w-24 h-24 flex-shrink-0 rounded-xl bg-gradient-to-br from-white/10 to-transparent border border-white/10 overflow-hidden flex items-center justify-center shadow-inner">
+        <button
+          onClick={() => imageUrl && onImageView(imageUrl)}
+          disabled={!imageUrl}
+          className="w-24 h-24 flex-shrink-0 rounded-xl bg-gradient-to-br from-white/10 to-transparent border border-white/10 overflow-hidden flex items-center justify-center shadow-inner disabled:cursor-default"
+        >
           {imageUrl ? (
             <img src={imageUrl} alt={product.nome} className="h-full w-full object-cover" />
           ) : (
@@ -47,7 +52,7 @@ export function ProductCardMobile({ product, onView, onReplenish, onEdit, onDele
               {getInitials(product.nome)}
             </div>
           )}
-        </div>
+        </button>
         <div className="flex-1 flex flex-col justify-between">
           <div>
             <h3 className="font-bold text-lg text-white leading-tight">{product.nome}</h3>

@@ -18,6 +18,7 @@ import { StockReplenishmentDialog } from '@/components/products/StockReplenishme
 import { useMediaQuery } from '@/hooks/use-media-query';
 import { ProductCardMobile } from '@/components/products/ProductCardMobile';
 import { mediaBaseUrl } from '@/lib/api';
+import { ImageViewerDialog } from '@/components/products/ImageViewerDialog';
 
 export function ProductListPage() {
   const navigate = useNavigate();
@@ -40,6 +41,7 @@ export function ProductListPage() {
   const [isReplenishOpen, setIsReplenishOpen] = useState(false);
 
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+  const [imageToView, setImageToView] = useState<string | null>(null);
 
   const { data: subcategories } = useSubcategories(filterCat !== 'all' ? Number(filterCat) : null);
 
@@ -85,6 +87,10 @@ export function ProductListPage() {
       deleteProduct(productToDelete.id);
       setProductToDelete(null);
     }
+  };
+
+  const handleOpenImageViewer = (imageUrl: string) => {
+    setImageToView(imageUrl);
   };
 
   const filteredProducts = useMemo(() => {
@@ -152,7 +158,11 @@ export function ProductListPage() {
             return (
               <TableRow key={product.id} className="border-white/5 hover:bg-white/[0.04] transition-colors group">
                 <TableCell className="pl-6 py-4">
-                    <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-white/10 to-transparent border border-white/10 overflow-hidden flex items-center justify-center shadow-inner">
+                    <button
+                      onClick={() => imageUrl && handleOpenImageViewer(imageUrl)}
+                      disabled={!imageUrl}
+                      className="h-12 w-12 rounded-xl bg-gradient-to-br from-white/10 to-transparent border border-white/10 overflow-hidden flex items-center justify-center shadow-inner disabled:cursor-default"
+                    >
                         {imageUrl ? (
                             <img src={imageUrl} alt="" className="h-full w-full object-cover" />
                         ) : (
@@ -160,7 +170,7 @@ export function ProductListPage() {
                                 {getInitials(product.nome)}
                             </div>
                         )}
-                    </div>
+                    </button>
                 </TableCell>
                 <TableCell><span className="text-muted-foreground font-mono text-xs">#{product.id}</span></TableCell>
                 <TableCell><span className="font-medium text-white group-hover:text-emerald-400 transition-colors">{product.nome}</span></TableCell>
@@ -215,6 +225,7 @@ export function ProductListPage() {
             onReplenish={handleReplenishProduct}
             onEdit={handleEditProduct}
             onDelete={handleDeleteRequest}
+            onImageView={handleOpenImageViewer}
           />
         ))
       ) : (
@@ -324,6 +335,12 @@ export function ProductListPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <ImageViewerDialog
+        imageUrl={imageToView}
+        open={!!imageToView}
+        onOpenChange={() => setImageToView(null)}
+      />
     </div>
   );
 }

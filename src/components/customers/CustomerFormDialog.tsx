@@ -3,7 +3,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import axios from 'axios';
-import InputMask from 'react-input-mask';
+import { IMaskInput } from 'react-imask';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -38,7 +38,7 @@ const formSchema = z.object({
     if (cleanDoc.length === 14) return validateCNPJ(cleanDoc);
     return false;
   }, 'CPF/CNPJ inválido'),
-  whatsapp: z.string().min(14, 'WhatsApp é obrigatório'),
+  whatsapp: z.string().min(15, 'WhatsApp é obrigatório'),
   email: z.string().email('Email inválido').optional().or(z.literal('')),
   rg_ie: z.string().optional(),
   data_nascimento: z.date().optional().nullable(),
@@ -92,7 +92,25 @@ export function CustomerFormDialog({ open, onOpenChange, customer }: CustomerFor
         data_nascimento: customer.data_nascimento ? new Date(customer.data_nascimento) : null,
       });
     } else {
-      form.reset();
+      form.reset({
+        nome: '',
+        tipo_pessoa: 'F',
+        cpf_cnpj: '',
+        whatsapp: '',
+        email: '',
+        rg_ie: '',
+        data_nascimento: null,
+        cep: '',
+        logradouro: '',
+        numero: '',
+        complemento: '',
+        bairro: '',
+        cidade: '',
+        estado: '',
+        tipo_cliente: 'varejo',
+        observacoes: '',
+        ativo: true,
+      });
     }
   }, [customer, open, form]);
 
@@ -170,13 +188,13 @@ export function CustomerFormDialog({ open, onOpenChange, customer }: CustomerFor
                       name="cpf_cnpj"
                       control={form.control}
                       render={({ field }) => (
-                        <InputMask
-                          mask={tipoPessoa === 'F' ? '999.999.999-99' : '99.999.999/9999-99'}
+                        <IMaskInput
+                          mask={tipoPessoa === 'F' ? '000.000.000-00' : '00.000.000/0000-00'}
                           value={field.value}
-                          onChange={field.onChange}
-                        >
-                          {(inputProps: any) => <Input {...inputProps} id="cpf_cnpj" />}
-                        </InputMask>
+                          onAccept={(value) => field.onChange(value)}
+                          as={Input}
+                          id="cpf_cnpj"
+                        />
                       )}
                     />
                     {form.formState.errors.cpf_cnpj && <p className="text-red-500 text-xs">{form.formState.errors.cpf_cnpj.message}</p>}
@@ -215,9 +233,13 @@ export function CustomerFormDialog({ open, onOpenChange, customer }: CustomerFor
                       name="whatsapp"
                       control={form.control}
                       render={({ field }) => (
-                        <InputMask mask="(99) 99999-9999" value={field.value} onChange={field.onChange}>
-                          {(inputProps: any) => <Input {...inputProps} id="whatsapp" />}
-                        </InputMask>
+                        <IMaskInput
+                          mask="(00) 00000-0000"
+                          value={field.value}
+                          onAccept={(value) => field.onChange(value)}
+                          as={Input}
+                          id="whatsapp"
+                        />
                       )}
                     />
                     {form.formState.errors.whatsapp && <p className="text-red-500 text-xs">{form.formState.errors.whatsapp.message}</p>}
@@ -238,9 +260,14 @@ export function CustomerFormDialog({ open, onOpenChange, customer }: CustomerFor
                         name="cep"
                         control={form.control}
                         render={({ field }) => (
-                          <InputMask mask="99999-999" value={field.value} onChange={field.onChange} onBlur={(e) => handleCepBlur(e.target.value)}>
-                            {(inputProps: any) => <Input {...inputProps} id="cep" />}
-                          </InputMask>
+                          <IMaskInput
+                            mask="00000-000"
+                            value={field.value}
+                            onAccept={(value) => field.onChange(value)}
+                            onBlur={(e) => handleCepBlur(e.currentTarget.value)}
+                            as={Input}
+                            id="cep"
+                          />
                         )}
                       />
                       {isCepLoading && <Loader2 className="absolute right-2 top-2 h-5 w-5 animate-spin text-muted-foreground" />}

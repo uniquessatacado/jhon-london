@@ -118,8 +118,9 @@ export function Layout() {
     if (!hasPermission) return false;
 
     if (item.featureKey) {
-      if (item.featureKey === 'pdv_liberado') return featureStatus.pdv_access;
-      return featureStatus.features[item.featureKey];
+      if (item.featureKey === 'pdv_liberado') return !!featureStatus?.pdv_access;
+      // Adicionado uso de optional chaining (?.) para evitar quebra caso features não exista
+      return !!featureStatus?.features?.[item.featureKey];
     }
     return true;
   });

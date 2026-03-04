@@ -8,8 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { 
-  Check, ArrowLeft, Info, DollarSign, Lock, Box, Grid as GridIcon, Tag, Ruler, AlertTriangle, ArrowDown, Copy, Barcode, ScanBarcode, 
-  Upload, X, Image as ImageIcon, Video, Play, Trash2, Loader2, FileText
+  Check, ArrowLeft, DollarSign, Box, Grid as GridIcon, Tag, Ruler, AlertTriangle, Image as ImageIcon, Video, Trash2, Loader2, FileText, Upload, X
 } from 'lucide-react';
 import { useCategories, useAllSubcategories } from '@/hooks/use-categories';
 import { useBrands } from '@/hooks/use-brands';
@@ -125,20 +124,14 @@ export function NewProductPage() {
   useEffect(() => {
     api.get('/configuracoes/qtd_minima_atacado_geral')
       .then(res => setGlobalAtacadoMin(res.data?.valor || '10'))
-      .catch(() => {
-        console.error("Failed to fetch global wholesale minimum quantity.");
-      });
+      .catch(() => console.error("Failed to fetch global wholesale minimum quantity."));
   }, []);
 
   useEffect(() => {
     if (allProducts) {
         const skus: string[] = [];
         const eans: string[] = [];
-        
-        const productsToScan = isEditMode 
-            ? allProducts.filter(p => String(p.id) !== id) 
-            : allProducts;
-
+        const productsToScan = isEditMode ? allProducts.filter(p => String(p.id) !== id) : allProducts;
         productsToScan.forEach(p => {
             if (p.variacoes && p.variacoes.length > 0) {
                 p.variacoes.forEach(v => {
@@ -156,9 +149,7 @@ export function NewProductPage() {
         let categoryId = productData.categoria_id;
         if (!categoryId && productData.subcategoria_id) {
             const sub = allSubcategories.find(s => s.id === productData.subcategoria_id);
-            if (sub) {
-                categoryId = sub.categoria_id;
-            }
+            if (sub) categoryId = sub.categoria_id;
         }
 
         const variacoesComDimensoes = productData.variacoes?.map(v => {
@@ -209,11 +200,8 @@ export function NewProductPage() {
             }
             const videoSrc = productData.video_url || productData.video;
             if (videoSrc) {
-                const fullVideoUrl = videoSrc.startsWith('http') ? videoSrc : `${mediaBaseUrl}${videoSrc}`;
-                setVideoPreview(fullVideoUrl);
+                setVideoPreview(videoSrc.startsWith('http') ? videoSrc : `${mediaBaseUrl}${videoSrc}`);
             }
-        } else {
-            toast.info("Dados do produto copiados.", { description: "Revise SKU, estoque e imagens." });
         }
     }
   }, [productData, reset, isDuplicateMode, allSubcategories, brands, grids]);
@@ -224,6 +212,8 @@ export function NewProductPage() {
   const habilitaAtacadoGrade = watch('habilita_atacado_grade');
   const usarPrecoUnico = watch('usar_preco_atacado_unico');
   const selectedGradeAtacadoId = watch('grade_atacado_id');
+  
+  // Lendo os preços exatos como digitados pelo usuário
   const precoAtacadoGeral = watch('preco_atacado_geral') || 0;
   const precoAtacadoGrade = watch('preco_atacado_grade') || 0;
   
@@ -234,13 +224,10 @@ export function NewProductPage() {
     const currentVariations = variacoesValues || [];
     const skusInForm = currentVariations.map((v: any) => v.sku?.trim()).filter(Boolean);
     const eansInForm = currentVariations.map((v: any) => v.codigo_barras?.trim()).filter(Boolean);
-
     const duplicateSkusInForm = skusInForm.filter((item: string, index: number) => skusInForm.indexOf(item) !== index);
     const duplicateEansInForm = eansInForm.filter((item: string, index: number) => eansInForm.indexOf(item) !== index);
-
     const conflictingSkus = skusInForm.filter(sku => existingIdentifiers.skus.includes(sku));
     const conflictingEans = eansInForm.filter(ean => existingIdentifiers.eans.includes(ean));
-
     return {
         allDuplicateSkus: [...new Set([...duplicateSkusInForm, ...conflictingSkus])],
         allDuplicateEans: [...new Set([...duplicateEansInForm, ...conflictingEans])]
@@ -253,31 +240,18 @@ export function NewProductPage() {
     if (!selectedGridObj || isEditMode || isDuplicateMode) return;
     const currentSizes = variacaoFields.map((v:any) => v.tamanho);
     const newSizes = selectedGridObj.tamanhos.map(t => t.tamanho);
-
     if (JSON.stringify(currentSizes) !== JSON.stringify(newSizes)) {
         const newVariations = selectedGridObj.tamanhos.map(t => ({ 
-            tamanho: t.tamanho, 
-            estoque: 0, 
-            sku: '', 
-            codigo_barras: '',
-            peso_kg: t.peso_kg || 0,
-            altura_cm: t.altura_cm || 0,
-            largura_cm: t.largura_cm || 0,
-            comprimento_cm: t.comprimento_cm || 0,
+            tamanho: t.tamanho, estoque: 0, sku: '', codigo_barras: '', peso_kg: t.peso_kg || 0, altura_cm: t.altura_cm || 0, largura_cm: t.largura_cm || 0, comprimento_cm: t.comprimento_cm || 0,
         }));
         replaceVariacoes(newVariations);
-        if (!isLoadingData) {
-            toast.info("Variações e dimensões preenchidas pela grade selecionada.");
-        }
     }
-  }, [selectedGridObj, replaceVariacoes, variacaoFields, isLoadingData, isEditMode, isDuplicateMode]);
+  }, [selectedGridObj, replaceVariacoes, variacaoFields, isEditMode, isDuplicateMode]);
 
   useEffect(() => {
     if (selectedSubcategoryId && allSubcategories) {
       const selectedSub = allSubcategories.find(sub => String(sub.id) === String(selectedSubcategoryId));
-      if (selectedSub) {
-        setValue('categoria_id', String(selectedSub.categoria_id));
-      }
+      if (selectedSub) setValue('categoria_id', String(selectedSub.categoria_id));
     }
   }, [selectedSubcategoryId, allSubcategories, setValue]);
 
@@ -292,12 +266,8 @@ export function NewProductPage() {
           setValue('cst_icms', fiscalData.cst_icms);
           setValue('origem', fiscalData.origem);
           setValue('unidade_medida', fiscalData.unidade_medida);
-          toast.info("Dados fiscais preenchidos pela subcategoria.");
         }
-      }).catch(err => {
-        console.error("Falha ao buscar dados fiscais", err);
-        toast.error("Não foi possível buscar os dados fiscais da subcategoria.");
-      });
+      }).catch(err => console.error(err));
     }
   }, [selectedSubcategoryId, setValue, isEditMode, isDuplicateMode, watch]);
 
@@ -313,26 +283,23 @@ export function NewProductPage() {
     }
   }, [selectedGradeAtacadoId, gradeAtacadoObj, replaceComposicao, composicaoAtacadoValues]);
 
+  // CÁLCULO INDEPENDENTE DO PACOTE FECHADO
   const totalPecasPacote = composicaoAtacadoValues?.reduce((acc: number, curr: any) => acc + (Number(curr?.quantidade) || 0), 0) || 0;
-  const valorTotalPacote = useMemo(() => (usarPrecoUnico ? Number(precoAtacadoGeral) : Number(precoAtacadoGrade)) * totalPecasPacote, [totalPecasPacote, precoAtacadoGeral, precoAtacadoGrade, usarPrecoUnico]);
+  
+  // Se 'usarPrecoUnico' estiver ATIVO, usa o precoGeral. Se DESATIVADO, usa estritamente o precoGrade
+  const unitPriceForGradeCalc = usarPrecoUnico ? Number(precoAtacadoGeral) : Number(precoAtacadoGrade);
+  const valorTotalPacote = unitPriceForGradeCalc * totalPecasPacote;
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, setFile: Function, setPreview: Function, type: 'image' | 'video') => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     if (type === 'image') {
-        if (file.size > 2 * 1024 * 1024) {
-            toast.info("A imagem é grande, comprimindo...");
-        }
         try {
             const compressedFile = await compressImage(file, 2, 1200);
             setFile(compressedFile);
             setPreview(URL.createObjectURL(compressedFile));
-        } catch (error) {
-            toast.error("Falha ao comprimir imagem.");
-            console.error(error);
-        }
-    } else { // Video
+        } catch (error) { toast.error("Falha ao comprimir imagem."); }
+    } else {
         if (file.size > 50 * 1024 * 1024) return toast.error(`Vídeo muito grande. Máximo 50MB.`);
         setFile(file);
         setPreview(URL.createObjectURL(file));
@@ -342,21 +309,12 @@ export function NewProductPage() {
   const handleGalleryChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (galleryPreviews.length + files.length > 5) return toast.error("Limite máximo de 5 imagens na galeria.");
-    
-    const compressionPromises = files.map(file => {
-        if (file.size > 2 * 1024 * 1024) {
-            return compressImage(file, 2, 1200);
-        }
-        return Promise.resolve(file);
-    });
-
+    const compressionPromises = files.map(file => file.size > 2 * 1024 * 1024 ? compressImage(file, 2, 1200) : Promise.resolve(file));
     try {
         const compressedFiles = await Promise.all(compressionPromises);
         setGalleryFiles(prev => [...prev, ...compressedFiles]);
         setGalleryPreviews(prev => [...prev, ...compressedFiles.map(f => URL.createObjectURL(f))]);
-    } catch (error) {
-        toast.error("Erro ao processar imagens da galeria.");
-    }
+    } catch (error) { toast.error("Erro ao processar imagens da galeria."); }
   };
 
   const removeGalleryImage = (index: number) => {
@@ -365,37 +323,22 @@ export function NewProductPage() {
     setGalleryPreviews(prev => prev.filter((_, i) => i !== index));
     if (!isOldImage) {
         const numExisting = galleryPreviews.filter(p => existingGallery.includes(p)).length;
-        if (index >= numExisting) {
-            setGalleryFiles(prev => prev.filter((_, i) => i !== (index - numExisting)));
-        }
+        if (index >= numExisting) setGalleryFiles(prev => prev.filter((_, i) => i !== (index - numExisting)));
     }
   };
 
   const handleApplyBulkStock = () => {
     const qty = Number(bulkStockQty);
     if (isNaN(qty) || bulkStockQty === '') return;
-
-    const currentVariations = watch('variacoes');
-    const updatedVariations = currentVariations.map((v: any) => ({
-        ...v,
-        estoque: qty
-    }));
-    setValue('variacoes', updatedVariations);
+    setValue('variacoes', watch('variacoes').map((v: any) => ({ ...v, estoque: qty })));
     setBulkStockQty('');
   };
 
   const onSubmit = (data: any) => {
-    if (!data.nome) return toast.error('O nome do produto é obrigatório.');
-    if (!data.grade_id) return toast.error('A grade do produto é obrigatória.');
-    if (!data.subcategoria_id) return toast.error('A subcategoria é obrigatória.');
-    if (!data.marca_id) return toast.error('A marca é obrigatória.');
+    if (!data.nome || !data.grade_id || !data.subcategoria_id || !data.marca_id) return toast.error('Preencha todos os campos obrigatórios da Identificação.');
     if (!data.variacoes || data.variacoes.length === 0) return toast.error('Adicione pelo menos uma variação na grade.');
     if (data.variacoes?.some((v: any) => !v.sku && !v.codigo_barras)) return toast.error('Toda variação precisa de SKU ou Cód. Barras.');
-    if (duplicateCheck.allDuplicateSkus.length > 0 || duplicateCheck.allDuplicateEans.length > 0) {
-        return toast.error('SKU ou Cód. de Barras já existe.', {
-            description: 'Verifique os campos em vermelho. Eles já estão em uso por outro produto ou duplicados neste formulário.'
-        });
-    }
+    if (duplicateCheck.allDuplicateSkus.length > 0 || duplicateCheck.allDuplicateEans.length > 0) return toast.error('SKU ou Cód. de Barras duplicado.');
 
     const payload = { ...data, id: isEditMode ? Number(id) : undefined, imagem_principal_file: mainImageFile, imagens_galeria_files: galleryFiles, video_file: videoFile };
     isEditMode ? updateProduct(payload) : createProduct(payload);
@@ -410,17 +353,14 @@ export function NewProductPage() {
       
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-           <Button type="button" variant="outline" size="icon" onClick={() => navigate('/produtos')} className="bg-white/5 border-white/10 hover:bg-white/10">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
+           <Button type="button" variant="outline" size="icon" onClick={() => navigate('/produtos')} className="bg-white/5 border-white/10 hover:bg-white/10"><ArrowLeft className="h-4 w-4" /></Button>
           <div>
             <h1 className="text-2xl md:text-3xl font-bold">{isEditMode ? 'Editar Produto' : isDuplicateMode ? 'Duplicar Produto' : 'Novo Produto'}</h1>
             <p className="text-muted-foreground text-sm hidden md:block">{isEditMode ? 'Alterar dados, preços e estoque.' : 'Cadastro completo.'}</p>
           </div>
         </div>
         <Button size={isMobile ? 'default' : 'lg'} type="submit" disabled={isSaving || isSubmitting} className="bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20">
-          {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
-          {isEditMode ? 'Salvar' : 'Salvar'}
+          {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />} {isEditMode ? 'Salvar' : 'Salvar'}
         </Button>
       </div>
 
@@ -431,57 +371,12 @@ export function NewProductPage() {
         <Card className="bg-black/20 border-white/10 shadow-lg">
           <CardHeader className="pb-3 border-b border-white/5"><CardTitle className="text-base flex items-center gap-2 text-white"><Tag className="h-4 w-4 text-emerald-500" /> 1. Identificação e Classificação</CardTitle></CardHeader>
           <CardContent className="space-y-4 pt-6">
-              <div className="grid gap-2">
-                  <Label htmlFor="nome">Nome do Produto *</Label>
-                  <Input id="nome" {...register('nome', { required: true })} className={`bg-black/40 h-14 text-base ${errors.nome ? 'border-red-500' : 'border-white/10'}`} placeholder="Ex: Camiseta Básica Gola V" />
-              </div>
+              <div className="grid gap-2"><Label htmlFor="nome">Nome do Produto *</Label><Input id="nome" {...register('nome', { required: true })} className={`bg-black/40 h-14 text-base ${errors.nome ? 'border-red-500' : 'border-white/10'}`} placeholder="Ex: Camiseta Básica Gola V" /></div>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                   <div className="grid gap-2">
-                      <Label>Categoria *</Label>
-                      <Select value={watch('categoria_id')} disabled>
-                          <SelectTrigger className="bg-black/40 h-14 text-base border-white/10 disabled:opacity-70 disabled:cursor-not-allowed"><SelectValue placeholder="Selecione uma subcategoria..." /></SelectTrigger>
-                          <SelectContent>{categories?.map(cat => (<SelectItem key={cat.id} value={String(cat.id)}>{cat.nome}</SelectItem>))}</SelectContent>
-                      </Select>
-                   </div>
-                   <div className="grid gap-2">
-                      <Label>Subcategoria *</Label>
-                      <Controller
-                        name="subcategoria_id"
-                        control={control}
-                        render={({ field }) => (
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <SelectTrigger className={`bg-black/40 h-14 text-base ${errors.subcategoria_id ? 'border-red-500' : 'border-white/10'}`}><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                            <SelectContent>{allSubcategories?.map(sub => (<SelectItem key={sub.id} value={String(sub.id)}>{sub.nome}</SelectItem>))}</SelectContent>
-                          </Select>
-                        )}
-                      />
-                   </div>
-                   <div className="grid gap-2">
-                      <Label>Marca *</Label>
-                      <Controller
-                        name="marca_id"
-                        control={control}
-                        render={({ field }) => (
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <SelectTrigger className={`bg-black/40 h-14 text-base ${errors.marca_id ? 'border-red-500' : 'border-white/10'}`}><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                            <SelectContent>{brands?.map(brand => <SelectItem key={brand.id} value={String(brand.id)}>{brand.nome}</SelectItem>)}</SelectContent>
-                          </Select>
-                        )}
-                      />
-                   </div>
-                   <div className="grid gap-2">
-                      <Label>Grade do Produto *</Label>
-                      <Controller
-                        name="grade_id"
-                        control={control}
-                        render={({ field }) => (
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <SelectTrigger className={`bg-black/40 h-14 text-base ${errors.grade_id ? 'border-red-500' : 'border-white/10'}`}><SelectValue placeholder="Escolha uma grade..." /></SelectTrigger>
-                            <SelectContent>{grids?.map(g => <SelectItem key={g.id} value={String(g.id)}>{g.nome}</SelectItem>)}</SelectContent>
-                          </Select>
-                        )}
-                      />
-                   </div>
+                   <div className="grid gap-2"><Label>Categoria *</Label><Select value={watch('categoria_id')} disabled><SelectTrigger className="bg-black/40 h-14 text-base border-white/10 disabled:opacity-70"><SelectValue placeholder="Selecione..." /></SelectTrigger><SelectContent>{categories?.map(cat => (<SelectItem key={cat.id} value={String(cat.id)}>{cat.nome}</SelectItem>))}</SelectContent></Select></div>
+                   <div className="grid gap-2"><Label>Subcategoria *</Label><Controller name="subcategoria_id" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value}><SelectTrigger className={`bg-black/40 h-14 text-base ${errors.subcategoria_id ? 'border-red-500' : 'border-white/10'}`}><SelectValue placeholder="Selecione..." /></SelectTrigger><SelectContent>{allSubcategories?.map(sub => (<SelectItem key={sub.id} value={String(sub.id)}>{sub.nome}</SelectItem>))}</SelectContent></Select>)} /></div>
+                   <div className="grid gap-2"><Label>Marca *</Label><Controller name="marca_id" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value}><SelectTrigger className={`bg-black/40 h-14 text-base ${errors.marca_id ? 'border-red-500' : 'border-white/10'}`}><SelectValue placeholder="Selecione..." /></SelectTrigger><SelectContent>{brands?.map(brand => <SelectItem key={brand.id} value={String(brand.id)}>{brand.nome}</SelectItem>)}</SelectContent></Select>)} /></div>
+                   <div className="grid gap-2"><Label>Grade do Produto *</Label><Controller name="grade_id" control={control} render={({ field }) => (<Select onValueChange={field.onChange} value={field.value}><SelectTrigger className={`bg-black/40 h-14 text-base ${errors.grade_id ? 'border-red-500' : 'border-white/10'}`}><SelectValue placeholder="Escolha uma grade..." /></SelectTrigger><SelectContent>{grids?.map(g => <SelectItem key={g.id} value={String(g.id)}>{g.nome}</SelectItem>)}</SelectContent></Select>)} /></div>
               </div>
           </CardContent>
         </Card>
@@ -502,10 +397,7 @@ export function NewProductPage() {
 
                         {isMobile ? (
                           <div className="space-y-4">
-                            {variacaoFields.map((field: any, index) => {
-                                const currentVariation = variacoesValues?.[index];
-                                return <MobileVariationCard key={field.id} field={field} currentVariation={currentVariation} index={index} register={register} duplicateCheck={duplicateCheck} onEditDimensions={setEditingDimensionsIndex} isEditMode={isEditMode} />
-                            })}
+                            {variacaoFields.map((field: any, index) => <MobileVariationCard key={field.id} field={field} currentVariation={variacoesValues?.[index]} index={index} register={register} duplicateCheck={duplicateCheck} onEditDimensions={setEditingDimensionsIndex} isEditMode={isEditMode} />)}
                           </div>
                         ) : (
                           <div id="variations-table" className="rounded-xl border border-white/10 overflow-hidden">
@@ -514,10 +406,8 @@ export function NewProductPage() {
                                 <TableBody className="bg-black/20">
                                     {variacaoFields.map((field: any, index) => {
                                         const currentVariation = variacoesValues?.[index];
-                                        const currentSku = currentVariation?.sku;
-                                        const currentEan = currentVariation?.codigo_barras;
-                                        const isSkuDuplicate = currentSku && duplicateCheck.allDuplicateSkus.includes(currentSku);
-                                        const isEanDuplicate = currentEan && duplicateCheck.allDuplicateEans.includes(currentEan);
+                                        const isSkuDuplicate = currentVariation?.sku && duplicateCheck.allDuplicateSkus.includes(currentVariation.sku);
+                                        const isEanDuplicate = currentVariation?.codigo_barras && duplicateCheck.allDuplicateEans.includes(currentVariation.codigo_barras);
                                         return (
                                             <TableRow key={field.id} className="border-white/10 hover:bg-white/5">
                                                 <TableCell><Badge variant="outline" className="text-emerald-400 border-emerald-500/30 bg-emerald-500/10 px-3 py-1">{field.tamanho}</Badge></TableCell>
@@ -556,7 +446,7 @@ export function NewProductPage() {
                  <div className="flex items-center justify-between bg-white/5 p-4 rounded-xl border border-white/10">
                     <div className="flex flex-col">
                       <Label htmlFor="usar_preco_atacado_unico" className="text-base cursor-pointer">Usar mesmo preço para ambos os atacados</Label>
-                      <span className="text-xs text-muted-foreground">Se ativado, o valor do Atacado Geral será replicado para o Atacado Grade.</span>
+                      <span className="text-xs text-muted-foreground">Se ativado, utiliza o mesmo valor unitário preenchido abaixo para o Atacado Geral e o Atacado Grade.</span>
                     </div>
                     <Switch id="usar_preco_atacado_unico" checked={usarPrecoUnico} onCheckedChange={(c) => setValue('usar_preco_atacado_unico', c)} />
                  </div>
@@ -574,8 +464,8 @@ export function NewProductPage() {
                         {habilitaAtacadoGeral && (
                           <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
                             <div className="grid gap-2">
-                              <Label>Preço {usarPrecoUnico ? '(Aplicado em Ambos)' : '(Avulso)'}</Label>
-                              <Input type="number" step="0.01" {...register('preco_atacado_geral')} className="bg-black/40 border-white/10 h-12" placeholder="R$ 0,00" />
+                              <Label>Preço Unitário {usarPrecoUnico ? '(Ambos)' : '(Geral)'}</Label>
+                              <Input type="number" step="0.01" {...register('preco_atacado_geral')} className="bg-black/40 border-white/10 h-12 text-lg font-bold text-emerald-400" placeholder="R$ 0,00" />
                             </div>
                             <div className="bg-black/40 p-3 rounded-lg border border-white/5">
                               <p className="text-xs text-muted-foreground"><span className="font-semibold text-white">Qtd Mínima:</span> {globalAtacadoMin} pçs</p>
@@ -604,7 +494,7 @@ export function NewProductPage() {
                                 control={control}
                                 render={({ field }) => (
                                   <Select onValueChange={field.onChange} value={field.value}>
-                                    <SelectTrigger className="bg-black/40 border-white/10 h-12"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                                    <SelectTrigger className="bg-black/40 border-white/10 h-12"><SelectValue placeholder="Selecione a grade..." /></SelectTrigger>
                                     <SelectContent>{grids?.map(g => <SelectItem key={g.id} value={String(g.id)}>{g.nome}</SelectItem>)}</SelectContent>
                                   </Select>
                                 )}
@@ -615,17 +505,16 @@ export function NewProductPage() {
                               <div className="grid gap-2">
                                 <Label>Preço Unitário (Grade)</Label>
                                 <Input type="number" step="0.01" {...register('preco_atacado_grade')} className="bg-black/40 border-purple-500/30 h-12 text-lg font-bold text-purple-400" placeholder="R$ 0,00" />
-                                <p className="text-[10px] text-muted-foreground">Valor de cada peça dentro do pacote fechado.</p>
                               </div>
                             )}
 
-                            {/* Tabela de composição */}
+                            {/* Tabela de composição (Visual e para quantificar) */}
                             {composicaoFields.length > 0 && (
                                <div className="border border-white/10 rounded-lg overflow-hidden mt-2">
                                   <Table>
                                      <TableHeader className="bg-purple-500/10">
                                         <TableRow className="border-white/10 hover:bg-transparent">
-                                           <TableHead className="h-8 text-xs text-purple-300">Tam</TableHead>
+                                           <TableHead className="h-8 text-xs text-purple-300">Tamanho</TableHead>
                                            <TableHead className="h-8 text-xs text-right text-purple-300">Qtd p/ Pacote</TableHead>
                                         </TableRow>
                                      </TableHeader>
@@ -647,7 +536,7 @@ export function NewProductPage() {
                             )}
                             
                             {gradeAtacadoObj && (
-                               <div className="bg-black/40 rounded-xl border border-white/10 p-4 text-sm space-y-2 mt-4">
+                               <div className="bg-black/40 rounded-xl border border-white/10 p-4 text-sm space-y-2 mt-4 shadow-inner">
                                   <div className="flex justify-between items-center">
                                      <span className="text-muted-foreground">Total Peças (1 pacote):</span>
                                      <span className="font-bold text-lg">{totalPecasPacote} un</span>
@@ -656,6 +545,9 @@ export function NewProductPage() {
                                      <span>Valor Total do Pacote:</span>
                                      <span className="text-purple-400 text-xl">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valorTotalPacote)}</span>
                                   </div>
+                                  <p className="text-[10px] text-muted-foreground text-right mt-1 opacity-70">
+                                    Calculado como: Preço Unitário × Total de Peças
+                                  </p>
                                </div>
                             )}
 

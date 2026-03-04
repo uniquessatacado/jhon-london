@@ -20,7 +20,8 @@ import { useAuth } from './contexts/AuthContext';
 const PdvRouteGuard = () => {
   const { featureStatus } = useAuth();
   if (!featureStatus) return null; // ou um loader
-  return featureStatus.pdv_access ? <PDVPage /> : <UnderConstructionPage />;
+  // Atualizado para usar a chave direta do novo JSON: pdv_liberado
+  return featureStatus.pdv_liberado ? <PDVPage /> : <UnderConstructionPage />;
 };
 
 const router = createBrowserRouter([

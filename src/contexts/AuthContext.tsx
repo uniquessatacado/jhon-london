@@ -2,14 +2,8 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 import { api } from '@/lib/api';
 import { User } from '@/types/auth';
 
-interface FeatureFlags {
+export interface FeatureStatus {
   [key: string]: boolean;
-}
-
-interface FeatureStatus {
-  is_super_admin: boolean;
-  features: FeatureFlags;
-  pdv_access: boolean;
 }
 
 interface AuthContextType {
@@ -33,11 +27,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const fetchFeatureStatus = async () => {
     try {
       const { data } = await api.get('/features/status');
-      setFeatureStatus(data);
+      
+      const parsedData: FeatureStatus = {};
+      Object.keys(data).forEach(key => {
+        parsedData[key] = data[key] === true || String(data[key]) === 'true';
+      });
+      
+      setFeatureStatus(parsedData);
     } catch (error) {
       console.error("Failed to fetch feature status", error);
-      // Em caso de erro, definimos um estado padrão seguro
-      setFeatureStatus({ is_super_admin: false, features: {}, pdv_access: false });
+      setFeatureStatus({});
     }
   };
 
@@ -65,7 +64,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     setIsLoading(false);
 
-    // Listener para o evento de erro de autenticação
     const handleAuthError = () => {
       logout();
     };

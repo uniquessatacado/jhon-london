@@ -110,17 +110,16 @@ export function Layout() {
     return null;
   }
 
-  // Master override: If the user is the specific super admin, grant all access.
-  const isMasterAdmin = user.email.toLowerCase() === 'ussloja@gmail.com' || featureStatus.is_super_admin;
+  // O Super Admin agora é validado pelo e-mail
+  const isMasterAdmin = user.email.toLowerCase() === 'ussloja@gmail.com';
 
   const allowedNavItems = isMasterAdmin ? navItems : navItems.filter(item => {
     const hasPermission = user.role === 'admin' || (user.permissoes && user.permissoes[item.permissionKey]);
     if (!hasPermission) return false;
 
+    // Se a rota depende de uma liberação global, verifica no featureStatus
     if (item.featureKey) {
-      if (item.featureKey === 'pdv_liberado') return !!featureStatus?.pdv_access;
-      // Adicionado uso de optional chaining (?.) para evitar quebra caso features não exista
-      return !!featureStatus?.features?.[item.featureKey];
+      return !!featureStatus[item.featureKey];
     }
     return true;
   });

@@ -11,63 +11,68 @@ const featureMap: { [key: string]: { label: string; description: string } } = {
   pdv_liberado: { label: 'PDV / Vendas', description: 'Frente de caixa para realização de vendas.' },
   clientes_liberado: { label: 'Clientes', description: 'Cadastro e gerenciamento da base de clientes.' },
   produtos_liberado: { label: 'Produtos', description: 'Gerenciamento de catálogo, estoque e preços.' },
+  vendas_liberado: { label: 'Vendas (Geral)', description: 'Módulo geral de histórico de vendas e faturamento.' },
 };
 
 export function FeatureReleasePage() {
-  const { featureStatus, refetchFeatureStatus } = useAuth();
+  const { refetchFeatureStatus } = useAuth();
   
-  // Controle de estado local para a interface responder instantaneamente
-  const [localFeatures, setLocalFeatures] = useState<{ [key: string]: boolean }>({});
-  // Bloqueia apenas a chavinha que está sendo salva no momento
+  // Guardará o estado exato que veio do servidor
+  const [features, setFeatures] = useState<{ [key: string]: boolean }>({});
+  const [isLoading, setIsLoading] = useState(true);
   const [loadingKeys, setLoadingKeys] = useState<{ [key: string]: boolean }>({});
 
-  // Sincroniza os dados do servidor com a tela de forma segura (forçando ser Verdadeiro/Falso)
-  useEffect(() => {
-    if (featureStatus && featureStatus.features) {
-      const parsedFeatures: { [key: string]: boolean } = {};
+  const fetchStatus = async () => {
+    try {
+      setIsLoading(true);
+      const { data } = await api.get('/features/status');
       
-      // Mapeia todas as chaves esperadas para garantir que apareçam, mesmo se a API não enviar
-      Object.keys(featureMap).forEach(key => {
-        const val = featureStatus.features[key];
-        // Forçamos para string para evitar o erro do TS (comparar boolean com string)
-        parsedFeatures[key] = String(val) === 'true';
+      // Converte para garantir que o state seja booleano (true/false)
+      const parsedData: { [key: string]: boolean } = {};
+      Object.keys(data).forEach(key => {
+        parsedData[key] = data[key] === true || String(data[key]) === 'true';
       });
       
-      setLocalFeatures(prev => ({ ...prev, ...parsedFeatures }));
+      setFeatures(parsedData);
+    } catch (error) {
+      toast.error("Erro ao buscar o status atualizado do servidor.");
+    } finally {
+      setIsLoading(false);
     }
-  }, [featureStatus]);
+  };
 
-  const handleToggle = async (featureKey: string, isEnabled: boolean) => {
-    // 1. Atualização "Otimista" - Muda a UI imediatamente para não parecer travado
-    setLocalFeatures(prev => ({ ...prev, [featureKey]: isEnabled }));
+  // Ao carregar a página, busca o estado real do DB
+  useEffect(() => {
+    fetchStatus();
+  }, []);
+
+  const handleToggle = async (featureKey: string, newValue: boolean) => {
+    // Liga o loader APENAS na chave sendo clicada
     setLoadingKeys(prev => ({ ...prev, [featureKey]: true }));
 
     try {
-      // 2. Envia para o servidor
+      // Faz o PUT e AGUARDA resposta 200
       await api.put(`/configuracoes/${featureKey}`, { 
-        valor: isEnabled ? 'true' : 'false',
-        descricao: `Liberação do módulo: ${featureMap[featureKey]?.label || featureKey}`
+        valor: newValue ? 'true' : 'false'
       });
       
-      toast.success(`'${featureMap[featureKey]?.label || featureKey}' atualizado com sucesso!`);
+      // Se deu certo (200), aí sim mudamos a chavinha na tela
+      setFeatures(prev => ({ ...prev, [featureKey]: newValue }));
+      toast.success(`Módulo atualizado com sucesso!`);
       
-      // 3. Aguarda 1 segundo antes de pedir os dados novos, para dar tempo do Banco de Dados atualizar.
-      // Isso evita o bug da chavinha "voltar sozinha".
-      setTimeout(() => {
-        refetchFeatureStatus();
-      }, 1000);
+      // Atualiza o contexto global para que o Menu Lateral (Sidebar) reflita a mudança
+      refetchFeatureStatus();
 
     } catch (error) {
-      // Se der erro real, reverte a chavinha para a posição anterior
-      setLocalFeatures(prev => ({ ...prev, [featureKey]: !isEnabled }));
-      toast.error('Falha ao atualizar a funcionalidade. Tente novamente.');
+      toast.error('Falha ao salvar a alteração. A configuração não foi modificada.');
     } finally {
+      // Remove o spinner
       setLoadingKeys(prev => ({ ...prev, [featureKey]: false }));
     }
   };
 
-  if (!featureStatus) {
-    return <div className="flex justify-center items-center h-64"><Loader2 className="h-8 w-8 animate-spin text-emerald-500" /></div>;
+  if (isLoading) {
+    return <div className="flex justify-center items-center h-[60vh]"><Loader2 className="h-10 w-10 animate-spin text-emerald-500" /></div>;
   }
 
   return (
@@ -97,7 +102,7 @@ export function FeatureReleasePage() {
                   {loadingKeys[key] && <Loader2 className="h-4 w-4 animate-spin text-emerald-500" />}
                   <Switch
                     id={`feature-${key}`}
-                    checked={localFeatures[key] ?? false}
+                    checked={features[key] ?? false}
                     onCheckedChange={(checked) => handleToggle(key, checked)}
                     disabled={loadingKeys[key]}
                     className="data-[state=checked]:bg-emerald-500"

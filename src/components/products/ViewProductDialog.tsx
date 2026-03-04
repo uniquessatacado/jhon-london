@@ -114,21 +114,16 @@ const ViewProductDialogContent = ({ product }: { product: Product }) => {
                                   <span>Varejo:</span>
                                   <span className="font-mono text-emerald-400 font-bold">{formatCurrency(product.preco_varejo)}</span>
                               </div>
-                              {product.tipo_atacado === 'geral' && (
+                              {(product.habilita_atacado_geral || product.preco_atacado_geral > 0) && (
                                   <div className="flex justify-between items-center text-purple-300">
                                       <span>Atacado Geral:</span>
-                                      <span className="font-mono">{formatCurrency(product.preco_atacado)}</span>
+                                      <span className="font-mono">{formatCurrency(product.preco_atacado_geral)}</span>
                                   </div>
                               )}
-                              {product.tipo_atacado === 'grade' && product.atacado_grade && product.atacado_grade.length > 0 && (
-                                  <div className="pt-2">
-                                      <span className="text-xs text-blue-300 uppercase font-semibold">Atacado Grade:</span>
-                                      {product.atacado_grade.map((g, i) => (
-                                          <div key={i} className="flex justify-between items-center text-blue-300 text-sm pl-2 mt-1">
-                                              <span>Tam. {g.tamanho}:</span>
-                                              <span className="font-mono">{formatCurrency(g.preco_atacado)}</span>
-                                          </div>
-                                      ))}
+                              {(product.habilita_atacado_grade || product.preco_atacado_grade > 0) && (
+                                  <div className="flex justify-between items-center text-blue-300">
+                                      <span>Atacado Pacote:</span>
+                                      <span className="font-mono">{formatCurrency(product.preco_atacado_grade)}</span>
                                   </div>
                               )}
                           </CardContent>

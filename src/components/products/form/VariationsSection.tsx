@@ -18,7 +18,7 @@ interface VariationsSectionProps {
   grids?: Grid[];
 }
 
-const MobileVariationCard = ({ field, currentVariation, index, register, setValue, skuErrorMsg, eanErrorMsg, validarSkuAoDigitar, onEditDimensions, isEditMode }: any) => {
+const MobileVariationCard = ({ field, currentVariation, index, register, skuErrorMsg, eanErrorMsg, validarSkuAoDigitar, onEditDimensions, isEditMode }: any) => {
   const currentEan = currentVariation?.codigo_barras;
   const currentSku = currentVariation?.sku;
   const isMissingBoth = !currentEan && !currentSku;
@@ -27,7 +27,9 @@ const MobileVariationCard = ({ field, currentVariation, index, register, setValu
   const eanBorder = isMissingBoth ? "border-red-500/50 bg-red-500/5" : eanErrorMsg ? "border-red-500 text-red-200 focus-visible:ring-red-500" : "bg-black/40 border-white/10";
 
   const hasDimensions = currentVariation?.peso_kg > 0 || currentVariation?.altura_cm > 0;
-  const { ref, name } = register(`variacoes.${index}.sku`);
+  
+  // Usamos a desestruturação do register para controlar o React Hook Form sem perder a referência
+  const { ref: skuRef, name: skuName, onChange: skuOnChange, onBlur: skuOnBlur } = register(`variacoes.${index}.sku`);
 
   return (
     <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-4">
@@ -41,13 +43,16 @@ const MobileVariationCard = ({ field, currentVariation, index, register, setValu
       <div className="space-y-2">
         <Label className="text-xs">SKU</Label>
         <Input 
-          ref={ref}
-          name={name}
+          ref={skuRef}
+          name={skuName}
           onChange={(e) => {
-            const val = e.target.value.toUpperCase();
-            e.target.value = val;
-            setValue(`variacoes.${index}.sku`, val);
-            validarSkuAoDigitar(val, index, currentVariation?.id);
+            e.target.value = e.target.value.toUpperCase(); // Força visualmente pra maiúsculo
+            skuOnChange(e); // Avisa o formulário que mudou (fundamental pra tela atualizar)
+            validarSkuAoDigitar(e.target.value, index, currentVariation?.id); // Dispara a verificação
+          }}
+          onBlur={(e) => {
+            skuOnBlur(e);
+            validarSkuAoDigitar(e.target.value, index, currentVariation?.id); // Checagem dupla ao sair
           }}
           className={`${skuBorder} uppercase h-12`} 
           placeholder={currentEan ? "Opcional" : "Obrigatório"} 
@@ -80,7 +85,6 @@ export function VariationsSection({ isEditMode, isDuplicateMode, grids }: Variat
   
   // Armazena erros da API
   const [skuBackendErrors, setSkuBackendErrors] = useState<Record<number, string>>({});
-  // Timers para não flodar o backend a cada milissegundo de digitação
   const skuTimers = useRef<Record<number, NodeJS.Timeout>>({});
 
   const variacoesValues = watch('variacoes') || [];
@@ -89,7 +93,7 @@ export function VariationsSection({ isEditMode, isDuplicateMode, grids }: Variat
 
   const selectedGridObj = useMemo(() => grids?.find(g => String(g.id) === String(selectedGridId)), [grids, selectedGridId]);
 
-  // VALIDAÇÃO LOCAL (impede SKUs idênticos na mesma tela)
+  // VALIDAÇÃO LOCAL (impede SKUs idênticos na mesma tela em tempo real)
   const localDuplicateSkus = useMemo(() => {
     const skus = variacoesValues.map((v: any) => v.sku?.trim().toUpperCase()).filter(Boolean);
     return skus.filter((item: string, index: number) => skus.indexOf(item) !== index);
@@ -139,7 +143,7 @@ export function VariationsSection({ isEditMode, isDuplicateMode, grids }: Variat
             largura_cm: t.largura_cm || 0, 
             comprimento_cm: t.comprimento_cm || 0,
         })));
-        setSkuBackendErrors({});
+        setSkuBackendErrors({}); // Limpa os erros se trocar a grade inteira
     }
   }, [selectedGridObj, isEditMode, isDuplicateMode, replace, variacaoFields]);
 
@@ -151,10 +155,14 @@ export function VariationsSection({ isEditMode, isDuplicateMode, grids }: Variat
     setBulkStockQty('');
   };
 
-  // ✅ VALIDAÇÃO NA API ENQUANTO DIGITA (TEMPO REAL COM DEBOUNCE)
+  // ✅ VALIDAÇÃO NA API ENQUANTO DIGITA (TEMPO REAL COM DEBOUNCE E CACHE BUSTING)
   const validarSkuAoDigitar = (sku: string, index: number, variacaoId?: number) => {
     if (!sku) {
-      setSkuBackendErrors(prev => ({ ...prev, [index]: '' }));
+      setSkuBackendErrors(prev => {
+        const next = { ...prev };
+        delete next[index]; // Remove o erro se apagar o campo
+        return next;
+      });
       return;
     }
 
@@ -162,16 +170,23 @@ export function VariationsSection({ isEditMode, isDuplicateMode, grids }: Variat
       clearTimeout(skuTimers.current[index]);
     }
 
-    // Aguarda 300ms após a última tecla digitada para bater na API
+    // Aguarda 300ms de pausa na digitação para não floodar o servidor
     skuTimers.current[index] = setTimeout(async () => {
       try {
-        const { data } = await api.get('/produtos/verificar-sku', {
+        // O `_t=${Date.now()}` impede o navegador de usar cache antigo e garante a checagem real!
+        const { data } = await api.get(`/produtos/verificar-sku?_t=${Date.now()}`, {
           params: { sku, variacao_id: variacaoId }
         });
-        setSkuBackendErrors(prev => ({ 
-          ...prev, 
-          [index]: data.existe ? data.mensagem : '' 
-        }));
+        
+        setSkuBackendErrors(prev => {
+          const next = { ...prev };
+          if (data.existe) {
+            next[index] = data.mensagem;
+          } else {
+            delete next[index]; // Limpa o erro se o SKU for livre
+          }
+          return next;
+        });
       } catch (e) {
         console.error("Erro ao validar SKU:", e);
       }
@@ -206,6 +221,7 @@ export function VariationsSection({ isEditMode, isDuplicateMode, grids }: Variat
                 const isLocalSkuDuplicate = currentSku && localDuplicateSkus.includes(currentSku);
                 const isLocalEanDuplicate = currentEan && localDuplicateEans.includes(currentEan);
                 
+                // Puxa o erro local (da própria tela) ou do banco de dados
                 const skuErrorMsg = isLocalSkuDuplicate ? 'SKU repetido nesta mesma grade' : skuBackendErrors[index];
                 const eanErrorMsg = isLocalEanDuplicate ? 'Cód. Barras repetido nesta grade' : null;
 
@@ -250,10 +266,12 @@ export function VariationsSection({ isEditMode, isDuplicateMode, grids }: Variat
                     const isLocalSkuDuplicate = currentSku && localDuplicateSkus.includes(currentSku);
                     const isLocalEanDuplicate = currentEan && localDuplicateEans.includes(currentEan);
                     
+                    // Une os erros visuais: Se for repetido na tela ganha preferência, senão exibe o erro do banco.
                     const skuErrorMsg = isLocalSkuDuplicate ? 'SKU repetido nesta mesma grade' : skuBackendErrors[index];
                     const eanErrorMsg = isLocalEanDuplicate ? 'Cód. Barras repetido nesta grade' : null;
                     
-                    const { ref, name } = register(`variacoes.${index}.sku`);
+                    // Amarrando corretamente o Input ao React Hook Form pra que a tela atualize em tempo real
+                    const { ref: skuRef, name: skuName, onChange: skuOnChange, onBlur: skuOnBlur } = register(`variacoes.${index}.sku`);
 
                     return (
                       <TableRow key={field.id} className="border-white/10 hover:bg-white/5">
@@ -262,15 +280,17 @@ export function VariationsSection({ isEditMode, isDuplicateMode, grids }: Variat
                         
                         <TableCell>
                           <div className="space-y-1">
-                            {/* Input chamando a função imediatamente na digitação onChange */}
                             <Input 
-                              ref={ref}
-                              name={name}
+                              ref={skuRef}
+                              name={skuName}
                               onChange={(e) => {
-                                const val = e.target.value.toUpperCase();
-                                e.target.value = val;
-                                setValue(`variacoes.${index}.sku`, val);
-                                validarSkuAoDigitar(val, index, currentVariation?.id);
+                                e.target.value = e.target.value.toUpperCase(); // Força UI maiúsculo
+                                skuOnChange(e); // Avisa o RHF para a tela saber que o estado mudou
+                                validarSkuAoDigitar(e.target.value, index, currentVariation?.id);
+                              }}
+                              onBlur={(e) => {
+                                skuOnBlur(e);
+                                validarSkuAoDigitar(e.target.value, index, currentVariation?.id); // Checagem dupla
                               }}
                               className={`uppercase h-9 transition-colors ${skuErrorMsg ? 'border-red-500 text-red-200 focus-visible:ring-red-500' : 'bg-black/40 border-white/10 focus-visible:ring-emerald-500'}`} 
                             />

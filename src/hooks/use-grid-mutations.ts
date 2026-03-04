@@ -10,18 +10,28 @@ type CreateGridDTO = {
 
 type UpdateGridDTO = CreateGridDTO & { id: number };
 
+// Função blindada para garantir que vírgulas virem pontos e nunca envie NaN (Not a Number) para o back-end
+const parseToNumber = (value: any): number => {
+  if (typeof value === 'number') return value;
+  if (!value) return 0;
+  // Troca vírgula por ponto caso o usuário ou o navegador use formatação pt-BR
+  const parsed = parseFloat(String(value).replace(',', '.'));
+  return isNaN(parsed) ? 0 : parsed;
+};
+
 // --- Create ---
 async function createGrid(newGrid: CreateGridDTO): Promise<Grid> {
   const payload = {
-    ...newGrid,
+    nome: newGrid.nome,
     tamanhos: newGrid.tamanhos.map(t => ({
-      ...t,
-      peso_kg: Number(t.peso_kg),
-      altura_cm: Number(t.altura_cm),
-      largura_cm: Number(t.largura_cm),
-      comprimento_cm: Number(t.comprimento_cm),
+      tamanho: t.tamanho,
+      peso_kg: parseToNumber(t.peso_kg),
+      altura_cm: parseToNumber(t.altura_cm),
+      largura_cm: parseToNumber(t.largura_cm),
+      comprimento_cm: parseToNumber(t.comprimento_cm),
     }))
   };
+  
   const { data } = await api.post('/grades', payload);
   return data;
 }
@@ -34,9 +44,11 @@ export function useCreateGrid() {
       toast.success('Grade criada com sucesso!');
       queryClient.invalidateQueries({ queryKey: ['grids'] });
     },
-    onError: (err) => {
-      console.error(err);
-      toast.error('Falha ao criar grade.');
+    onError: (error: any) => {
+      console.error("Erro completo ao criar grade:", error.response?.data);
+      toast.error('Falha ao criar grade.', {
+        description: error.response?.data?.message || 'Verifique os dados e tente novamente.'
+      });
     },
   });
 }
@@ -45,14 +57,16 @@ export function useCreateGrid() {
 async function updateGrid(updatedGrid: UpdateGridDTO): Promise<Grid> {
   const payload = {
     nome: updatedGrid.nome,
+    // Mapeamos estritamente os campos necessários, descartando IDs temporários do React Hook Form
     tamanhos: updatedGrid.tamanhos.map(t => ({
-      ...t,
-      peso_kg: Number(t.peso_kg),
-      altura_cm: Number(t.altura_cm),
-      largura_cm: Number(t.largura_cm),
-      comprimento_cm: Number(t.comprimento_cm),
+      tamanho: t.tamanho,
+      peso_kg: parseToNumber(t.peso_kg),
+      altura_cm: parseToNumber(t.altura_cm),
+      largura_cm: parseToNumber(t.largura_cm),
+      comprimento_cm: parseToNumber(t.comprimento_cm),
     }))
   };
+  
   const { data } = await api.put(`/grades/${updatedGrid.id}`, payload);
   return data;
 }
@@ -66,9 +80,9 @@ export function useUpdateGrid() {
       queryClient.invalidateQueries({ queryKey: ['grids'] });
     },
     onError: (error: any) => {
-      console.error('Falha ao atualizar grade:', error.response?.data);
+      console.error('Erro completo ao atualizar grade:', error.response?.data);
       toast.error('Falha ao atualizar grade.', {
-        description: error.response?.data?.message || 'Erro desconhecido.'
+        description: error.response?.data?.message || 'A API recusou o formato dos dados.'
       });
     },
   });

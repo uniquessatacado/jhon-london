@@ -30,9 +30,13 @@ export function FeatureReleasePage() {
     setLocalFeatures(prev => ({ ...prev, [featureKey]: isEnabled }));
     setIsSaving(true);
     try {
-      await api.put(`/features/${featureKey}`, { valor: isEnabled });
+      // Corrigido: Usando o endpoint /configuracoes que o backend usa para chaves globais
+      await api.put(`/configuracoes/${featureKey}`, { 
+        valor: isEnabled ? 'true' : 'false',
+        descricao: `Liberação do módulo: ${featureMap[featureKey]?.label || featureKey}`
+      });
       toast.success(`'${featureMap[featureKey]?.label || featureKey}' atualizado com sucesso!`);
-      refetchFeatureStatus(); // Atualiza o estado global
+      refetchFeatureStatus(); // Atualiza o estado global para que o menu lateral reaja
     } catch (error) {
       toast.error('Falha ao atualizar a funcionalidade.');
       // Reverte a mudança visual em caso de erro

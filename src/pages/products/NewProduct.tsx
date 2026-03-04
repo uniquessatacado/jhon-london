@@ -76,10 +76,7 @@ export function NewProductPage() {
       .catch(() => console.error("Failed to fetch global wholesale minimum quantity."));
   }, []);
 
-  // TRAVA DE SEGURANÇA: Só preenche o formulário quando todas as listas (marcas, cats, etc)
-  // e os dados do produto estiverem carregados da API. Isso impede os selects de ficarem vazios.
   useEffect(() => {
-    // Se qualquer lista importante estiver carregando, aborta e aguarda.
     if (isLoadingCats || isLoadingSubs || isLoadingBrands || isLoadingGrids || isLoadingData) {
       return;
     }
@@ -180,6 +177,13 @@ export function NewProductPage() {
     if (!data.variacoes || data.variacoes.length === 0) return toast.error('Adicione pelo menos uma variação na grade.');
     if (data.variacoes?.some((v: any) => !v.sku && !v.codigo_barras)) return toast.error('Toda variação precisa de SKU ou Cód. Barras.');
 
+    // Verificação de segurança final antes de mandar pro back-end (Evita erro 500 caso escape visualmente)
+    const skus = data.variacoes.map((v: any) => v.sku?.trim().toUpperCase()).filter(Boolean);
+    if (new Set(skus).size !== skus.length) return toast.error('Existem SKUs repetidos na grade do produto. Corrija os erros em vermelho.');
+
+    const eans = data.variacoes.map((v: any) => v.codigo_barras?.trim().toUpperCase()).filter(Boolean);
+    if (new Set(eans).size !== eans.length) return toast.error('Existem Códigos de Barras repetidos na grade. Corrija os erros em vermelho.');
+
     const payload = { 
       ...data, 
       id: isEditMode ? Number(id) : undefined, 
@@ -193,7 +197,6 @@ export function NewProductPage() {
   
   const isSaving = isCreating || isUpdating;
 
-  // Mostra a tela de carregamento para garantir que nenhum flash aconteça com selects vazios
   const isPageLoading = isLoadingCats || isLoadingBrands || isLoadingGrids || isLoadingSubs || ((isEditMode || isDuplicateMode) && isLoadingData);
 
   if (isPageLoading) return <div className="flex h-[80vh] items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-emerald-500" /></div>;

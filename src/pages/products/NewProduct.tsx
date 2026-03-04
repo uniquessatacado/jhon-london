@@ -48,7 +48,7 @@ export function NewProductPage() {
     }
   });
 
-  const { watch, setValue, reset, handleSubmit, register, formState: { isSubmitting } } = methods;
+  const { watch, setValue, reset, handleSubmit, getValues, formState: { isSubmitting } } = methods;
   
   const { data: categories, isLoading: isLoadingCats } = useCategories();
   const { data: brands, isLoading: isLoadingBrands } = useBrands();
@@ -77,9 +77,7 @@ export function NewProductPage() {
       .catch(() => console.error("Failed to fetch global wholesale minimum quantity."));
   }, []);
 
-  // ✅ CORREÇÃO DEFINITIVA DO BUG DOS SELECTS VAZIOS
   useEffect(() => {
-    // 1. Só continua se TODOS os dados da API já tiverem chegado
     if (isLoadingCats || isLoadingSubs || isLoadingBrands || isLoadingGrids || isLoadingData || hasInitialized.current) {
       return; 
     }
@@ -132,7 +130,6 @@ export function NewProductPage() {
       
       reset(formData);
       
-      // 2. Injeção direta forçada com delay para garantir a UI montada do Radix UI
       setTimeout(() => {
         if (formData.categoria_id) setValue('categoria_id', formData.categoria_id, { shouldValidate: true });
         if (formData.subcategoria_id) setValue('subcategoria_id', formData.subcategoria_id, { shouldValidate: true });
@@ -166,12 +163,21 @@ export function NewProductPage() {
   useEffect(() => {
     if (selectedSubcategoryId && allSubcategories) {
       const selectedSub = allSubcategories.find(sub => String(sub.id) === String(selectedSubcategoryId));
-      if (selectedSub) setValue('categoria_id', String(selectedSub.categoria_id));
+      if (selectedSub) {
+        setValue('categoria_id', String(selectedSub.categoria_id));
+        
+        // NOVIDADE: Auto-preenche a grade baseada na subcategoria selecionada!
+        const currentGrid = getValues('grade_id');
+        if (((!isEditMode && !isDuplicateMode) || hasInitialized.current) && selectedSub.grade_id) {
+           if (String(currentGrid) !== String(selectedSub.grade_id)) {
+               setValue('grade_id', String(selectedSub.grade_id), { shouldValidate: true });
+           }
+        }
+      }
     }
-  }, [selectedSubcategoryId, allSubcategories, setValue]);
+  }, [selectedSubcategoryId, allSubcategories, setValue, isEditMode, isDuplicateMode, getValues]);
 
   useEffect(() => {
-    // Só busca dados fiscais se for produto novo OU se o usuário alterou a subcategoria manualmente após a tela carregar
     const shouldFill = (!isEditMode && !isDuplicateMode) || (hasInitialized.current && !watch('ncm'));
     if (selectedSubcategoryId && shouldFill) {
       api.get(`/subcategorias/${selectedSubcategoryId}/fiscal`).then(response => {
@@ -192,7 +198,6 @@ export function NewProductPage() {
     if (!data.variacoes || data.variacoes.length === 0) return toast.error('Adicione pelo menos uma variação na grade.');
     if (data.variacoes?.some((v: any) => !v.sku && !v.codigo_barras)) return toast.error('Toda variação precisa de SKU ou Cód. Barras.');
 
-    // Segurança final: Verifica se há SKUs repetidos vazando
     const skus = data.variacoes.map((v: any) => v.sku?.trim().toUpperCase()).filter(Boolean);
     if (new Set(skus).size !== skus.length) return toast.error('Existem SKUs repetidos na grade do produto. Corrija os erros em vermelho.');
 
@@ -276,8 +281,8 @@ export function NewProductPage() {
 
           <FiscalSection />
           
-          <input type="hidden" {...register('ncm')} />
-          <input type="hidden" {...register('cfop_padrao')} />
+          <input type="hidden" {...methods.register('ncm')} />
+          <input type="hidden" {...methods.register('cfop_padrao')} />
         </div>
       </form>
     </FormProvider>

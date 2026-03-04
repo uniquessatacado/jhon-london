@@ -1,5 +1,5 @@
 import { useMemo, useEffect, useRef } from 'react';
-import { useFormContext, useFieldArray, Controller } from 'react-hook-form';
+import { useFormContext, useFieldArray } from 'react-hook-form';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -42,16 +42,13 @@ export function FinancialSection({ grids, globalAtacadoMin, isEditMode, isDuplic
     const currentSizes = composicaoFields.map((v:any) => v.tamanho);
     const newSizes = gradeAtacadoObj.tamanhos.map(t => t.tamanho);
 
-    // Se estivermos editando e for a grade que veio do banco de dados:
     if ((isEditMode || isDuplicateMode) && String(gradeAtacadoObj.id) === initialGradeAtacadoIdRef.current) {
-        // Se o banco trouxe VAZIO (ou seja, tabela não ia renderizar), nós forçamos a criar as linhas zeradas!
         if (currentSizes.length === 0) {
             replace(gradeAtacadoObj.tamanhos.map(t => ({ tamanho: t.tamanho, quantidade: 0 })));
         }
-        return; // Retorna para não apagar dados legítimos salvos
+        return; 
     }
     
-    // Se o usuário mudou a grade, atualiza a tabela com quantidade padrão = 1
     if (JSON.stringify(currentSizes) !== JSON.stringify(newSizes)) {
         replace(gradeAtacadoObj.tamanhos.map(t => ({ tamanho: t.tamanho, quantidade: 1 })));
     }
@@ -83,7 +80,6 @@ export function FinancialSection({ grids, globalAtacadoMin, isEditMode, isDuplic
         
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* ATACADO GERAL */}
             <div className={`p-5 rounded-xl border transition-all ${habilitaAtacadoGeral ? 'bg-emerald-500/5 border-emerald-500/30' : 'bg-white/5 border-white/10'}`}>
               <div className="flex justify-between items-start mb-4">
                 <div>
@@ -106,7 +102,6 @@ export function FinancialSection({ grids, globalAtacadoMin, isEditMode, isDuplic
               )}
             </div>
 
-            {/* ATACADO GRADE */}
             <div className={`p-5 rounded-xl border transition-all ${habilitaAtacadoGrade ? 'bg-purple-500/5 border-purple-500/30' : 'bg-white/5 border-white/10'}`}>
               <div className="flex justify-between items-start mb-4">
                 <div>
@@ -120,16 +115,10 @@ export function FinancialSection({ grids, globalAtacadoMin, isEditMode, isDuplic
                   
                   <div className="grid gap-2">
                     <Label>Selecione a Grade do Pacote</Label>
-                    <Controller
-                      name="grade_atacado_id"
-                      control={control}
-                      render={({ field }) => (
-                        <Select onValueChange={field.onChange} value={field.value ? String(field.value) : undefined}>
-                          <SelectTrigger className="bg-black/40 border-white/10 h-12"><SelectValue placeholder="Selecione a grade..." /></SelectTrigger>
-                          <SelectContent>{grids?.map(g => <SelectItem key={g.id} value={String(g.id)}>{g.nome}</SelectItem>)}</SelectContent>
-                        </Select>
-                      )}
-                    />
+                    <Select onValueChange={(v) => setValue('grade_atacado_id', v)} value={selectedGradeAtacadoId ? String(selectedGradeAtacadoId) : undefined}>
+                      <SelectTrigger className="bg-black/40 border-white/10 h-12"><SelectValue placeholder="Selecione a grade..." /></SelectTrigger>
+                      <SelectContent>{grids?.map(g => <SelectItem key={g.id} value={String(g.id)}>{g.nome}</SelectItem>)}</SelectContent>
+                    </Select>
                   </div>
 
                   <div className="grid gap-2">

@@ -31,7 +31,7 @@ export function NewProductPage() {
   const fetchId = id || duplicateId;
   
   const methods = useForm<any>({
-    mode: 'onChange', // Fundamental para destravar validação contínua (como bloqueio de erros de SKU)
+    mode: 'onChange', 
     defaultValues: {
       variacoes: [],
       composicao_atacado: [], 
@@ -49,9 +49,8 @@ export function NewProductPage() {
     }
   });
 
-  const { watch, setValue, reset, handleSubmit, formState: { isSubmitting, errors } } = methods;
+  const { watch, setValue, reset, handleSubmit, getValues, formState: { isSubmitting, errors } } = methods;
   
-  // Queries de tabelas auxiliares
   const { data: categories, isLoading: isLoadingCats } = useCategories();
   const { data: brands, isLoading: isLoadingBrands } = useBrands();
   const { data: grids, isLoading: isLoadingGrids } = useGrids();
@@ -59,8 +58,6 @@ export function NewProductPage() {
   
   const { mutate: createProduct, isPending: isCreating } = useCreateProduct();
   const { mutate: updateProduct, isPending: isUpdating } = useUpdateProduct();
-  
-  // Carrega os dados do produto sendo editado/duplicado
   const { data: productData, isLoading: isLoadingData } = useProductDetails(fetchId || undefined);
 
   const [globalAtacadoMin, setGlobalAtacadoMin] = useState('10');
@@ -75,24 +72,27 @@ export function NewProductPage() {
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [videoPreview, setVideoPreview] = useState<string | null>(null);
 
-  // Carrega configs globais
   useEffect(() => {
     api.get('/configuracoes/qtd_minima_atacado_geral')
       .then(res => setGlobalAtacadoMin(res.data?.valor || '10'))
       .catch(() => console.error("Failed to fetch global wholesale minimum quantity."));
   }, []);
 
-  // CARREGAMENTO SEGURO DA EDIÇÃO: Aguarda TODAS as dependências antes de injetar os dados no form.
+  // CARREGAMENTO SEGURO DA EDIÇÃO: Aguarda TODAS as dependências
   useEffect(() => {
-    // Se ainda está carregando o produto ou qualquer tabela auxiliar, pausa a injeção.
     if (!productData || isLoadingCats || isLoadingSubs || isLoadingBrands || isLoadingGrids || hasInitialized.current) {
       return; 
     }
 
-    let categoryId = productData.categoria_id;
-    if (!categoryId && productData.subcategoria_id) {
-      const sub = allSubcategories?.find(s => s.id === productData.subcategoria_id);
-      if (sub) categoryId = sub.categoria_id;
+    let categoryId = productData.categoria_id?.toString() || '';
+    const subcategoryId = productData.subcategoria_id?.toString() || '';
+    const brandId = productData.marca_id?.toString() || '';
+    const gridId = productData.grade_id?.toString() || '';
+    const gradeAtacadoId = productData.grade_atacado_id?.toString() || '';
+
+    if (!categoryId && subcategoryId) {
+      const sub = allSubcategories?.find(s => String(s.id) === subcategoryId);
+      if (sub) categoryId = String(sub.categoria_id);
     }
 
     const variacoesComDimensoes = productData.variacoes?.map(v => {
@@ -110,15 +110,25 @@ export function NewProductPage() {
       };
     }) || [];
 
-    // Prepara o objeto com tipagem 100% igual à exigida pelo Select Component (strings)
-    const formData = {
+    // 1. Setar IMEDIATAMENTE nos estados locais do React Hook Form
+    setValue('categoria_id', categoryId);
+    setValue('marca_id', brandId);
+    setValue('grade_id', gridId);
+    setValue('grade_atacado_id', gradeAtacadoId);
+
+    // Para subcategoria: como já carregamos "allSubcategories", um pequeno delay garante o render da árvore
+    setTimeout(() => {
+      setValue('subcategoria_id', subcategoryId);
+    }, 50);
+
+    // 2. Preencher os dados normais
+    reset({
       nome: isDuplicateMode ? `${productData.nome} - Cópia` : productData.nome,
-      categoria_id: categoryId ? String(categoryId) : '',
-      subcategoria_id: productData.subcategoria_id ? String(productData.subcategoria_id) : '',
-      marca_id: productData.marca_id ? String(productData.marca_id) : '',
-      grade_id: productData.grade_id ? String(productData.grade_id) : '',
-      grade_atacado_id: productData.grade_atacado_id ? String(productData.grade_atacado_id) : '',
-      
+      categoria_id: categoryId,
+      subcategoria_id: subcategoryId,
+      marca_id: brandId,
+      grade_id: gridId,
+      grade_atacado_id: gradeAtacadoId,
       ncm: productData.ncm,
       cfop_padrao: productData.cfop_padrao,
       cst_icms: productData.cst_icms,
@@ -134,12 +144,9 @@ export function NewProductPage() {
       composicao_atacado: typeof productData.composicao_atacado_grade === 'string' 
         ? JSON.parse(productData.composicao_atacado_grade || "[]") 
         : (productData.composicao_atacado_grade || [])
-    };
+    });
     
-    // Injeta tudo de uma vez. O React Hook Form atualizará os Selects imediatamente
-    reset(formData);
-    
-    // Carrega Imagens / Vídeo
+    // Imagens / Vídeo
     if (!isDuplicateMode) {
       if (productData.imagem_principal) setMainImagePreview(productData.imagem_principal.startsWith('http') ? productData.imagem_principal : `${mediaBaseUrl}${productData.imagem_principal}`);
       if (productData.imagens_galeria?.length) {
@@ -154,36 +161,48 @@ export function NewProductPage() {
     }
 
     hasInitialized.current = true;
-  }, [productData, isLoadingCats, isLoadingSubs, isLoadingBrands, isLoadingGrids, allSubcategories, reset, isDuplicateMode]);
+  }, [productData, isLoadingCats, isLoadingSubs, isLoadingBrands, isLoadingGrids, allSubcategories, reset, isDuplicateMode, setValue]);
 
   const selectedSubcategoryId = watch('subcategoria_id');
 
-  // Autopreenchimento Inteligente (Apenas para novos produtos ou alterações feitas pelo usuário)
+  // Autopreenchimento Inteligente (Dispara quando o usuário altera a subcategoria)
   useEffect(() => {
-    if (selectedSubcategoryId && allSubcategories && (!isEditMode && !isDuplicateMode || hasInitialized.current)) {
+    if (selectedSubcategoryId && allSubcategories) {
       const selectedSub = allSubcategories.find(sub => String(sub.id) === String(selectedSubcategoryId));
       if (selectedSub) {
-        setValue('categoria_id', String(selectedSub.categoria_id), { shouldValidate: true });
+        setValue('categoria_id', String(selectedSub.categoria_id));
         
-        // Puxa NCM e Fiscal
-        api.get(`/subcategorias/${selectedSubcategoryId}/fiscal`).then(response => {
-          const fiscalData = response.data;
-          if (fiscalData) {
-            if (!watch('ncm')) setValue('ncm', fiscalData.ncm);
-            if (!watch('cfop_padrao')) setValue('cfop_padrao', fiscalData.cfop_padrao);
-            if (!watch('cst_icms')) setValue('cst_icms', fiscalData.cst_icms);
-            if (!watch('origem')) setValue('origem', fiscalData.origem);
-            if (!watch('unidade_medida')) setValue('unidade_medida', fiscalData.unidade_medida);
-          }
-        }).catch(() => null);
+        // Evita reescrever a Grade na primeira abertura do Edição
+        const isManualChange = hasInitialized.current && String(selectedSubcategoryId) !== String(productData?.subcategoria_id);
+        
+        if (!isEditMode && !isDuplicateMode || isManualChange) {
+           const currentGrid = getValues('grade_id');
+           if (selectedSub.grade_id && String(currentGrid) !== String(selectedSub.grade_id)) {
+               setValue('grade_id', String(selectedSub.grade_id), { shouldValidate: true });
+           }
+           
+           api.get(`/subcategorias/${selectedSubcategoryId}/fiscal`).then(response => {
+             const fiscalData = response.data;
+             if (fiscalData) {
+               setValue('ncm', fiscalData.ncm);
+               setValue('cfop_padrao', fiscalData.cfop_padrao);
+               setValue('cst_icms', fiscalData.cst_icms);
+               setValue('origem', fiscalData.origem);
+               setValue('unidade_medida', fiscalData.unidade_medida);
+             }
+           }).catch(() => null);
+        }
       }
     }
-  }, [selectedSubcategoryId, allSubcategories, setValue, isEditMode, isDuplicateMode, watch]);
+  }, [selectedSubcategoryId, allSubcategories, setValue, isEditMode, isDuplicateMode, getValues, productData]);
 
   const onSubmit = (data: any) => {
     if (!data.nome || !data.grade_id || !data.subcategoria_id || !data.marca_id) return toast.error('Preencha todos os campos obrigatórios da Identificação.');
     if (!data.variacoes || data.variacoes.length === 0) return toast.error('Adicione pelo menos uma variação na grade.');
     if (data.variacoes?.some((v: any) => !v.sku && !v.codigo_barras)) return toast.error('Toda variação precisa de SKU ou Cód. Barras.');
+
+    const skus = data.variacoes.map((v: any) => v.sku?.trim().toUpperCase()).filter(Boolean);
+    if (new Set(skus).size !== skus.length) return toast.error('Existem SKUs repetidos na grade do produto. Corrija os erros em vermelho.');
 
     const payload = { 
       ...data, 
@@ -198,11 +217,10 @@ export function NewProductPage() {
   
   const isSaving = isCreating || isUpdating;
 
-  // Trava o carregamento da página inteira até que todas as tabelas e dados do produto estejam prontos
+  // Trava a tela enquanto o banco estiver processando as categorias
   const isPageLoading = isLoadingCats || isLoadingBrands || isLoadingGrids || isLoadingSubs || ((isEditMode || isDuplicateMode) && isLoadingData);
   if (isPageLoading) return <div className="flex h-[80vh] items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-emerald-500" /></div>;
 
-  // Desabilita o botão Salvar se houver QUALQUER erro detectado (incluindo o retorno da API de SKU duplicado injetado via setError)
   const hasValidationErrors = Object.keys(errors).length > 0;
 
   return (

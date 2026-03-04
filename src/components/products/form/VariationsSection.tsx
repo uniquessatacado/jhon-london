@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useFormContext, useFieldArray } from 'react-hook-form';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -9,10 +9,13 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Grid as GridIcon, Ruler } from 'lucide-react';
 import { useMediaQuery } from '@/hooks/use-media-query';
+import { Grid } from '@/types';
 
 interface VariationsSectionProps {
   isEditMode: boolean;
+  isDuplicateMode: boolean;
   duplicateCheck: { allDuplicateSkus: string[], allDuplicateEans: string[] };
+  grids?: Grid[];
 }
 
 const MobileVariationCard = ({ field, currentVariation, index, register, duplicateCheck, onEditDimensions, isEditMode }: any) => {
@@ -53,28 +56,64 @@ const MobileVariationCard = ({ field, currentVariation, index, register, duplica
   );
 };
 
-export function VariationsSection({ isEditMode, duplicateCheck }: VariationsSectionProps) {
+export function VariationsSection({ isEditMode, isDuplicateMode, duplicateCheck, grids }: VariationsSectionProps) {
   const { register, control, watch, setValue } = useFormContext<any>();
-  const { fields: variacaoFields } = useFieldArray({ control, name: "variacoes" });
+  const { fields: variacaoFields, replace } = useFieldArray({ control, name: "variacoes" });
   const isMobile = useMediaQuery('(max-width: 768px)');
   
   const [bulkStockQty, setBulkStockQty] = useState('');
   const [editingDimensionsIndex, setEditingDimensionsIndex] = useState<number | null>(null);
 
   const variacoesValues = watch('variacoes') || [];
+  const selectedGridId = watch('grade_id');
+  const initialGridIdRef = useRef<string | null>(null);
+
+  // Memoriza o objeto da grade selecionada
+  const selectedGridObj = useMemo(() => grids?.find(g => String(g.id) === String(selectedGridId)), [grids, selectedGridId]);
+
+  // Captura o ID da grade inicial vindo do banco de dados (para não apagar os dados ao abrir a edição)
+  useEffect(() => {
+    if ((isEditMode || isDuplicateMode) && selectedGridId && !initialGridIdRef.current) {
+        initialGridIdRef.current = String(selectedGridId);
+    }
+  }, [selectedGridId, isEditMode, isDuplicateMode]);
+
+  // Lógica de preenchimento automático das variações quando a grade muda
+  useEffect(() => {
+    if (!selectedGridObj) return;
+
+    // Proteção de dados: se estiver editando e a grade for a mesma que veio do banco, não substitua.
+    if ((isEditMode || isDuplicateMode) && String(selectedGridObj.id) === initialGridIdRef.current) {
+        return;
+    }
+
+    const currentSizes = variacaoFields.map((v:any) => v.tamanho);
+    const newSizes = selectedGridObj.tamanhos.map(t => t.tamanho);
+
+    // Se os tamanhos na tabela forem diferentes da nova grade selecionada, refaz a tabela!
+    if (JSON.stringify(currentSizes) !== JSON.stringify(newSizes)) {
+        replace(selectedGridObj.tamanhos.map(t => ({
+            tamanho: t.tamanho, 
+            estoque: 0, 
+            sku: '', 
+            codigo_barras: '', 
+            peso_kg: t.peso_kg || 0, 
+            altura_cm: t.altura_cm || 0, 
+            largura_cm: t.largura_cm || 0, 
+            comprimento_cm: t.comprimento_cm || 0,
+        })));
+    }
+  }, [selectedGridObj, isEditMode, isDuplicateMode, replace, variacaoFields]);
 
   const handleApplyBulkStock = () => {
     const qty = Number(bulkStockQty);
     if (isNaN(qty) || bulkStockQty === '') return;
-    const currentVariations = watch('variacoes');
-    const updatedVariations = currentVariations.map((v: any) => ({
-        ...v,
-        estoque: qty
-    }));
+    const updatedVariations = variacoesValues.map((v: any) => ({ ...v, estoque: qty }));
     setValue('variacoes', updatedVariations);
     setBulkStockQty('');
   };
 
+  // Se não houver campos ainda (por ex: grade não selecionada), oculta o bloco.
   if (variacaoFields.length === 0) return null;
 
   return (

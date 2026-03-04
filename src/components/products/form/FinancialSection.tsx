@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useEffect, useRef } from 'react';
 import { useFormContext, useFieldArray, Controller } from 'react-hook-form';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -13,11 +13,13 @@ import { Grid } from '@/types';
 interface FinancialSectionProps {
   grids?: Grid[];
   globalAtacadoMin: string;
+  isEditMode: boolean;
+  isDuplicateMode: boolean;
 }
 
-export function FinancialSection({ grids, globalAtacadoMin }: FinancialSectionProps) {
+export function FinancialSection({ grids, globalAtacadoMin, isEditMode, isDuplicateMode }: FinancialSectionProps) {
   const { register, control, watch, setValue } = useFormContext<any>();
-  const { fields: composicaoFields } = useFieldArray({ control, name: "composicao_atacado" });
+  const { fields: composicaoFields, replace } = useFieldArray({ control, name: "composicao_atacado" });
 
   const habilitaAtacadoGeral = watch('habilita_atacado_geral');
   const habilitaAtacadoGrade = watch('habilita_atacado_grade');
@@ -26,6 +28,31 @@ export function FinancialSection({ grids, globalAtacadoMin }: FinancialSectionPr
   const composicaoAtacadoValues = watch('composicao_atacado') || [];
 
   const gradeAtacadoObj = useMemo(() => grids?.find(g => String(g.id) === String(selectedGradeAtacadoId)), [grids, selectedGradeAtacadoId]);
+  const initialGradeAtacadoIdRef = useRef<string | null>(null);
+
+  // Captura a grade de atacado inicial
+  useEffect(() => {
+    if ((isEditMode || isDuplicateMode) && selectedGradeAtacadoId && !initialGradeAtacadoIdRef.current) {
+        initialGradeAtacadoIdRef.current = String(selectedGradeAtacadoId);
+    }
+  }, [selectedGradeAtacadoId, isEditMode, isDuplicateMode]);
+
+  // Auto-preenchimento da tabela de composição (Atacado Fechado)
+  useEffect(() => {
+    if (!gradeAtacadoObj) return;
+
+    // Proteção para não apagar a composição editada vinda do banco de dados na montagem
+    if ((isEditMode || isDuplicateMode) && String(gradeAtacadoObj.id) === initialGradeAtacadoIdRef.current) {
+        return;
+    }
+
+    const currentSizes = composicaoFields.map((v:any) => v.tamanho);
+    const newSizes = gradeAtacadoObj.tamanhos.map(t => t.tamanho);
+    
+    if (JSON.stringify(currentSizes) !== JSON.stringify(newSizes)) {
+        replace(gradeAtacadoObj.tamanhos.map(t => ({ tamanho: t.tamanho, quantidade: 1 })));
+    }
+  }, [gradeAtacadoObj, isEditMode, isDuplicateMode, replace, composicaoFields]);
 
   // Total do Pacote (Grade Fechada) = Total de Peças * Preço Unitário Exclusivo da Grade
   const totalPecasPacote = composicaoAtacadoValues?.reduce((acc: number, curr: any) => acc + (Number(curr?.quantidade) || 0), 0) || 0;
@@ -151,7 +178,7 @@ export function FinancialSection({ grids, globalAtacadoMin }: FinancialSectionPr
                         <span className="text-purple-400 text-xl">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valorTotalPacote)}</span>
                       </div>
                       <p className="text-[10px] text-muted-foreground text-right mt-1 opacity-70">
-                        Preço Unitário (Grade) × Total de Peças
+                        Calculado como: Preço Unitário × Total de Peças
                       </p>
                     </div>
                   )}

@@ -96,8 +96,6 @@ export function NewProductPage() {
     }
   }, [allProducts, isEditMode, id]);
 
-  // Aguarda todos os arrays base (categories, brands, subcategories, grids) estarem carregados
-  // para evitar resetar o formulário com dados e eles não aparecerem nos Selects
   useEffect(() => {
     if (productData && allSubcategories && brands && grids && categories) {
       let categoryId = productData.categoria_id;
@@ -120,7 +118,7 @@ export function NewProductPage() {
         };
       }) || [];
 
-      reset({
+      const formData = {
         nome: isDuplicateMode ? `${productData.nome} - Cópia` : productData.nome,
         grade_id: productData.grade_id ? String(productData.grade_id) : '',
         categoria_id: categoryId ? String(categoryId) : '',
@@ -142,7 +140,9 @@ export function NewProductPage() {
         composicao_atacado: typeof productData.composicao_atacado_grade === 'string' 
           ? JSON.parse(productData.composicao_atacado_grade || "[]") 
           : (productData.composicao_atacado_grade || [])
-      });
+      };
+      
+      reset(formData);
       
       if (!isDuplicateMode) {
         if (productData.imagem_principal) setMainImagePreview(productData.imagem_principal.startsWith('http') ? productData.imagem_principal : `${mediaBaseUrl}${productData.imagem_principal}`);
@@ -255,16 +255,18 @@ export function NewProductPage() {
             grids={grids} 
           />
           
-          {selectedGridId && (
-            <VariationsSection 
-              isEditMode={isEditMode} 
-              duplicateCheck={duplicateCheck} 
-            />
-          )}
+          <VariationsSection 
+            isEditMode={isEditMode} 
+            isDuplicateMode={isDuplicateMode}
+            duplicateCheck={duplicateCheck} 
+            grids={grids}
+          />
 
           <FinancialSection 
             grids={grids} 
             globalAtacadoMin={globalAtacadoMin} 
+            isEditMode={isEditMode}
+            isDuplicateMode={isDuplicateMode}
           />
 
           <MediaSection 

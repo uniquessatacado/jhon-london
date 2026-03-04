@@ -7,9 +7,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, Tag, FolderTree, ArrowRight, Trash2, Pencil, Grid as GridIcon } from 'lucide-react';
+import { PlusCircle, Tag, FolderTree, ArrowRight, Pencil, Grid as GridIcon } from 'lucide-react';
 import { useCategories, useSubcategories } from '@/hooks/use-categories';
-import { useCreateCategory, useDeleteCategory, useCreateSubcategory, useUpdateSubcategory } from '@/hooks/use-category-mutations';
+import { useCreateCategory, useCreateSubcategory, useUpdateSubcategory } from '@/hooks/use-category-mutations';
 import { useGrids } from '@/hooks/use-grids';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Category, Subcategory } from '@/types';
@@ -20,30 +20,25 @@ import { toast } from 'sonner';
 export function CategoryPage() {
   const queryClient = useQueryClient();
 
-  // Hooks de Dados
   const { data: categories, isLoading: isLoadingCats } = useCategories();
   const { data: grids } = useGrids();
   
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const { data: subcategories, isLoading: isLoadingSubs } = useSubcategories(selectedCategory?.id || null);
 
-  // Hooks de Mutação
   const { mutate: createCategory, isPending: isCreatingCat } = useCreateCategory();
   const { mutate: createSubcategory, isPending: isCreatingSub } = useCreateSubcategory();
   const { mutate: updateSubcategory, isPending: isUpdatingSub } = useUpdateSubcategory();
 
-  // Estados de UI
   const [isCatDialogOpen, setIsCatDialogOpen] = useState(false);
   const [isSubDialogOpen, setIsSubDialogOpen] = useState(false);
   const [editingSub, setEditingSub] = useState<Subcategory | null>(null);
 
-  // Forms
   const { register: registerCat, handleSubmit: handleCatSubmit, reset: resetCat } = useForm<{ nome: string }>();
   const { register: registerSub, handleSubmit: handleSubSubmit, reset: resetSub, setValue: setSubValue, watch: watchSub } = useForm<Subcategory>();
 
   const watchedSubGradeId = watchSub('grade_id');
 
-  // Handlers
   const onCatSubmit = (data: { nome: string }) => {
     createCategory(data, {
       onSuccess: () => {
@@ -56,7 +51,6 @@ export function CategoryPage() {
   const handleOpenSubDialog = (sub: Subcategory | null = null) => {
     if (sub) {
         setEditingSub(sub);
-        // Preencher form
         setSubValue('nome', sub.nome);
         setSubValue('ncm', sub.ncm);
         setSubValue('cfop_padrao', sub.cfop_padrao);
@@ -67,7 +61,6 @@ export function CategoryPage() {
     } else {
         setEditingSub(null);
         resetSub();
-        // Defaults
         setSubValue('cfop_padrao', '');
         setSubValue('cst_icms', '');
         setSubValue('origem', '');
@@ -125,37 +118,38 @@ export function CategoryPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 h-full min-h-0">
         
         {/* COLUNA ESQUERDA: CATEGORIAS */}
-        <Card className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl border-white/10 flex flex-col h-full">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Tag className="h-4 w-4 text-emerald-500" /> Categorias
+        <Card className="bg-black/20 border-white/10 flex flex-col h-full shadow-lg">
+          <CardHeader className="flex flex-row items-center justify-between pb-4 border-b border-white/5">
+            <CardTitle className="text-lg flex items-center gap-2 text-white">
+              <Tag className="h-5 w-5 text-emerald-500" /> Categorias
             </CardTitle>
-            <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => setIsCatDialogOpen(true)}>
+            <Button size="sm" variant="ghost" className="h-8 w-8 p-0 hover:bg-white/10 text-emerald-400" onClick={() => setIsCatDialogOpen(true)}>
               <PlusCircle className="h-5 w-5" />
             </Button>
           </CardHeader>
           <CardContent className="flex-1 overflow-hidden p-0">
-            <ScrollArea className="h-full px-4 pb-4">
+            <ScrollArea className="h-full px-4 py-4">
               {isLoadingCats ? (
-                <div className="space-y-2 pt-2">
-                  <Skeleton className="h-10 w-full" />
-                  <Skeleton className="h-10 w-full" />
-                  <Skeleton className="h-10 w-full" />
+                <div className="space-y-2">
+                  <Skeleton className="h-12 w-full bg-white/5 rounded-xl" />
+                  <Skeleton className="h-12 w-full bg-white/5 rounded-xl" />
                 </div>
+              ) : categories?.length === 0 ? (
+                <div className="text-center text-muted-foreground mt-10">Nenhuma categoria.</div>
               ) : (
-                <div className="space-y-1 pt-2">
+                <div className="space-y-2">
                   {categories?.map(cat => (
                     <div 
                       key={cat.id}
                       onClick={() => setSelectedCategory(cat)}
-                      className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-all ${
+                      className={`flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all border ${
                         selectedCategory?.id === cat.id 
-                          ? 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 font-medium' 
-                          : 'hover:bg-white/5 border border-transparent hover:border-white/10'
+                          ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 font-bold shadow-sm' 
+                          : 'bg-white/5 border-transparent hover:border-white/10 text-white'
                       }`}
                     >
                       <span className="truncate">{cat.nome}</span>
-                      {selectedCategory?.id === cat.id && <ArrowRight className="h-4 w-4 opacity-50" />}
+                      {selectedCategory?.id === cat.id && <ArrowRight className="h-4 w-4" />}
                     </div>
                   ))}
                 </div>
@@ -165,19 +159,19 @@ export function CategoryPage() {
         </Card>
 
         {/* COLUNA DIREITA: SUBCATEGORIAS */}
-        <Card className="col-span-1 md:col-span-2 bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl border-white/10 flex flex-col h-full">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 border-b border-white/5">
+        <Card className="col-span-1 md:col-span-2 bg-black/20 border-white/10 flex flex-col h-full shadow-lg">
+          <CardHeader className="flex flex-row items-center justify-between pb-4 border-b border-white/5">
             <div>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <FolderTree className="h-4 w-4 text-emerald-500" /> 
+              <CardTitle className="text-lg flex items-center gap-2 text-white">
+                <FolderTree className="h-5 w-5 text-emerald-500" /> 
                 {selectedCategory ? `Subcategorias de: ${selectedCategory.nome}` : 'Selecione uma Categoria'}
               </CardTitle>
               {selectedCategory && (
-                <CardDescription>Configure os dados fiscais padrão para esta linha.</CardDescription>
+                <CardDescription>Configure os dados fiscais padrão para esta linha de produtos.</CardDescription>
               )}
             </div>
             {selectedCategory && (
-              <Button size="sm" className="bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border border-emerald-500/30" onClick={() => handleOpenSubDialog()}>
+              <Button size="sm" className="bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20" onClick={() => handleOpenSubDialog()}>
                 <PlusCircle className="mr-2 h-4 w-4" /> Nova Subcategoria
               </Button>
             )}
@@ -185,33 +179,33 @@ export function CategoryPage() {
           <CardContent className="flex-1 overflow-hidden p-0">
             {!selectedCategory ? (
               <div className="h-full flex items-center justify-center text-muted-foreground flex-col gap-4">
-                <Tag className="h-12 w-12 opacity-20" />
+                <Tag className="h-16 w-16 opacity-20" />
                 <p>Selecione uma categoria à esquerda para ver suas subcategorias.</p>
               </div>
             ) : isLoadingSubs ? (
               <div className="p-4 space-y-4">
-                <Skeleton className="h-20 w-full" />
-                <Skeleton className="h-20 w-full" />
+                <Skeleton className="h-24 w-full bg-white/5 rounded-2xl" />
+                <Skeleton className="h-24 w-full bg-white/5 rounded-2xl" />
               </div>
             ) : subcategories?.length === 0 ? (
                <div className="h-full flex items-center justify-center text-muted-foreground flex-col gap-4">
-                <p>Nenhuma subcategoria encontrada.</p>
-                <Button variant="link" onClick={() => handleOpenSubDialog()}>Criar a primeira</Button>
+                <p>Nenhuma subcategoria encontrada nesta categoria.</p>
+                <Button variant="outline" className="border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10" onClick={() => handleOpenSubDialog()}>Criar a primeira</Button>
               </div>
             ) : (
               <ScrollArea className="h-full">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 p-4">
                   {subcategories?.map(sub => (
-                    <div key={sub.id} className="bg-white/5 border border-white/10 rounded-xl p-4 hover:border-emerald-500/30 transition-all group relative">
+                    <div key={sub.id} className="bg-white/5 border border-white/10 rounded-2xl p-5 hover:border-emerald-500/30 transition-all group relative">
                       <Button 
                          size="icon" 
                          variant="ghost" 
-                         className="absolute top-2 right-2 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white/10"
+                         className="absolute top-3 right-3 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 hover:bg-white/10 rounded-lg"
                          onClick={() => handleOpenSubDialog(sub)}
                       >
-                         <Pencil className="h-4 w-4 text-muted-foreground" />
+                         <Pencil className="h-4 w-4 text-emerald-400" />
                       </Button>
-                      <div className="flex items-start justify-between mb-2 pr-8">
+                      <div className="flex items-start justify-between mb-4 pr-10">
                         <div>
                             <h3 className="font-bold text-lg text-white">{sub.nome}</h3>
                             {sub.grade_id && (
@@ -221,25 +215,13 @@ export function CategoryPage() {
                                 </div>
                             )}
                         </div>
-                        <Badge variant="outline" className="text-xs font-mono">{sub.ncm}</Badge>
+                        <Badge variant="outline" className="bg-black/40 border-white/10 text-xs font-mono">{sub.ncm}</Badge>
                       </div>
-                      <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground mt-3">
-                        <div>
-                          <span className="block opacity-50">CFOP</span>
-                          <span className="text-foreground">{sub.cfop_padrao}</span>
-                        </div>
-                        <div>
-                          <span className="block opacity-50">CST/CSOSN</span>
-                          <span className="text-foreground">{sub.cst_icms}</span>
-                        </div>
-                        <div>
-                          <span className="block opacity-50">Origem</span>
-                          <span className="text-foreground">{sub.origem}</span>
-                        </div>
-                        <div>
-                          <span className="block opacity-50">Und.</span>
-                          <span className="text-foreground">{sub.unidade_medida}</span>
-                        </div>
+                      <div className="grid grid-cols-2 gap-y-3 gap-x-2 text-xs text-muted-foreground bg-black/40 p-3 rounded-xl border border-white/5">
+                        <div><span className="block opacity-60 mb-0.5">CFOP</span><span className="text-white font-medium">{sub.cfop_padrao}</span></div>
+                        <div><span className="block opacity-60 mb-0.5">CST/CSOSN</span><span className="text-white font-medium">{sub.cst_icms}</span></div>
+                        <div><span className="block opacity-60 mb-0.5">Origem</span><span className="text-white font-medium">{sub.origem}</span></div>
+                        <div><span className="block opacity-60 mb-0.5">Unidade</span><span className="text-white font-medium">{sub.unidade_medida}</span></div>
                       </div>
                     </div>
                   ))}
@@ -250,47 +232,43 @@ export function CategoryPage() {
         </Card>
       </div>
 
-      {/* DIALOG: Nova Categoria */}
       <Dialog open={isCatDialogOpen} onOpenChange={setIsCatDialogOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Nova Categoria</DialogTitle></DialogHeader>
-          <form onSubmit={handleCatSubmit(onCatSubmit)} className="space-y-4">
-            <div>
+        <DialogContent className="bg-zinc-950 border-white/10">
+          <DialogHeader><DialogTitle>Nova Categoria Principal</DialogTitle></DialogHeader>
+          <form onSubmit={handleCatSubmit(onCatSubmit)} className="space-y-6 pt-4">
+            <div className="space-y-2">
               <Label>Nome</Label>
-              <Input {...registerCat('nome', { required: true })} placeholder="Ex: Roupas" />
+              <Input {...registerCat('nome', { required: true })} placeholder="Ex: Roupas, Acessórios..." className="bg-black/40 border-white/10 h-12" />
             </div>
             <DialogFooter>
-              <Button type="submit" disabled={isCreatingCat}>Salvar</Button>
+              <Button type="button" variant="outline" className="bg-transparent border-white/10 hover:bg-white/5" onClick={() => setIsCatDialogOpen(false)}>Cancelar</Button>
+              <Button type="submit" disabled={isCreatingCat} className="bg-emerald-500 hover:bg-emerald-600 text-white">Salvar</Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
 
-      {/* DIALOG: Nova/Edit Subcategoria */}
       <Dialog open={isSubDialogOpen} onOpenChange={setIsSubDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl bg-zinc-950 border-white/10">
           <DialogHeader>
             <DialogTitle>{editingSub ? 'Editar Subcategoria' : 'Nova Subcategoria'}</DialogTitle>
-            <DialogDescription>Define a classificação fiscal e grade padrão.</DialogDescription>
+            <DialogDescription>Define a classificação fiscal e grade padrão. Produtos cadastrados aqui herdarão essas regras.</DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleSubSubmit(onSubSubmit)} className="space-y-4">
-            <div className="grid gap-4 py-4">
+          <form onSubmit={handleSubSubmit(onSubSubmit)} className="space-y-6 pt-4">
+            <div className="grid gap-6">
               <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-2">
+                <div className="space-y-2">
                     <Label htmlFor="nome">Nome da Subcategoria</Label>
-                    <Input id="nome" {...registerSub('nome', { required: true })} placeholder="Ex: Calça Jeans" />
+                    <Input id="nome" {...registerSub('nome', { required: true })} placeholder="Ex: Camisetas" className="bg-black/40 border-white/10 h-12" />
                 </div>
-                <div className="grid gap-2">
+                <div className="space-y-2">
                     <Label className="flex items-center gap-2">
                         <GridIcon className="h-3 w-3" /> Grade Padrão (Opcional)
                     </Label>
-                    <Select 
-                        onValueChange={(v) => setSubValue('grade_id', v === "null" ? null : Number(v))} 
-                        value={watchedSubGradeId ? String(watchedSubGradeId) : "null"}
-                    >
-                        <SelectTrigger><SelectValue placeholder="Nenhuma" /></SelectTrigger>
+                    <Select onValueChange={(v) => setSubValue('grade_id', v === "null" ? null : Number(v))} value={watchedSubGradeId ? String(watchedSubGradeId) : "null"}>
+                        <SelectTrigger className="bg-black/40 border-white/10 h-12"><SelectValue placeholder="Nenhuma" /></SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="null">Nenhuma</SelectItem>
+                            <SelectItem value="null">Deixar sem grade</SelectItem>
                             {grids?.map(g => (
                                 <SelectItem key={g.id} value={String(g.id)}>{g.nome}</SelectItem>
                             ))}
@@ -299,81 +277,71 @@ export function CategoryPage() {
                 </div>
               </div>
               
-              <div className="grid grid-cols-2 gap-4">
-                 <div className="grid gap-2">
-                  <Label htmlFor="ncm">NCM (8 dígitos)</Label>
-                  <Input id="ncm" {...registerSub('ncm', { required: true })} placeholder="00000000" />
-                  <p className="text-[10px] text-muted-foreground">Aceita pontos. Enviaremos apenas números.</p>
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="cfop">CFOP Padrão</Label>
-                   <Select 
-                        onValueChange={(v) => setSubValue('cfop_padrao', v)}
-                        defaultValue={editingSub?.cfop_padrao}
-                   >
-                    <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="5102">5102 - Venda Mercadoria</SelectItem>
-                      <SelectItem value="5405">5405 - Venda ST</SelectItem>
-                      <SelectItem value="6102">6102 - Venda Interestadual</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
+              <div className="p-4 rounded-xl border border-white/10 bg-white/5 space-y-4">
+                  <h4 className="font-semibold text-emerald-400 text-sm mb-2 uppercase tracking-wider">Regras Fiscais Padrão</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="ncm">NCM (8 dígitos)</Label>
+                      <Input id="ncm" {...registerSub('ncm', { required: true })} placeholder="00000000" className="bg-black/40 border-white/10 font-mono" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="cfop">CFOP Padrão</Label>
+                      <Select onValueChange={(v) => setSubValue('cfop_padrao', v)} defaultValue={editingSub?.cfop_padrao}>
+                        <SelectTrigger className="bg-black/40 border-white/10"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="5102">5102 - Venda Mercadoria</SelectItem>
+                          <SelectItem value="5405">5405 - Venda ST</SelectItem>
+                          <SelectItem value="6102">6102 - Venda Interestadual</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                 <div className="grid gap-2">
-                  <Label>CST/CSOSN</Label>
-                  <Select 
-                    onValueChange={(v) => setSubValue('cst_icms', v)}
-                    defaultValue={editingSub?.cst_icms}
-                  >
-                    <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="102">102 - Tributada SN</SelectItem>
-                      <SelectItem value="300">300 - Imune</SelectItem>
-                      <SelectItem value="400">400 - Não Tributada</SelectItem>
-                      <SelectItem value="00">00 - Tributada Integralmente</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid gap-2">
-                  <Label>Origem</Label>
-                  <Select 
-                    onValueChange={(v) => setSubValue('origem', v)}
-                    defaultValue={editingSub?.origem}
-                  >
-                    <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="0">0 - Nacional</SelectItem>
-                      <SelectItem value="1">1 - Estrangeira (Importação direta)</SelectItem>
-                      <SelectItem value="2">2 - Estrangeira (Adq. no mercado interno)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>CST / CSOSN</Label>
+                      <Select onValueChange={(v) => setSubValue('cst_icms', v)} defaultValue={editingSub?.cst_icms}>
+                        <SelectTrigger className="bg-black/40 border-white/10"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="102">102 - Tributada SN</SelectItem>
+                          <SelectItem value="300">300 - Imune</SelectItem>
+                          <SelectItem value="400">400 - Não Tributada</SelectItem>
+                          <SelectItem value="00">00 - Tributada Integralmente</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Origem da Mercadoria</Label>
+                      <Select onValueChange={(v) => setSubValue('origem', v)} defaultValue={editingSub?.origem}>
+                        <SelectTrigger className="bg-black/40 border-white/10"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="0">0 - Nacional</SelectItem>
+                          <SelectItem value="1">1 - Estrangeira (Importação direta)</SelectItem>
+                          <SelectItem value="2">2 - Estrangeira (Adq. no mercado interno)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
 
-               <div className="grid gap-2">
-                  <Label>Unidade de Medida</Label>
-                  <Select 
-                    onValueChange={(v) => setSubValue('unidade_medida', v)}
-                    defaultValue={editingSub?.unidade_medida}
-                  >
-                    <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="UN">UN - Unidade</SelectItem>
-                      <SelectItem value="KG">KG - Quilograma</SelectItem>
-                      <SelectItem value="MT">MT - Metro</SelectItem>
-                      <SelectItem value="CX">CX - Caixa</SelectItem>
-                      <SelectItem value="PC">PC - Peça</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                  <div className="grid gap-2">
+                      <Label>Unidade de Medida Comercial</Label>
+                      <Select onValueChange={(v) => setSubValue('unidade_medida', v)} defaultValue={editingSub?.unidade_medida}>
+                        <SelectTrigger className="bg-black/40 border-white/10"><SelectValue placeholder="Ex: UN, KG, PC" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="UN">UN - Unidade</SelectItem>
+                          <SelectItem value="KG">KG - Quilograma</SelectItem>
+                          <SelectItem value="MT">MT - Metro</SelectItem>
+                          <SelectItem value="CX">CX - Caixa</SelectItem>
+                          <SelectItem value="PC">PC - Peça</SelectItem>
+                        </SelectContent>
+                      </Select>
+                  </div>
+              </div>
             </div>
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsSubDialogOpen(false)}>Cancelar</Button>
-              <Button type="submit" disabled={isCreatingSub || isUpdatingSub}>
+              <Button type="button" variant="outline" className="bg-transparent border-white/10 hover:bg-white/5" onClick={() => setIsSubDialogOpen(false)}>Cancelar</Button>
+              <Button type="submit" disabled={isCreatingSub || isUpdatingSub} className="bg-emerald-500 hover:bg-emerald-600 text-white">
                   {editingSub ? 'Salvar Alterações' : 'Criar Subcategoria'}
               </Button>
             </DialogFooter>

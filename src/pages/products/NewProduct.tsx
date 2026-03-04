@@ -212,8 +212,6 @@ export function NewProductPage() {
   const habilitaAtacadoGrade = watch('habilita_atacado_grade');
   const usarPrecoUnico = watch('usar_preco_atacado_unico');
   const selectedGradeAtacadoId = watch('grade_atacado_id');
-  
-  // Lendo os preços exatos como digitados pelo usuário
   const precoAtacadoGeral = watch('preco_atacado_geral') || 0;
   const precoAtacadoGrade = watch('preco_atacado_grade') || 0;
   
@@ -283,12 +281,18 @@ export function NewProductPage() {
     }
   }, [selectedGradeAtacadoId, gradeAtacadoObj, replaceComposicao, composicaoAtacadoValues]);
 
+  // Sincroniza o valor de atacado grade se o toggle "usar preço único" estiver ativo
+  useEffect(() => {
+    if (usarPrecoUnico) {
+      setValue('preco_atacado_grade', precoAtacadoGeral);
+    }
+  }, [usarPrecoUnico, precoAtacadoGeral, setValue]);
+
   // CÁLCULO INDEPENDENTE DO PACOTE FECHADO
   const totalPecasPacote = composicaoAtacadoValues?.reduce((acc: number, curr: any) => acc + (Number(curr?.quantidade) || 0), 0) || 0;
   
-  // Se 'usarPrecoUnico' estiver ATIVO, usa o precoGeral. Se DESATIVADO, usa estritamente o precoGrade
-  const unitPriceForGradeCalc = usarPrecoUnico ? Number(precoAtacadoGeral) : Number(precoAtacadoGrade);
-  const valorTotalPacote = unitPriceForGradeCalc * totalPecasPacote;
+  // Agora usamos sempre o precoAtacadoGrade, que já vai estar com o valor certo (seja digitado manual ou sincronizado)
+  const valorTotalPacote = Number(precoAtacadoGrade) * totalPecasPacote;
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, setFile: Function, setPreview: Function, type: 'image' | 'video') => {
     const file = e.target.files?.[0];
@@ -464,7 +468,7 @@ export function NewProductPage() {
                         {habilitaAtacadoGeral && (
                           <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
                             <div className="grid gap-2">
-                              <Label>Preço Unitário {usarPrecoUnico ? '(Ambos)' : '(Geral)'}</Label>
+                              <Label>Preço Unitário {usarPrecoUnico ? '(Aplicado em Ambos)' : '(Avulso)'}</Label>
                               <Input type="number" step="0.01" {...register('preco_atacado_geral')} className="bg-black/40 border-white/10 h-12 text-lg font-bold text-emerald-400" placeholder="R$ 0,00" />
                             </div>
                             <div className="bg-black/40 p-3 rounded-lg border border-white/5">
@@ -501,12 +505,18 @@ export function NewProductPage() {
                               />
                             </div>
 
-                            {!usarPrecoUnico && (
-                              <div className="grid gap-2">
-                                <Label>Preço Unitário (Grade)</Label>
-                                <Input type="number" step="0.01" {...register('preco_atacado_grade')} className="bg-black/40 border-purple-500/30 h-12 text-lg font-bold text-purple-400" placeholder="R$ 0,00" />
-                              </div>
-                            )}
+                            <div className="grid gap-2">
+                              <Label>Preço Unitário (Grade)</Label>
+                              <Input 
+                                type="number" 
+                                step="0.01" 
+                                {...register('preco_atacado_grade')} 
+                                disabled={usarPrecoUnico}
+                                className={`bg-black/40 h-12 text-lg font-bold ${usarPrecoUnico ? 'border-white/10 text-purple-400/50' : 'border-purple-500/30 text-purple-400'}`} 
+                                placeholder="R$ 0,00" 
+                              />
+                              {usarPrecoUnico && <p className="text-[10px] text-purple-300/50">Valor sincronizado com o Atacado Geral</p>}
+                            </div>
 
                             {/* Tabela de composição (Visual e para quantificar) */}
                             {composicaoFields.length > 0 && (

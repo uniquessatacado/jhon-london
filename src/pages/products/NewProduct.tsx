@@ -76,9 +76,10 @@ export function NewProductPage() {
       .catch(() => console.error("Failed to fetch global wholesale minimum quantity."));
   }, []);
 
+  // ✅ BUG 1 CORRIGIDO: Só preenchemos o form DEPOIS que todas as listas (marcas, cats, grades) forem carregadas!
   useEffect(() => {
     if (isLoadingCats || isLoadingSubs || isLoadingBrands || isLoadingGrids || isLoadingData) {
-      return;
+      return; // Trava aqui enquanto estiver carregando
     }
 
     if (productData) {
@@ -92,7 +93,7 @@ export function NewProductPage() {
         const dim = productData.dimensoes_grade?.find(d => d.tamanho === v.tamanho);
         return {
           ...v,
-          id: v.id, // ID preservado para validar SKU na mesma variação
+          id: v.id,
           estoque: isDuplicateMode ? 0 : v.estoque,
           sku: isDuplicateMode ? '' : v.sku,
           codigo_barras: isDuplicateMode ? '' : v.codigo_barras,
@@ -177,12 +178,8 @@ export function NewProductPage() {
     if (!data.variacoes || data.variacoes.length === 0) return toast.error('Adicione pelo menos uma variação na grade.');
     if (data.variacoes?.some((v: any) => !v.sku && !v.codigo_barras)) return toast.error('Toda variação precisa de SKU ou Cód. Barras.');
 
-    // Verificação de segurança final antes de mandar pro back-end (Evita erro 500 caso escape visualmente)
     const skus = data.variacoes.map((v: any) => v.sku?.trim().toUpperCase()).filter(Boolean);
     if (new Set(skus).size !== skus.length) return toast.error('Existem SKUs repetidos na grade do produto. Corrija os erros em vermelho.');
-
-    const eans = data.variacoes.map((v: any) => v.codigo_barras?.trim().toUpperCase()).filter(Boolean);
-    if (new Set(eans).size !== eans.length) return toast.error('Existem Códigos de Barras repetidos na grade. Corrija os erros em vermelho.');
 
     const payload = { 
       ...data, 
@@ -197,6 +194,7 @@ export function NewProductPage() {
   
   const isSaving = isCreating || isUpdating;
 
+  // Tela de Loading para travar até as rotas carregarem
   const isPageLoading = isLoadingCats || isLoadingBrands || isLoadingGrids || isLoadingSubs || ((isEditMode || isDuplicateMode) && isLoadingData);
 
   if (isPageLoading) return <div className="flex h-[80vh] items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-emerald-500" /></div>;

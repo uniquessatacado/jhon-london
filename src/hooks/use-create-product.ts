@@ -4,7 +4,6 @@ import { Product } from '@/types';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 
-// DTO atualizado para suportar arquivos e os dois atacados separados
 export type ProductFormDTO = {
   id?: number; 
   nome: string;
@@ -23,24 +22,19 @@ export type ProductFormDTO = {
     comprimento_cm?: number;
   }[];
 
-  // Fiscal
   ncm: string;
   cfop_padrao: string;
   cst_icms: string;
   origem: string;
   unidade_medida: string;
 
-  // Financeiro
   preco_custo: number;
   preco_varejo: number;
   
-  // Atacado Geral
   habilita_atacado_geral: boolean;
   preco_atacado_geral: number;
   
-  // Atacado Grade
   habilita_atacado_grade: boolean;
-  usar_preco_atacado_unico: boolean;
   grade_atacado_id: string;
   preco_atacado_grade: number;
   qtd_minima_atacado_grade: number;
@@ -50,45 +44,34 @@ export type ProductFormDTO = {
     quantidade: number;
   }[];
 
-  // Arquivos
   imagem_principal_file?: File | null;
   imagens_galeria_files?: File[];
   video_file?: File | null;
-  
-  // Para manter imagens existentes em caso de update
   keep_images?: boolean; 
 };
 
-// Função auxiliar para montar o FormData
 const buildProductFormData = (formData: ProductFormDTO) => {
   const payload = new FormData();
 
-  // Campos Simples
   payload.append('nome', formData.nome);
   payload.append('grade_id', String(formData.grade_id));
   payload.append('subcategoria_id', String(formData.subcategoria_id));
   payload.append('marca_id', String(formData.marca_id));
   
-  // Fiscal
   payload.append('ncm', formData.ncm);
   payload.append('cfop_padrao', formData.cfop_padrao);
   payload.append('cst_icms', formData.cst_icms);
   payload.append('origem', formData.origem);
   payload.append('unidade_medida', formData.unidade_medida);
 
-  // Financeiro Varejo/Custo
   payload.append('preco_custo', String(Number(formData.preco_custo) || 0));
   payload.append('preco_varejo', String(Number(formData.preco_varejo) || 0));
   
-  // Controle de Preço Único
-  payload.append('usar_preco_atacado_unico', String(formData.usar_preco_atacado_unico));
-
-  // Atacado Geral
   payload.append('habilita_atacado_geral', String(formData.habilita_atacado_geral));
   payload.append('preco_atacado_geral', String(Number(formData.preco_atacado_geral) || 0));
   
-  // Atacado Grade
   payload.append('habilita_atacado_grade', String(formData.habilita_atacado_grade));
+  payload.append('preco_atacado_grade', String(Number(formData.preco_atacado_grade) || 0));
   payload.append('qtd_minima_atacado_grade', String(Number(formData.qtd_minima_atacado_grade) || 0));
   
   if (formData.grade_atacado_id && formData.grade_atacado_id !== "null") {
@@ -96,29 +79,19 @@ const buildProductFormData = (formData: ProductFormDTO) => {
   } else {
     payload.append('grade_atacado_id', '');
   }
-  
-  // Regra de negócio: Se "usar preço único" for true, replica o preco_geral para o preco_grade no backend.
-  const precoAtacadoGrade = formData.usar_preco_atacado_unico 
-        ? (Number(formData.preco_atacado_geral) || 0) 
-        : (Number(formData.preco_atacado_grade) || 0);
-  payload.append('preco_atacado_grade', String(precoAtacadoGrade));
 
-  // --- ARQUIVOS ---
   if (formData.imagem_principal_file) {
     payload.append('imagem_principal', formData.imagem_principal_file);
   }
-
   if (formData.video_file) {
     payload.append('video', formData.video_file);
   }
-
   if (formData.imagens_galeria_files && formData.imagens_galeria_files.length > 0) {
     formData.imagens_galeria_files.forEach((file) => {
       payload.append('imagens_galeria', file);
     });
   }
 
-  // --- OBJETOS COMPLEXOS (JSON Stringify) ---
   const variacoesJson = JSON.stringify(formData.variacoes?.map(v => ({
     tamanho: v.tamanho,
     estoque: Number(v.estoque) || 0,

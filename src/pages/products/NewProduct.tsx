@@ -14,7 +14,6 @@ import { toast } from 'sonner';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useMediaQuery } from '@/hooks/use-media-query';
 
-// Subcomponentes importados da estrutura modular
 import { IdentificationSection } from '@/components/products/form/IdentificationSection';
 import { VariationsSection } from '@/components/products/form/VariationsSection';
 import { FinancialSection } from '@/components/products/form/FinancialSection';
@@ -38,12 +37,15 @@ export function NewProductPage() {
       composicao_atacado: [], 
       habilita_atacado_geral: false,
       habilita_atacado_grade: false,
-      usar_preco_atacado_unico: true,
       preco_custo: 0,
       preco_varejo: 0,
       preco_atacado_geral: 0,
       preco_atacado_grade: 0,
       categoria_id: '',
+      subcategoria_id: '',
+      marca_id: '',
+      grade_id: '',
+      grade_atacado_id: ''
     }
   });
 
@@ -71,7 +73,6 @@ export function NewProductPage() {
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [videoPreview, setVideoPreview] = useState<string | null>(null);
 
-  // Efeitos e Buscas
   useEffect(() => {
     api.get('/configuracoes/qtd_minima_atacado_geral')
       .then(res => setGlobalAtacadoMin(res.data?.valor || '10'))
@@ -95,8 +96,10 @@ export function NewProductPage() {
     }
   }, [allProducts, isEditMode, id]);
 
+  // Aguarda todos os arrays base (categories, brands, subcategories, grids) estarem carregados
+  // para evitar resetar o formulário com dados e eles não aparecerem nos Selects
   useEffect(() => {
-    if (productData && allSubcategories && brands && grids) {
+    if (productData && allSubcategories && brands && grids && categories) {
       let categoryId = productData.categoria_id;
       if (!categoryId && productData.subcategoria_id) {
         const sub = allSubcategories.find(s => s.id === productData.subcategoria_id);
@@ -117,32 +120,29 @@ export function NewProductPage() {
         };
       }) || [];
 
-      const formData = {
+      reset({
         nome: isDuplicateMode ? `${productData.nome} - Cópia` : productData.nome,
-        grade_id: String(productData.grade_id || ''),
-        categoria_id: String(categoryId || ''),
-        subcategoria_id: String(productData.subcategoria_id || ''),
-        marca_id: String(productData.marca_id || ''),
+        grade_id: productData.grade_id ? String(productData.grade_id) : '',
+        categoria_id: categoryId ? String(categoryId) : '',
+        subcategoria_id: productData.subcategoria_id ? String(productData.subcategoria_id) : '',
+        marca_id: productData.marca_id ? String(productData.marca_id) : '',
         ncm: productData.ncm,
         cfop_padrao: productData.cfop_padrao,
         cst_icms: productData.cst_icms,
         origem: productData.origem,
         unidade_medida: productData.unidade_medida,
-        preco_custo: productData.preco_custo,
-        preco_varejo: productData.preco_varejo,
+        preco_custo: Number(productData.preco_custo) || 0,
+        preco_varejo: Number(productData.preco_varejo) || 0,
         habilita_atacado_geral: !!productData.habilita_atacado_geral, 
-        preco_atacado_geral: productData.preco_atacado_geral,
+        preco_atacado_geral: Number(productData.preco_atacado_geral) || 0,
         habilita_atacado_grade: !!productData.habilita_atacado_grade, 
-        usar_preco_atacado_unico: !!productData.usar_preco_atacado_unico, 
-        grade_atacado_id: String(productData.grade_atacado_id || ''),
-        preco_atacado_grade: productData.preco_atacado_grade,
+        grade_atacado_id: productData.grade_atacado_id ? String(productData.grade_atacado_id) : '',
+        preco_atacado_grade: Number(productData.preco_atacado_grade) || 0,
         variacoes: variacoesComDimensoes,
         composicao_atacado: typeof productData.composicao_atacado_grade === 'string' 
           ? JSON.parse(productData.composicao_atacado_grade || "[]") 
           : (productData.composicao_atacado_grade || [])
-      };
-      
-      reset(formData);
+      });
       
       if (!isDuplicateMode) {
         if (productData.imagem_principal) setMainImagePreview(productData.imagem_principal.startsWith('http') ? productData.imagem_principal : `${mediaBaseUrl}${productData.imagem_principal}`);
@@ -157,13 +157,11 @@ export function NewProductPage() {
         }
       }
     }
-  }, [productData, reset, isDuplicateMode, allSubcategories, brands, grids]);
+  }, [productData, reset, isDuplicateMode, allSubcategories, brands, grids, categories]);
 
   const variacoesValues = watch('variacoes') || [];
   const selectedSubcategoryId = watch('subcategoria_id');
   const selectedGridId = watch('grade_id');
-  const usarPrecoUnico = watch('usar_preco_atacado_unico');
-  const precoAtacadoGeral = watch('preco_atacado_geral');
 
   const duplicateCheck = useMemo(() => {
     const skusInForm = variacoesValues.map((v: any) => v.sku?.trim()).filter(Boolean);
@@ -200,12 +198,6 @@ export function NewProductPage() {
       }).catch(err => console.error(err));
     }
   }, [selectedSubcategoryId, setValue, isEditMode, isDuplicateMode, watch]);
-
-  useEffect(() => {
-    if (usarPrecoUnico) {
-      setValue('preco_atacado_grade', precoAtacadoGeral);
-    }
-  }, [usarPrecoUnico, precoAtacadoGeral, setValue]);
 
   const onSubmit = (data: any) => {
     if (!data.nome || !data.grade_id || !data.subcategoria_id || !data.marca_id) return toast.error('Preencha todos os campos obrigatórios da Identificação.');

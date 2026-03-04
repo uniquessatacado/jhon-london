@@ -21,17 +21,15 @@ export function FinancialSection({ grids, globalAtacadoMin }: FinancialSectionPr
 
   const habilitaAtacadoGeral = watch('habilita_atacado_geral');
   const habilitaAtacadoGrade = watch('habilita_atacado_grade');
-  const usarPrecoUnico = watch('usar_preco_atacado_unico');
   const selectedGradeAtacadoId = watch('grade_atacado_id');
-  const precoAtacadoGeral = watch('preco_atacado_geral') || 0;
   const precoAtacadoGrade = watch('preco_atacado_grade') || 0;
   const composicaoAtacadoValues = watch('composicao_atacado') || [];
 
   const gradeAtacadoObj = useMemo(() => grids?.find(g => String(g.id) === String(selectedGradeAtacadoId)), [grids, selectedGradeAtacadoId]);
 
+  // Total do Pacote (Grade Fechada) = Total de Peças * Preço Unitário Exclusivo da Grade
   const totalPecasPacote = composicaoAtacadoValues?.reduce((acc: number, curr: any) => acc + (Number(curr?.quantidade) || 0), 0) || 0;
-  const unitPriceForGradeCalc = usarPrecoUnico ? Number(precoAtacadoGeral) : Number(precoAtacadoGrade);
-  const valorTotalPacote = unitPriceForGradeCalc * totalPecasPacote;
+  const valorTotalPacote = Number(precoAtacadoGrade) * totalPecasPacote;
 
   return (
     <Card className="bg-black/20 border-white/10 shadow-lg">
@@ -43,28 +41,20 @@ export function FinancialSection({ grids, globalAtacadoMin }: FinancialSectionPr
       <CardContent className="pt-6 space-y-6">
         <div className="grid grid-cols-2 gap-4 max-w-2xl">
           <div className="grid gap-2">
-            <Label>Custo (R$)</Label>
-            <Input type="number" step="0.01" {...register('preco_custo')} className="bg-black/40 border-white/10 h-14 text-base" />
+            <Label>Custo Obrigatório (R$)</Label>
+            <Input type="number" step="0.01" {...register('preco_custo', { required: true })} className="bg-black/40 border-white/10 h-14 text-base" />
           </div>
           <div className="grid gap-2">
-            <Label>Varejo (R$)</Label>
-            <Input type="number" step="0.01" {...register('preco_varejo')} className="bg-black/40 border-emerald-500/30 text-emerald-400 font-bold h-14 text-base" />
+            <Label>Varejo Obrigatório (R$)</Label>
+            <Input type="number" step="0.01" {...register('preco_varejo', { required: true })} className="bg-black/40 border-emerald-500/30 text-emerald-400 font-bold h-14 text-base" />
           </div>
         </div>
         
         <Separator className="bg-white/10" />
         
         <div className="space-y-4">
-          <div className="flex items-center justify-between bg-white/5 p-4 rounded-xl border border-white/10">
-            <div className="flex flex-col">
-              <Label htmlFor="usar_preco_atacado_unico" className="text-base cursor-pointer">Usar mesmo preço para ambos os atacados</Label>
-              <span className="text-xs text-muted-foreground">Se ativado, utiliza o mesmo valor unitário preenchido abaixo para o Atacado Geral e o Atacado Grade.</span>
-            </div>
-            <Switch id="usar_preco_atacado_unico" checked={usarPrecoUnico} onCheckedChange={(c) => setValue('usar_preco_atacado_unico', c)} />
-          </div>
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Geral */}
+            {/* ATACADO GERAL */}
             <div className={`p-5 rounded-xl border transition-all ${habilitaAtacadoGeral ? 'bg-emerald-500/5 border-emerald-500/30' : 'bg-white/5 border-white/10'}`}>
               <div className="flex justify-between items-start mb-4">
                 <div>
@@ -76,7 +66,7 @@ export function FinancialSection({ grids, globalAtacadoMin }: FinancialSectionPr
               {habilitaAtacadoGeral && (
                 <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
                   <div className="grid gap-2">
-                    <Label>Preço Unitário {usarPrecoUnico ? '(Ambos)' : '(Geral)'}</Label>
+                    <Label>Preço Unitário Exclusivo (Geral)</Label>
                     <Input type="number" step="0.01" {...register('preco_atacado_geral')} className="bg-black/40 border-white/10 h-12 text-lg font-bold text-emerald-400" placeholder="R$ 0,00" />
                   </div>
                   <div className="bg-black/40 p-3 rounded-lg border border-white/5">
@@ -87,7 +77,7 @@ export function FinancialSection({ grids, globalAtacadoMin }: FinancialSectionPr
               )}
             </div>
 
-            {/* Grade */}
+            {/* ATACADO GRADE */}
             <div className={`p-5 rounded-xl border transition-all ${habilitaAtacadoGrade ? 'bg-purple-500/5 border-purple-500/30' : 'bg-white/5 border-white/10'}`}>
               <div className="flex justify-between items-start mb-4">
                 <div>
@@ -100,12 +90,12 @@ export function FinancialSection({ grids, globalAtacadoMin }: FinancialSectionPr
                 <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
                   
                   <div className="grid gap-2">
-                    <Label>Grade Atacado</Label>
+                    <Label>Selecione a Grade do Pacote</Label>
                     <Controller
                       name="grade_atacado_id"
                       control={control}
                       render={({ field }) => (
-                        <Select onValueChange={field.onChange} value={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value ? String(field.value) : undefined}>
                           <SelectTrigger className="bg-black/40 border-white/10 h-12"><SelectValue placeholder="Selecione a grade..." /></SelectTrigger>
                           <SelectContent>{grids?.map(g => <SelectItem key={g.id} value={String(g.id)}>{g.nome}</SelectItem>)}</SelectContent>
                         </Select>
@@ -114,16 +104,14 @@ export function FinancialSection({ grids, globalAtacadoMin }: FinancialSectionPr
                   </div>
 
                   <div className="grid gap-2">
-                    <Label>Preço Unitário (Grade)</Label>
+                    <Label>Preço Unitário Exclusivo (Grade)</Label>
                     <Input 
                       type="number" 
                       step="0.01" 
                       {...register('preco_atacado_grade')} 
-                      disabled={usarPrecoUnico}
-                      className={`bg-black/40 h-12 text-lg font-bold ${usarPrecoUnico ? 'border-white/10 text-purple-400/50' : 'border-purple-500/30 text-purple-400'}`} 
+                      className="bg-black/40 border-purple-500/30 h-12 text-lg font-bold text-purple-400" 
                       placeholder="R$ 0,00" 
                     />
-                    {usarPrecoUnico && <p className="text-[10px] text-purple-300/50">Valor sincronizado com o Atacado Geral</p>}
                   </div>
 
                   {composicaoFields.length > 0 && (
@@ -163,7 +151,7 @@ export function FinancialSection({ grids, globalAtacadoMin }: FinancialSectionPr
                         <span className="text-purple-400 text-xl">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valorTotalPacote)}</span>
                       </div>
                       <p className="text-[10px] text-muted-foreground text-right mt-1 opacity-70">
-                        Calculado como: Preço Unitário × Total de Peças
+                        Preço Unitário (Grade) × Total de Peças
                       </p>
                     </div>
                   )}

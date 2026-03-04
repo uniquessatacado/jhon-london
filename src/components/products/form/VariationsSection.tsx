@@ -68,29 +68,39 @@ export function VariationsSection({ isEditMode, isDuplicateMode, duplicateCheck,
   const selectedGridId = watch('grade_id');
   const initialGridIdRef = useRef<string | null>(null);
 
-  // Memoriza o objeto da grade selecionada
   const selectedGridObj = useMemo(() => grids?.find(g => String(g.id) === String(selectedGridId)), [grids, selectedGridId]);
 
-  // Captura o ID da grade inicial vindo do banco de dados (para não apagar os dados ao abrir a edição)
   useEffect(() => {
     if ((isEditMode || isDuplicateMode) && selectedGridId && !initialGridIdRef.current) {
         initialGridIdRef.current = String(selectedGridId);
     }
   }, [selectedGridId, isEditMode, isDuplicateMode]);
 
-  // Lógica de preenchimento automático das variações quando a grade muda
   useEffect(() => {
     if (!selectedGridObj) return;
-
-    // Proteção de dados: se estiver editando e a grade for a mesma que veio do banco, não substitua.
-    if ((isEditMode || isDuplicateMode) && String(selectedGridObj.id) === initialGridIdRef.current) {
-        return;
-    }
 
     const currentSizes = variacaoFields.map((v:any) => v.tamanho);
     const newSizes = selectedGridObj.tamanhos.map(t => t.tamanho);
 
-    // Se os tamanhos na tabela forem diferentes da nova grade selecionada, refaz a tabela!
+    // Se estiver editando e a grade for a que já estava salva:
+    if ((isEditMode || isDuplicateMode) && String(selectedGridObj.id) === initialGridIdRef.current) {
+        // Se a tabela veio vazia do banco de dados (produto legado, por ex), criamos as linhas:
+        if (currentSizes.length === 0) {
+            replace(selectedGridObj.tamanhos.map(t => ({
+                tamanho: t.tamanho, 
+                estoque: 0, 
+                sku: '', 
+                codigo_barras: '', 
+                peso_kg: t.peso_kg || 0, 
+                altura_cm: t.altura_cm || 0, 
+                largura_cm: t.largura_cm || 0, 
+                comprimento_cm: t.comprimento_cm || 0,
+            })));
+        }
+        return; // Retorna para não sobrescrever dados existentes
+    }
+
+    // Caso contrário (mudou de grade no form), recria a tabela:
     if (JSON.stringify(currentSizes) !== JSON.stringify(newSizes)) {
         replace(selectedGridObj.tamanhos.map(t => ({
             tamanho: t.tamanho, 
@@ -113,7 +123,6 @@ export function VariationsSection({ isEditMode, isDuplicateMode, duplicateCheck,
     setBulkStockQty('');
   };
 
-  // Se não houver campos ainda (por ex: grade não selecionada), oculta o bloco.
   if (variacaoFields.length === 0) return null;
 
   return (

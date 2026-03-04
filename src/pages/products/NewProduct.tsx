@@ -51,11 +51,11 @@ export function NewProductPage() {
 
   const { watch, setValue, reset, handleSubmit, register, formState: { isSubmitting } } = methods;
   
-  const { data: categories } = useCategories();
-  const { data: brands } = useBrands();
-  const { data: grids } = useGrids();
-  const { data: allSubcategories } = useAllSubcategories();
-  const { data: allProducts } = useProducts();
+  const { data: categories, isLoading: isLoadingCats } = useCategories();
+  const { data: brands, isLoading: isLoadingBrands } = useBrands();
+  const { data: grids, isLoading: isLoadingGrids } = useGrids();
+  const { data: allSubcategories, isLoading: isLoadingSubs } = useAllSubcategories();
+  const { data: allProducts, isLoading: isLoadingProducts } = useProducts();
   
   const { mutate: createProduct, isPending: isCreating } = useCreateProduct();
   const { mutate: updateProduct, isPending: isUpdating } = useUpdateProduct();
@@ -161,7 +161,6 @@ export function NewProductPage() {
 
   const variacoesValues = watch('variacoes') || [];
   const selectedSubcategoryId = watch('subcategoria_id');
-  const selectedGridId = watch('grade_id');
 
   const duplicateCheck = useMemo(() => {
     const skusInForm = variacoesValues.map((v: any) => v.sku?.trim()).filter(Boolean);
@@ -218,7 +217,10 @@ export function NewProductPage() {
   
   const isSaving = isCreating || isUpdating;
 
-  if ((isEditMode || isDuplicateMode) && isLoadingData) return <div className="flex h-[80vh] items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-emerald-500" /></div>;
+  // A TELA INTEIRA AGUARDA O CARREGAMENTO DOS DADOS PARA PREENCHER OS SELECTS CORRETAMENTE
+  const isPageLoading = isLoadingCats || isLoadingBrands || isLoadingGrids || isLoadingSubs || isLoadingProducts || ((isEditMode || isDuplicateMode) && isLoadingData);
+
+  if (isPageLoading) return <div className="flex h-[80vh] items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-emerald-500" /></div>;
 
   return (
     <FormProvider {...methods}>

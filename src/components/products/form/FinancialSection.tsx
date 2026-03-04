@@ -30,31 +30,33 @@ export function FinancialSection({ grids, globalAtacadoMin, isEditMode, isDuplic
   const gradeAtacadoObj = useMemo(() => grids?.find(g => String(g.id) === String(selectedGradeAtacadoId)), [grids, selectedGradeAtacadoId]);
   const initialGradeAtacadoIdRef = useRef<string | null>(null);
 
-  // Captura a grade de atacado inicial
   useEffect(() => {
     if ((isEditMode || isDuplicateMode) && selectedGradeAtacadoId && !initialGradeAtacadoIdRef.current) {
         initialGradeAtacadoIdRef.current = String(selectedGradeAtacadoId);
     }
   }, [selectedGradeAtacadoId, isEditMode, isDuplicateMode]);
 
-  // Auto-preenchimento da tabela de composição (Atacado Fechado)
   useEffect(() => {
     if (!gradeAtacadoObj) return;
 
-    // Proteção para não apagar a composição editada vinda do banco de dados na montagem
-    if ((isEditMode || isDuplicateMode) && String(gradeAtacadoObj.id) === initialGradeAtacadoIdRef.current) {
-        return;
-    }
-
     const currentSizes = composicaoFields.map((v:any) => v.tamanho);
     const newSizes = gradeAtacadoObj.tamanhos.map(t => t.tamanho);
+
+    // Se estivermos editando e for a grade que veio do banco de dados:
+    if ((isEditMode || isDuplicateMode) && String(gradeAtacadoObj.id) === initialGradeAtacadoIdRef.current) {
+        // Se o banco trouxe VAZIO (ou seja, tabela não ia renderizar), nós forçamos a criar as linhas zeradas!
+        if (currentSizes.length === 0) {
+            replace(gradeAtacadoObj.tamanhos.map(t => ({ tamanho: t.tamanho, quantidade: 0 })));
+        }
+        return; // Retorna para não apagar dados legítimos salvos
+    }
     
+    // Se o usuário mudou a grade, atualiza a tabela com quantidade padrão = 1
     if (JSON.stringify(currentSizes) !== JSON.stringify(newSizes)) {
         replace(gradeAtacadoObj.tamanhos.map(t => ({ tamanho: t.tamanho, quantidade: 1 })));
     }
   }, [gradeAtacadoObj, isEditMode, isDuplicateMode, replace, composicaoFields]);
 
-  // Total do Pacote (Grade Fechada) = Total de Peças * Preço Unitário Exclusivo da Grade
   const totalPecasPacote = composicaoAtacadoValues?.reduce((acc: number, curr: any) => acc + (Number(curr?.quantidade) || 0), 0) || 0;
   const valorTotalPacote = Number(precoAtacadoGrade) * totalPecasPacote;
 

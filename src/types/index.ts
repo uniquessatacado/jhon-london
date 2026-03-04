@@ -55,21 +55,14 @@ export interface Product {
   preco_custo: number;
   preco_varejo: number;
   
-  // NOVOS CAMPOS DE PREÇO ATACADO & PACOTE
-  usar_preco_atacado_unico: boolean;
-  
-  // Atacado Geral (Misturado)
-  habilita_atacado_geral: boolean; 
-  preco_atacado_geral: number;
-  
-  // Atacado Grade (Pacote Fechado)
-  habilita_atacado_grade: boolean;
-  grade_atacado_id: number | null; // ID da grade que define o pacote
-  atacado_grade_qtd_por_tamanho: number; // Ex: 2 peças de cada tamanho
-  preco_atacado_grade: number; // Preço unitário dentro do pacote
-  qtd_minima_atacado_grade: number; // Mantido para retrocompatibilidade ou regra extra
-  
-  composicao_atacado_grade?: any; // JSON string ou objeto dependendo do retorno da API
+  // ATACADO (ESTRUTURA DO BANCO DE DADOS)
+  tipo_atacado: 'nenhum' | 'geral' | 'grade';
+  preco_atacado?: number;
+  quantidade_minima_atacado?: number;
+  atacado_grade?: {
+    tamanho: string;
+    preco_atacado: number;
+  }[];
 
   estoque: number;
   estoque_minimo: number;
@@ -78,9 +71,9 @@ export interface Product {
   categoria_id: number;
   subcategoria_id: number | null;
   marca_id: number;
-  grade_id: number | null; // Grade física do produto (pode ser diferente da do pacote)
+  grade_id: number | null; 
   
-  // Campos extras para listagem (vindos de joins na API)
+  // Campos extras
   categoria_nome?: string;
   subcategoria_nome?: string;
   marca_nome?: string;
@@ -102,14 +95,13 @@ export interface Product {
   largura_cm: number;
   comprimento_cm: number;
   
-  // Array de dimensões da grade (se vier da API)
   dimensoes_grade?: any[]; 
 
   imagem_principal: string;
   imagens_galeria: string[];
   
   video?: string;
-  video_url?: string; // Campo extra que pode vir do backend
+  video_url?: string;
   
   criado_em: string;
   atualizado_em: string;

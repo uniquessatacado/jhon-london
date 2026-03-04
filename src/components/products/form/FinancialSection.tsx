@@ -1,37 +1,23 @@
-import { useMemo } from 'react';
 import { useFormContext, useFieldArray, Controller } from 'react-hook-form';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Switch } from '@/components/ui/switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Separator } from '@/components/ui/separator';
-import { DollarSign } from 'lucide-react';
-import { Grid } from '@/types';
+import { DollarSign, AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
-interface FinancialSectionProps {
-  grids?: Grid[];
-  globalAtacadoMin: string;
-}
+export function FinancialSection({ globalAtacadoMin }: { globalAtacadoMin: string }) {
+  const { register, control, watch } = useFormContext<any>();
+  
+  const { fields: atacadoGradeFields } = useFieldArray({ 
+      control, 
+      name: "atacado_grade" 
+  });
 
-export function FinancialSection({ grids, globalAtacadoMin }: FinancialSectionProps) {
-  const { register, control, watch, setValue } = useFormContext<any>();
-  const { fields: composicaoFields } = useFieldArray({ control, name: "composicao_atacado" });
-
-  const habilitaAtacadoGeral = watch('habilita_atacado_geral');
-  const habilitaAtacadoGrade = watch('habilita_atacado_grade');
-  const usarPrecoUnico = watch('usar_preco_atacado_unico');
-  const selectedGradeAtacadoId = watch('grade_atacado_id');
-  const precoAtacadoGeral = watch('preco_atacado_geral') || 0;
-  const precoAtacadoGrade = watch('preco_atacado_grade') || 0;
-  const composicaoAtacadoValues = watch('composicao_atacado') || [];
-
-  const gradeAtacadoObj = useMemo(() => grids?.find(g => String(g.id) === String(selectedGradeAtacadoId)), [grids, selectedGradeAtacadoId]);
-
-  const totalPecasPacote = composicaoAtacadoValues?.reduce((acc: number, curr: any) => acc + (Number(curr?.quantidade) || 0), 0) || 0;
-  const unitPriceForGradeCalc = usarPrecoUnico ? Number(precoAtacadoGeral) : Number(precoAtacadoGrade);
-  const valorTotalPacote = unitPriceForGradeCalc * totalPecasPacote;
+  const tipoAtacado = watch('tipo_atacado');
+  const hasGridSelected = watch('grade_id');
 
   return (
     <Card className="bg-black/20 border-white/10 shadow-lg">
@@ -40,7 +26,8 @@ export function FinancialSection({ grids, globalAtacadoMin }: FinancialSectionPr
           <DollarSign className="h-4 w-4 text-emerald-500" /> 3. Financeiro e Atacado
         </CardTitle>
       </CardHeader>
-      <CardContent className="pt-6 space-y-6">
+      <CardContent className="pt-6 space-y-8">
+        {/* PREÇOS BASE */}
         <div className="grid grid-cols-2 gap-4 max-w-2xl">
           <div className="grid gap-2">
             <Label>Custo (R$)</Label>
@@ -54,122 +41,103 @@ export function FinancialSection({ grids, globalAtacadoMin }: FinancialSectionPr
         
         <Separator className="bg-white/10" />
         
-        <div className="space-y-4">
-          <div className="flex items-center justify-between bg-white/5 p-4 rounded-xl border border-white/10">
-            <div className="flex flex-col">
-              <Label htmlFor="usar_preco_atacado_unico" className="text-base cursor-pointer">Usar mesmo preço para ambos os atacados</Label>
-              <span className="text-xs text-muted-foreground">Se ativado, utiliza o mesmo valor unitário preenchido abaixo para o Atacado Geral e o Atacado Grade.</span>
-            </div>
-            <Switch id="usar_preco_atacado_unico" checked={usarPrecoUnico} onCheckedChange={(c) => setValue('usar_preco_atacado_unico', c)} />
+        {/* TIPO DE ATACADO (RADIO) */}
+        <div className="space-y-6">
+          <div>
+              <Label className="text-lg font-bold mb-4 block text-white">Regras de Atacado</Label>
+              <Controller
+                name="tipo_atacado"
+                control={control}
+                render={({ field }) => (
+                  <RadioGroup onValueChange={field.onChange} value={field.value} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="flex items-start space-x-3 p-4 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-colors cursor-pointer">
+                      <RadioGroupItem value="nenhum" id="nenhum" className="mt-1" />
+                      <div>
+                          <Label htmlFor="nenhum" className="text-base font-bold cursor-pointer">Vender apenas Varejo</Label>
+                          <p className="text-xs text-muted-foreground mt-1">Este produto não terá preço de atacado.</p>
+                      </div>
+                    </div>
+                    <div className={`flex items-start space-x-3 p-4 rounded-xl border transition-colors cursor-pointer ${field.value === 'geral' ? 'border-emerald-500/50 bg-emerald-500/10' : 'border-white/10 bg-white/5 hover:bg-white/10'}`}>
+                      <RadioGroupItem value="geral" id="geral" className="mt-1 text-emerald-500" />
+                      <div>
+                          <Label htmlFor="geral" className="text-base font-bold text-emerald-400 cursor-pointer">Atacado Geral (Mesclado)</Label>
+                          <p className="text-xs text-muted-foreground mt-1">Preço único se o cliente atingir a quantidade mínima no carrinho.</p>
+                      </div>
+                    </div>
+                    <div className={`flex items-start space-x-3 p-4 rounded-xl border transition-colors cursor-pointer ${field.value === 'grade' ? 'border-purple-500/50 bg-purple-500/10' : 'border-white/10 bg-white/5 hover:bg-white/10'}`}>
+                      <RadioGroupItem value="grade" id="grade" className="mt-1 text-purple-500" />
+                      <div>
+                          <Label htmlFor="grade" className="text-base font-bold text-purple-400 cursor-pointer">Atacado Grade (Fechado)</Label>
+                          <p className="text-xs text-muted-foreground mt-1">Preços específicos para cada tamanho dentro de um pacote fechado.</p>
+                      </div>
+                    </div>
+                  </RadioGroup>
+                )}
+              />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Geral */}
-            <div className={`p-5 rounded-xl border transition-all ${habilitaAtacadoGeral ? 'bg-emerald-500/5 border-emerald-500/30' : 'bg-white/5 border-white/10'}`}>
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <Label className="text-lg font-bold text-emerald-400">Atacado Geral (Mesclado)</Label>
-                  <p className="text-xs text-muted-foreground mt-1">Vendas avulsas / misturadas</p>
-                </div>
-                <Switch checked={habilitaAtacadoGeral} onCheckedChange={(c) => setValue('habilita_atacado_geral', c)} />
-              </div>
-              {habilitaAtacadoGeral && (
-                <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
-                  <div className="grid gap-2">
-                    <Label>Preço Unitário {usarPrecoUnico ? '(Ambos)' : '(Geral)'}</Label>
-                    <Input type="number" step="0.01" {...register('preco_atacado_geral')} className="bg-black/40 border-white/10 h-12 text-lg font-bold text-emerald-400" placeholder="R$ 0,00" />
+          {/* RENDERIZAÇÃO CONDICIONAL BASEADA NO RADIO */}
+          <div className="animate-in fade-in slide-in-from-top-4">
+              
+              {tipoAtacado === 'geral' && (
+                  <div className="p-6 rounded-xl border border-emerald-500/30 bg-emerald-500/5 max-w-2xl space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                          <div className="grid gap-2">
+                              <Label>Preço Atacado (R$)</Label>
+                              <Input type="number" step="0.01" {...register('preco_atacado')} className="bg-black/40 border-white/10 h-12 text-lg font-bold text-emerald-400" placeholder="R$ 0,00" />
+                          </div>
+                          <div className="grid gap-2">
+                              <Label>Qtd. Mínima no Carrinho</Label>
+                              <Input type="number" {...register('quantidade_minima_atacado')} className="bg-black/40 border-white/10 h-12" placeholder={globalAtacadoMin} />
+                              <p className="text-[10px] text-muted-foreground">Padrão global: {globalAtacadoMin} pçs</p>
+                          </div>
+                      </div>
                   </div>
-                  <div className="bg-black/40 p-3 rounded-lg border border-white/5">
-                    <p className="text-xs text-muted-foreground"><span className="font-semibold text-white">Qtd Mínima:</span> {globalAtacadoMin} pçs</p>
-                    <p className="text-[10px] text-muted-foreground mt-1">Definida nas configurações globais do sistema.</p>
-                  </div>
-                </div>
               )}
-            </div>
 
-            {/* Grade */}
-            <div className={`p-5 rounded-xl border transition-all ${habilitaAtacadoGrade ? 'bg-purple-500/5 border-purple-500/30' : 'bg-white/5 border-white/10'}`}>
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <Label className="text-lg font-bold text-purple-400">Atacado Grade (Fechado)</Label>
-                  <p className="text-xs text-muted-foreground mt-1">Kit fechado com grade definida</p>
-                </div>
-                <Switch checked={habilitaAtacadoGrade} onCheckedChange={(c) => setValue('habilita_atacado_grade', c)} />
-              </div>
-              {habilitaAtacadoGrade && (
-                <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
-                  
-                  <div className="grid gap-2">
-                    <Label>Grade Atacado</Label>
-                    <Controller
-                      name="grade_atacado_id"
-                      control={control}
-                      render={({ field }) => (
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <SelectTrigger className="bg-black/40 border-white/10 h-12"><SelectValue placeholder="Selecione a grade..." /></SelectTrigger>
-                          <SelectContent>{grids?.map(g => <SelectItem key={g.id} value={String(g.id)}>{g.nome}</SelectItem>)}</SelectContent>
-                        </Select>
+              {tipoAtacado === 'grade' && (
+                  <div className="p-6 rounded-xl border border-purple-500/30 bg-purple-500/5 max-w-2xl space-y-4">
+                      {!hasGridSelected ? (
+                          <Alert className="bg-black/40 border-white/10">
+                              <AlertCircle className="h-4 w-4 text-purple-400" />
+                              <AlertDescription className="text-muted-foreground">Você precisa selecionar a <b>Grade do Produto</b> (Passo 1) para definir os preços por tamanho.</AlertDescription>
+                          </Alert>
+                      ) : (
+                          <div className="space-y-4">
+                              <p className="text-sm text-purple-200">Defina o preço específico de atacado para cada tamanho desta grade:</p>
+                              <div className="border border-white/10 rounded-lg overflow-hidden">
+                                  <Table>
+                                      <TableHeader className="bg-black/40">
+                                          <TableRow className="border-white/10 hover:bg-transparent">
+                                              <TableHead className="text-purple-300 font-bold w-[120px]">Tamanho</TableHead>
+                                              <TableHead className="text-purple-300 font-bold">Preço de Atacado (R$)</TableHead>
+                                          </TableRow>
+                                      </TableHeader>
+                                      <TableBody className="bg-black/20">
+                                          {atacadoGradeFields.map((field: any, idx) => (
+                                              <TableRow key={field.id} className="border-white/5 hover:bg-white/5">
+                                                  <TableCell className="font-bold text-lg">
+                                                      {field.tamanho}
+                                                      <input type="hidden" {...register(`atacado_grade.${idx}.tamanho`)} />
+                                                  </TableCell>
+                                                  <TableCell>
+                                                      <Input 
+                                                          type="number" 
+                                                          step="0.01" 
+                                                          {...register(`atacado_grade.${idx}.preco_atacado`)} 
+                                                          className="bg-black/40 border-white/10 h-12 text-lg font-mono text-purple-400 max-w-[200px]" 
+                                                          placeholder="0.00" 
+                                                      />
+                                                  </TableCell>
+                                              </TableRow>
+                                          ))}
+                                      </TableBody>
+                                  </Table>
+                              </div>
+                          </div>
                       )}
-                    />
                   </div>
-
-                  <div className="grid gap-2">
-                    <Label>Preço Unitário (Grade)</Label>
-                    <Input 
-                      type="number" 
-                      step="0.01" 
-                      {...register('preco_atacado_grade')} 
-                      disabled={usarPrecoUnico}
-                      className={`bg-black/40 h-12 text-lg font-bold ${usarPrecoUnico ? 'border-white/10 text-purple-400/50' : 'border-purple-500/30 text-purple-400'}`} 
-                      placeholder="R$ 0,00" 
-                    />
-                    {usarPrecoUnico && <p className="text-[10px] text-purple-300/50">Valor sincronizado com o Atacado Geral</p>}
-                  </div>
-
-                  {composicaoFields.length > 0 && (
-                    <div className="border border-white/10 rounded-lg overflow-hidden mt-2">
-                      <Table>
-                        <TableHeader className="bg-purple-500/10">
-                          <TableRow className="border-white/10 hover:bg-transparent">
-                            <TableHead className="h-8 text-xs text-purple-300">Tamanho</TableHead>
-                            <TableHead className="h-8 text-xs text-right text-purple-300">Qtd p/ Pacote</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody className="bg-black/20">
-                          {composicaoFields.map((field: any, idx) => (
-                            <TableRow key={field.id} className="border-white/5 hover:bg-transparent">
-                              <TableCell className="py-2 font-medium">
-                                {field.tamanho}
-                                <input type="hidden" {...register(`composicao_atacado.${idx}.tamanho`)} />
-                              </TableCell>
-                              <TableCell className="py-2 text-right">
-                                <Input type="number" min="0" className="h-8 w-20 ml-auto bg-black/40 border-white/10 text-right" {...register(`composicao_atacado.${idx}.quantidade`, { valueAsNumber: true })} />
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  )}
-                  
-                  {gradeAtacadoObj && (
-                    <div className="bg-black/40 rounded-xl border border-white/10 p-4 text-sm space-y-2 mt-4 shadow-inner">
-                      <div className="flex justify-between items-center">
-                        <span className="text-muted-foreground">Total Peças (1 pacote):</span>
-                        <span className="font-bold text-lg">{totalPecasPacote} un</span>
-                      </div>
-                      <div className="border-t border-white/10 pt-2 flex justify-between items-center font-bold">
-                        <span>Valor Total do Pacote:</span>
-                        <span className="text-purple-400 text-xl">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valorTotalPacote)}</span>
-                      </div>
-                      <p className="text-[10px] text-muted-foreground text-right mt-1 opacity-70">
-                        Calculado como: Preço Unitário × Total de Peças
-                      </p>
-                    </div>
-                  )}
-                </div>
               )}
-            </div>
           </div>
         </div>
       </CardContent>

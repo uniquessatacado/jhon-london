@@ -22,7 +22,18 @@ export function ViewStockDialog({ product, open, onOpenChange }: ViewStockDialog
     const totalStock = product.variacoes?.reduce((acc, v) => acc + (Number(v.estoque) || 0), 0) || 0;
     const totalCostValue = totalStock * (product.preco_custo || 0);
     const totalRetailValue = totalStock * (product.preco_varejo || 0);
-    const totalWholesaleValue = totalStock * (product.preco_atacado_geral || 0);
+    
+    // Calcula o potencial de atacado somando o estoque * preco_atacado apropriado para a variação
+    const totalWholesaleValue = product.variacoes?.reduce((acc, v) => {
+      const stock = Number(v.estoque) || 0;
+      if (product.tipo_atacado === 'geral') {
+        return acc + (stock * (product.preco_atacado || 0));
+      } else if (product.tipo_atacado === 'grade' && product.atacado_grade) {
+        const gradePrice = product.atacado_grade.find(g => g.tamanho === v.tamanho)?.preco_atacado || 0;
+        return acc + (stock * gradePrice);
+      }
+      return acc;
+    }, 0) || 0;
 
     return {
       totalStock,

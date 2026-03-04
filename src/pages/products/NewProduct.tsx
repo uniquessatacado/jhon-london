@@ -1,5 +1,5 @@
-import { useEffect, useState, useMemo } from 'react';
-import { useForm, FormProvider } from 'react-hook-form';
+import { useEffect, useState, useMemo, useRef } from 'react';
+import { useForm, FormProvider, useFieldArray } from 'react-hook-form';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Check, ArrowLeft, AlertTriangle, Loader2 } from 'lucide-react';
@@ -14,7 +14,7 @@ import { toast } from 'sonner';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useMediaQuery } from '@/hooks/use-media-query';
 
-// Subcomponentes importados da estrutura modular
+// Subcomponentes
 import { IdentificationSection } from '@/components/products/form/IdentificationSection';
 import { VariationsSection } from '@/components/products/form/VariationsSection';
 import { FinancialSection } from '@/components/products/form/FinancialSection';
@@ -35,19 +35,24 @@ export function NewProductPage() {
   const methods = useForm<any>({
     defaultValues: {
       variacoes: [],
-      composicao_atacado: [], 
-      habilita_atacado_geral: false,
-      habilita_atacado_grade: false,
-      usar_preco_atacado_unico: true,
+      tipo_atacado: 'nenhum',
+      preco_atacado: 0,
+      quantidade_minima_atacado: 0,
+      atacado_grade: [],
       preco_custo: 0,
       preco_varejo: 0,
-      preco_atacado_geral: 0,
-      preco_atacado_grade: 0,
       categoria_id: '',
+      subcategoria_id: '',
+      marca_id: '',
+      grade_id: ''
     }
   });
 
-  const { watch, setValue, reset, handleSubmit, register, formState: { isSubmitting } } = methods;
+  const { watch, setValue, reset, handleSubmit, register, control, formState: { isSubmitting } } = methods;
+  
+  // Utilizando os hooks para controle de arrays vinculados
+  const { fields: variacaoFields, replace: replaceVariacoes } = useFieldArray({ control, name: "variacoes" });
+  const { replace: replaceAtacadoGrade } = useFieldArray({ control, name: "atacado_grade" });
   
   const { data: categories } = useCategories();
   const { data: brands } = useBrands();
@@ -62,7 +67,6 @@ export function NewProductPage() {
   const [existingIdentifiers, setExistingIdentifiers] = useState<{skus: string[], eans: string[]}>({ skus: [], eans: [] });
   const [globalAtacadoMin, setGlobalAtacadoMin] = useState('10');
 
-  // Estados de mídia
   const [mainImageFile, setMainImageFile] = useState<File | null>(null);
   const [mainImagePreview, setMainImagePreview] = useState<string | null>(null);
   const [galleryFiles, setGalleryFiles] = useState<File[]>([]);
@@ -71,11 +75,13 @@ export function NewProductPage() {
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [videoPreview, setVideoPreview] = useState<string | null>(null);
 
-  // Efeitos e Buscas
+  // Evitar sobreposição de Grade durante o load inicial
+  const isInitialLoadDone = useRef(false);
+
   useEffect(() => {
     api.get('/configuracoes/qtd_minima_atacado_geral')
       .then(res => setGlobalAtacadoMin(res.data?.valor || '10'))
-      .catch(() => console.error("Failed to fetch global wholesale minimum quantity."));
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -95,8 +101,13 @@ export function NewProductPage() {
     }
   }, [allProducts, isEditMode, id]);
 
+  // CORREÇÃO CRÍTICA 1: Carregamento dos Selects na Edição
+  // Aguardamos expressamente todos os dicionários (brands, categories, etc) carregarem 
+  // ANTES de dar o reset() com os dados do produto.
+  const isDataLoading = isLoadingData || !categories || !brands || !grids || !allSubcategories;
+
   useEffect(() => {
-    if (productData && allSubcategories && brands && grids) {
+    if (productData && !isDataLoading && !isInitialLoadDone.current) {
       let categoryId = productData.categoria_id;
       if (!categoryId && productData.subcategoria_id) {
         const sub = allSubcategories.find(s => s.id === productData.subcategoria_id);
@@ -117,6 +128,22 @@ export function NewProductPage() {
         };
       }) || [];
 
+      // Ajustando array do Atacado Grade
+      let atacadoGradeArr = [];
+      try {
+          // Trata se o BD retorna string JSON ou Array de Objetos
+          atacadoGradeArr = typeof productData.atacado_grade === 'string' 
+             ? JSON.parse(productData.atacado_grade) 
+             : (productData.atacado_grade || []);
+             
+          // Fallback para nome de campo antigo caso a API mande composicao_atacado_grade
+          if (atacadoGradeArr.length === 0 && (productData as any).composicao_atacado_grade) {
+             atacadoGradeArr = typeof (productData as any).composicao_atacado_grade === 'string' 
+                ? JSON.parse((productData as any).composicao_atacado_grade) 
+                : ((productData as any).composicao_atacado_grade);
+          }
+      } catch (e) {}
+
       const formData = {
         nome: isDuplicateMode ? `${productData.nome} - Cópia` : productData.nome,
         grade_id: String(productData.grade_id || ''),
@@ -130,16 +157,14 @@ export function NewProductPage() {
         unidade_medida: productData.unidade_medida,
         preco_custo: productData.preco_custo,
         preco_varejo: productData.preco_varejo,
-        habilita_atacado_geral: !!productData.habilita_atacado_geral, 
-        preco_atacado_geral: productData.preco_atacado_geral,
-        habilita_atacado_grade: !!productData.habilita_atacado_grade, 
-        usar_preco_atacado_unico: !!productData.usar_preco_atacado_unico, 
-        grade_atacado_id: String(productData.grade_atacado_id || ''),
-        preco_atacado_grade: productData.preco_atacado_grade,
+        
+        // ESTRUTURA ATUALIZADA DO ATACADO
+        tipo_atacado: productData.tipo_atacado || 'nenhum',
+        preco_atacado: productData.preco_atacado || 0,
+        quantidade_minima_atacado: productData.quantidade_minima_atacado || 0,
+        atacado_grade: atacadoGradeArr,
+        
         variacoes: variacoesComDimensoes,
-        composicao_atacado: typeof productData.composicao_atacado_grade === 'string' 
-          ? JSON.parse(productData.composicao_atacado_grade || "[]") 
-          : (productData.composicao_atacado_grade || [])
       };
       
       reset(formData);
@@ -156,14 +181,40 @@ export function NewProductPage() {
           setVideoPreview(videoSrc.startsWith('http') ? videoSrc : `${mediaBaseUrl}${videoSrc}`);
         }
       }
+      
+      isInitialLoadDone.current = true;
     }
-  }, [productData, reset, isDuplicateMode, allSubcategories, brands, grids]);
+  }, [productData, reset, isDuplicateMode, allSubcategories, isDataLoading]);
 
   const variacoesValues = watch('variacoes') || [];
   const selectedSubcategoryId = watch('subcategoria_id');
   const selectedGridId = watch('grade_id');
-  const usarPrecoUnico = watch('usar_preco_atacado_unico');
-  const precoAtacadoGeral = watch('preco_atacado_geral');
+
+  // Gerenciando as mudanças da grade do produto para sincronizar variações e atacado_grade
+  const selectedGridObj = useMemo(() => grids?.find(g => String(g.id) === String(selectedGridId)), [grids, selectedGridId]);
+
+  useEffect(() => {
+    // Não substitui as variações durante o load inicial de edição, apenas quando o usuário alterar a grade na interface.
+    if (!selectedGridObj || (!isInitialLoadDone.current && (isEditMode || isDuplicateMode))) return;
+    
+    const currentSizes = variacoesValues.map((v:any) => v.tamanho);
+    const newSizes = selectedGridObj.tamanhos.map(t => t.tamanho);
+    
+    if (JSON.stringify(currentSizes) !== JSON.stringify(newSizes)) {
+        // Zera as Variações
+        const newVariations = selectedGridObj.tamanhos.map(t => ({ 
+            tamanho: t.tamanho, estoque: 0, sku: '', codigo_barras: '', 
+            peso_kg: t.peso_kg || 0, altura_cm: t.altura_cm || 0, largura_cm: t.largura_cm || 0, comprimento_cm: t.comprimento_cm || 0,
+        }));
+        replaceVariacoes(newVariations);
+
+        // Prepara as linhas do Atacado Grade
+        const newAtacadoGrade = selectedGridObj.tamanhos.map(t => ({
+            tamanho: t.tamanho, preco_atacado: 0
+        }));
+        replaceAtacadoGrade(newAtacadoGrade);
+    }
+  }, [selectedGridObj, isEditMode, isDuplicateMode, variacoesValues, replaceVariacoes, replaceAtacadoGrade]);
 
   const duplicateCheck = useMemo(() => {
     const skusInForm = variacoesValues.map((v: any) => v.sku?.trim()).filter(Boolean);
@@ -201,14 +252,8 @@ export function NewProductPage() {
     }
   }, [selectedSubcategoryId, setValue, isEditMode, isDuplicateMode, watch]);
 
-  useEffect(() => {
-    if (usarPrecoUnico) {
-      setValue('preco_atacado_grade', precoAtacadoGeral);
-    }
-  }, [usarPrecoUnico, precoAtacadoGeral, setValue]);
-
   const onSubmit = (data: any) => {
-    if (!data.nome || !data.grade_id || !data.subcategoria_id || !data.marca_id) return toast.error('Preencha todos os campos obrigatórios da Identificação.');
+    if (!data.nome || !data.grade_id || !data.subcategoria_id || !data.marca_id) return toast.error('Preencha todos os campos obrigatórios da Identificação (Categoria, Subcategoria, Marca, Grade).');
     if (!data.variacoes || data.variacoes.length === 0) return toast.error('Adicione pelo menos uma variação na grade.');
     if (data.variacoes?.some((v: any) => !v.sku && !v.codigo_barras)) return toast.error('Toda variação precisa de SKU ou Cód. Barras.');
     if (duplicateCheck.allDuplicateSkus.length > 0 || duplicateCheck.allDuplicateEans.length > 0) return toast.error('SKU ou Cód. de Barras duplicado.');
@@ -226,7 +271,10 @@ export function NewProductPage() {
   
   const isSaving = isCreating || isUpdating;
 
-  if ((isEditMode || isDuplicateMode) && isLoadingData) return <div className="flex h-[80vh] items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-emerald-500" /></div>;
+  // Bloqueia renderização da tela se os Selects não tiverem opções montadas ainda
+  if ((isEditMode || isDuplicateMode) && isDataLoading) {
+     return <div className="flex h-[80vh] items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-emerald-500" /></div>;
+  }
 
   return (
     <FormProvider {...methods}>
@@ -271,7 +319,6 @@ export function NewProductPage() {
           )}
 
           <FinancialSection 
-            grids={grids} 
             globalAtacadoMin={globalAtacadoMin} 
           />
 

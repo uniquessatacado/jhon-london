@@ -1,13 +1,14 @@
 import axios from 'axios';
 
+// Usamos um caminho relativo para o proxy do Vite ou rewrites da Vercel interceptarem
 export const api = axios.create({
   baseURL: '/api',
 });
 
-// URL base para imagens, para ser usada no frontend
+// URL base para imagens absolutas vindo do backend
 export const mediaBaseUrl = 'https://api.jl.venduss.com/uploads/';
 
-// Interceptor para adicionar o token em todas as requisições
+// Interceptor para adicionar o token em TODAS as requisições
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('jl_token');
   if (token) {
@@ -21,18 +22,9 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401 || error.response?.status === 403) {
-      // Dispara um evento global para o AuthContext lidar com o logout.
-      // Isso evita múltiplos redirecionamentos forçados.
+      // Dispara evento global para deslogar o usuário em caso de token inválido
       window.dispatchEvent(new Event('auth-error'));
     }
     return Promise.reject(error);
   }
 );
-
-// Test connection on startup (Optional check)
-api.get('/teste').then(response => {
-  console.log('API Connection Test:', response.data);
-}).catch(error => {
-  // Ignora erro de teste silenciosamente em produção/dev
-  console.log('API Connection Test (Silent):', error.message);
-});

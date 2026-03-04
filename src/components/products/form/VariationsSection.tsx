@@ -10,23 +10,22 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Grid as GridIcon, Ruler } from 'lucide-react';
 import { useMediaQuery } from '@/hooks/use-media-query';
 import { Grid } from '@/types';
+import { api } from '@/lib/api';
 
 interface VariationsSectionProps {
   isEditMode: boolean;
   isDuplicateMode: boolean;
-  duplicateCheck: { allDuplicateSkus: string[], allDuplicateEans: string[] };
   grids?: Grid[];
 }
 
-const MobileVariationCard = ({ field, currentVariation, index, register, duplicateCheck, onEditDimensions, isEditMode }: any) => {
+const MobileVariationCard = ({ field, currentVariation, index, register, skuErrors, validarSku, onEditDimensions, isEditMode }: any) => {
   const currentEan = currentVariation?.codigo_barras;
   const currentSku = currentVariation?.sku;
   const isMissingBoth = !currentEan && !currentSku;
-  const isSkuDuplicate = currentSku && duplicateCheck.allDuplicateSkus.includes(currentSku);
-  const isEanDuplicate = currentEan && duplicateCheck.allDuplicateEans.includes(currentEan);
+  const skuErrorMsg = skuErrors[index];
 
-  const skuBorder = isMissingBoth ? "border-red-500/50 bg-red-500/5" : isSkuDuplicate ? "border-red-500 text-red-200" : "bg-black/40 border-white/10";
-  const eanBorder = isMissingBoth ? "border-red-500/50 bg-red-500/5" : isEanDuplicate ? "border-red-500 text-red-200" : "bg-black/40 border-white/10";
+  const skuBorder = isMissingBoth ? "border-red-500/50 bg-red-500/5" : skuErrorMsg ? "border-red-500 text-red-200" : "bg-black/40 border-white/10";
+  const eanBorder = isMissingBoth ? "border-red-500/50 bg-red-500/5" : "bg-black/40 border-white/10";
 
   const hasDimensions = currentVariation?.peso_kg > 0 || currentVariation?.altura_cm > 0;
 
@@ -41,13 +40,17 @@ const MobileVariationCard = ({ field, currentVariation, index, register, duplica
       </div>
       <div className="space-y-2">
         <Label className="text-xs">SKU</Label>
-        <Input {...register(`variacoes.${index}.sku`)} className={`${skuBorder} uppercase h-12`} placeholder={currentEan ? "Opcional" : "Obrigatório"} />
-        {isSkuDuplicate && <p className="text-xs text-red-400">SKU já existe</p>}
+        <Input 
+          {...register(`variacoes.${index}.sku`)} 
+          onBlur={(e) => validarSku(e.target.value, index, currentVariation?.id)}
+          className={`${skuBorder} uppercase h-12`} 
+          placeholder={currentEan ? "Opcional" : "Obrigatório"} 
+        />
+        {skuErrorMsg && <p className="text-xs text-red-400">{skuErrorMsg}</p>}
       </div>
       <div className="space-y-2">
         <Label className="text-xs">Cód. Barras</Label>
         <Input {...register(`variacoes.${index}.codigo_barras`)} className={`${eanBorder} h-12`} placeholder="EAN-13" />
-        {isEanDuplicate && <p className="text-xs text-red-400">Cód. Barras já existe</p>}
       </div>
       <Button type="button" variant="outline" className={`w-full h-12 ${hasDimensions ? 'border-emerald-500/30 bg-emerald-500/5 text-emerald-400' : 'border-white/10'}`} onClick={() => onEditDimensions(index)}>
         <Ruler className="mr-2 h-4 w-4" /> {hasDimensions ? 'Editar Dimensões' : 'Adicionar Dimensões'}
@@ -56,13 +59,16 @@ const MobileVariationCard = ({ field, currentVariation, index, register, duplica
   );
 };
 
-export function VariationsSection({ isEditMode, isDuplicateMode, duplicateCheck, grids }: VariationsSectionProps) {
+export function VariationsSection({ isEditMode, isDuplicateMode, grids }: VariationsSectionProps) {
   const { register, control, watch, setValue } = useFormContext<any>();
   const { fields: variacaoFields, replace } = useFieldArray({ control, name: "variacoes" });
   const isMobile = useMediaQuery('(max-width: 768px)');
   
   const [bulkStockQty, setBulkStockQty] = useState('');
   const [editingDimensionsIndex, setEditingDimensionsIndex] = useState<number | null>(null);
+  
+  // Estado para armazenar os erros de SKU vindos da API
+  const [skuErrors, setSkuErrors] = useState<Record<number, string>>({});
 
   const variacoesValues = watch('variacoes') || [];
   const selectedGridId = watch('grade_id');
@@ -82,9 +88,7 @@ export function VariationsSection({ isEditMode, isDuplicateMode, duplicateCheck,
     const currentSizes = variacaoFields.map((v:any) => v.tamanho);
     const newSizes = selectedGridObj.tamanhos.map(t => t.tamanho);
 
-    // Se estiver editando e a grade for a que já estava salva:
     if ((isEditMode || isDuplicateMode) && String(selectedGridObj.id) === initialGridIdRef.current) {
-        // Se a tabela veio vazia do banco de dados (produto legado, por ex), criamos as linhas:
         if (currentSizes.length === 0) {
             replace(selectedGridObj.tamanhos.map(t => ({
                 tamanho: t.tamanho, 
@@ -97,10 +101,9 @@ export function VariationsSection({ isEditMode, isDuplicateMode, duplicateCheck,
                 comprimento_cm: t.comprimento_cm || 0,
             })));
         }
-        return; // Retorna para não sobrescrever dados existentes
+        return; 
     }
 
-    // Caso contrário (mudou de grade no form), recria a tabela:
     if (JSON.stringify(currentSizes) !== JSON.stringify(newSizes)) {
         replace(selectedGridObj.tamanhos.map(t => ({
             tamanho: t.tamanho, 
@@ -121,6 +124,25 @@ export function VariationsSection({ isEditMode, isDuplicateMode, duplicateCheck,
     const updatedVariations = variacoesValues.map((v: any) => ({ ...v, estoque: qty }));
     setValue('variacoes', updatedVariations);
     setBulkStockQty('');
+  };
+
+  // Função para validar o SKU via API no onBlur
+  const validarSku = async (sku: string, index: number, variacaoId?: number) => {
+    if (!sku) {
+      setSkuErrors(prev => ({ ...prev, [index]: '' }));
+      return;
+    }
+    try {
+      const { data } = await api.get('/produtos/verificar-sku', {
+        params: { sku, variacao_id: variacaoId }
+      });
+      setSkuErrors(prev => ({ 
+        ...prev, 
+        [index]: data.existe ? data.mensagem : '' 
+      }));
+    } catch (e) {
+      console.error("Erro ao validar SKU:", e);
+    }
   };
 
   if (variacaoFields.length === 0) return null;
@@ -150,7 +172,8 @@ export function VariationsSection({ isEditMode, isDuplicateMode, duplicateCheck,
                   currentVariation={variacoesValues?.[index]} 
                   index={index} 
                   register={register} 
-                  duplicateCheck={duplicateCheck} 
+                  skuErrors={skuErrors}
+                  validarSku={validarSku}
                   onEditDimensions={setEditingDimensionsIndex} 
                   isEditMode={isEditMode} 
                 />
@@ -163,7 +186,7 @@ export function VariationsSection({ isEditMode, isDuplicateMode, duplicateCheck,
                   <TableRow className="border-white/10 hover:bg-transparent">
                     <TableHead className="w-[80px] text-emerald-400 font-bold">Tam.</TableHead>
                     <TableHead className="w-[100px]">Estoque</TableHead>
-                    <TableHead className="min-w-[150px]">SKU</TableHead>
+                    <TableHead className="min-w-[180px]">SKU</TableHead>
                     <TableHead className="min-w-[150px]">Cód. Barras</TableHead>
                     <TableHead>Peso(kg)</TableHead>
                     <TableHead>A(cm)</TableHead>
@@ -174,16 +197,25 @@ export function VariationsSection({ isEditMode, isDuplicateMode, duplicateCheck,
                 <TableBody className="bg-black/20">
                   {variacaoFields.map((field: any, index) => {
                     const currentVariation = variacoesValues?.[index];
-                    const currentSku = currentVariation?.sku;
-                    const currentEan = currentVariation?.codigo_barras;
-                    const isSkuDuplicate = currentSku && duplicateCheck.allDuplicateSkus.includes(currentSku);
-                    const isEanDuplicate = currentEan && duplicateCheck.allDuplicateEans.includes(currentEan);
+                    const skuErrorMsg = skuErrors[index];
+                    
                     return (
                       <TableRow key={field.id} className="border-white/10 hover:bg-white/5">
                         <TableCell><Badge variant="outline" className="text-emerald-400 border-emerald-500/30 bg-emerald-500/10 px-3 py-1">{field.tamanho}</Badge></TableCell>
                         <TableCell><Input type="number" {...register(`variacoes.${index}.estoque`)} disabled={isEditMode} className="bg-black/40 border-white/10 h-9 disabled:opacity-70" /></TableCell>
-                        <TableCell><Input {...register(`variacoes.${index}.sku`)} className={`uppercase h-9 ${isSkuDuplicate ? 'border-red-500' : 'bg-black/40 border-white/10'}`} /></TableCell>
-                        <TableCell><Input {...register(`variacoes.${index}.codigo_barras`)} className={`h-9 ${isEanDuplicate ? 'border-red-500' : 'bg-black/40 border-white/10'}`} /></TableCell>
+                        
+                        <TableCell>
+                          <div className="space-y-1">
+                            <Input 
+                              {...register(`variacoes.${index}.sku`)} 
+                              onBlur={(e) => validarSku(e.target.value, index, currentVariation?.id)}
+                              className={`uppercase h-9 ${skuErrorMsg ? 'border-red-500' : 'bg-black/40 border-white/10'}`} 
+                            />
+                            {skuErrorMsg && <span className="text-red-500 text-[10px] leading-tight block">{skuErrorMsg}</span>}
+                          </div>
+                        </TableCell>
+                        
+                        <TableCell><Input {...register(`variacoes.${index}.codigo_barras`)} className="h-9 bg-black/40 border-white/10" /></TableCell>
                         <TableCell><Input type="number" step="0.01" {...register(`variacoes.${index}.peso_kg`)} className="bg-black/40 border-white/10 h-9 w-20" /></TableCell>
                         <TableCell><Input type="number" {...register(`variacoes.${index}.altura_cm`)} className="bg-black/40 border-white/10 h-9 w-16" /></TableCell>
                         <TableCell><Input type="number" {...register(`variacoes.${index}.largura_cm`)} className="bg-black/40 border-white/10 h-9 w-16" /></TableCell>

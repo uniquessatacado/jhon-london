@@ -37,6 +37,7 @@ export interface Grid {
 }
 
 export interface ProductVariation {
+  id?: number; // Adicionado para validar SKU no backend
   tamanho: string;
   estoque: number;
   sku: string;
@@ -55,67 +56,57 @@ export interface Product {
   preco_custo: number;
   preco_varejo: number;
   
-  // NOVOS CAMPOS DE PREÇO ATACADO & PACOTE
   usar_preco_atacado_unico: boolean;
   
-  // Atacado Geral (Misturado)
   habilita_atacado_geral: boolean; 
   preco_atacado_geral: number;
   
-  // Atacado Grade (Pacote Fechado)
   habilita_atacado_grade: boolean;
-  grade_atacado_id: number | null; // ID da grade que define o pacote
-  atacado_grade_qtd_por_tamanho: number; // Ex: 2 peças de cada tamanho
-  preco_atacado_grade: number; // Preço unitário dentro do pacote
-  qtd_minima_atacado_grade: number; // Mantido para retrocompatibilidade ou regra extra
+  grade_atacado_id: number | null; 
+  atacado_grade_qtd_por_tamanho: number; 
+  preco_atacado_grade: number; 
+  qtd_minima_atacado_grade: number; 
   
-  composicao_atacado_grade?: any; // JSON string ou objeto dependendo do retorno da API
+  composicao_atacado_grade?: any; 
 
   estoque: number;
   estoque_minimo: number;
   
-  // Relacionamentos
   categoria_id: number;
   subcategoria_id: number | null;
   marca_id: number;
-  grade_id: number | null; // Grade física do produto (pode ser diferente da do pacote)
+  grade_id: number | null; 
   
-  // Campos extras para listagem (vindos de joins na API)
   categoria_nome?: string;
   subcategoria_nome?: string;
   marca_nome?: string;
   grade_nome?: string;
 
-  // Variações
   variacoes?: ProductVariation[];
   
-  // Fiscal
   ncm: string;
   cfop_padrao: string;
   cst_icms: string;
   unidade_medida: string;
   origem: string;
   
-  // Dimensões
   peso_kg: number;
   altura_cm: number;
   largura_cm: number;
   comprimento_cm: number;
   
-  // Array de dimensões da grade (se vier da API)
   dimensoes_grade?: any[]; 
 
   imagem_principal: string;
   imagens_galeria: string[];
   
   video?: string;
-  video_url?: string; // Campo extra que pode vir do backend
+  video_url?: string; 
   
   criado_em: string;
   atualizado_em: string;
 }
 
-// --- PDV Types ---
 export interface CartItem {
   productId: number;
   productName: string;

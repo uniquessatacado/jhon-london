@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -8,7 +8,6 @@ import { useBrands } from '@/hooks/use-brands';
 import { useGrids } from '@/hooks/use-grids';
 import { useCreateProduct, useUpdateProduct } from '@/hooks/use-create-product';
 import { useProductDetails } from '@/hooks/use-product-details';
-import { useProducts } from '@/hooks/use-products';
 import { api, mediaBaseUrl } from '@/lib/api';
 import { toast } from 'sonner';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -55,13 +54,11 @@ export function NewProductPage() {
   const { data: brands, isLoading: isLoadingBrands } = useBrands();
   const { data: grids, isLoading: isLoadingGrids } = useGrids();
   const { data: allSubcategories, isLoading: isLoadingSubs } = useAllSubcategories();
-  const { data: allProducts, isLoading: isLoadingProducts } = useProducts();
   
   const { mutate: createProduct, isPending: isCreating } = useCreateProduct();
   const { mutate: updateProduct, isPending: isUpdating } = useUpdateProduct();
   const { data: productData, isLoading: isLoadingData } = useProductDetails(fetchId || undefined);
 
-  const [existingIdentifiers, setExistingIdentifiers] = useState<{skus: string[], eans: string[]}>({ skus: [], eans: [] });
   const [globalAtacadoMin, setGlobalAtacadoMin] = useState('10');
 
   // Estados de mídia
@@ -79,28 +76,18 @@ export function NewProductPage() {
       .catch(() => console.error("Failed to fetch global wholesale minimum quantity."));
   }, []);
 
+  // TRAVA DE SEGURANÇA: Só preenche o formulário quando todas as listas (marcas, cats, etc)
+  // e os dados do produto estiverem carregados da API. Isso impede os selects de ficarem vazios.
   useEffect(() => {
-    if (allProducts) {
-      const skus: string[] = [];
-      const eans: string[] = [];
-      const productsToScan = isEditMode ? allProducts.filter(p => String(p.id) !== id) : allProducts;
-      productsToScan.forEach(p => {
-        if (p.variacoes && p.variacoes.length > 0) {
-          p.variacoes.forEach(v => {
-            if (v.sku) skus.push(v.sku.trim());
-            if (v.codigo_barras) eans.push(v.codigo_barras.trim());
-          });
-        }
-      });
-      setExistingIdentifiers({ skus: [...new Set(skus)], eans: [...new Set(eans)] });
+    // Se qualquer lista importante estiver carregando, aborta e aguarda.
+    if (isLoadingCats || isLoadingSubs || isLoadingBrands || isLoadingGrids || isLoadingData) {
+      return;
     }
-  }, [allProducts, isEditMode, id]);
 
-  useEffect(() => {
-    if (productData && allSubcategories && brands && grids && categories) {
+    if (productData) {
       let categoryId = productData.categoria_id;
       if (!categoryId && productData.subcategoria_id) {
-        const sub = allSubcategories.find(s => s.id === productData.subcategoria_id);
+        const sub = allSubcategories?.find(s => s.id === productData.subcategoria_id);
         if (sub) categoryId = sub.categoria_id;
       }
 
@@ -108,6 +95,7 @@ export function NewProductPage() {
         const dim = productData.dimensoes_grade?.find(d => d.tamanho === v.tamanho);
         return {
           ...v,
+          id: v.id, // ID preservado para validar SKU na mesma variação
           estoque: isDuplicateMode ? 0 : v.estoque,
           sku: isDuplicateMode ? '' : v.sku,
           codigo_barras: isDuplicateMode ? '' : v.codigo_barras,
@@ -157,23 +145,12 @@ export function NewProductPage() {
         }
       }
     }
-  }, [productData, reset, isDuplicateMode, allSubcategories, brands, grids, categories]);
+  }, [
+    productData, reset, isDuplicateMode, allSubcategories, brands, grids, categories, 
+    isLoadingCats, isLoadingSubs, isLoadingBrands, isLoadingGrids, isLoadingData
+  ]);
 
-  const variacoesValues = watch('variacoes') || [];
   const selectedSubcategoryId = watch('subcategoria_id');
-
-  const duplicateCheck = useMemo(() => {
-    const skusInForm = variacoesValues.map((v: any) => v.sku?.trim()).filter(Boolean);
-    const eansInForm = variacoesValues.map((v: any) => v.codigo_barras?.trim()).filter(Boolean);
-    const duplicateSkusInForm = skusInForm.filter((item: string, index: number) => skusInForm.indexOf(item) !== index);
-    const duplicateEansInForm = eansInForm.filter((item: string, index: number) => eansInForm.indexOf(item) !== index);
-    const conflictingSkus = skusInForm.filter(sku => existingIdentifiers.skus.includes(sku));
-    const conflictingEans = eansInForm.filter(ean => existingIdentifiers.eans.includes(ean));
-    return {
-      allDuplicateSkus: [...new Set([...duplicateSkusInForm, ...conflictingSkus])],
-      allDuplicateEans: [...new Set([...duplicateEansInForm, ...conflictingEans])]
-    };
-  }, [variacoesValues, existingIdentifiers]);
 
   useEffect(() => {
     if (selectedSubcategoryId && allSubcategories) {
@@ -202,7 +179,6 @@ export function NewProductPage() {
     if (!data.nome || !data.grade_id || !data.subcategoria_id || !data.marca_id) return toast.error('Preencha todos os campos obrigatórios da Identificação.');
     if (!data.variacoes || data.variacoes.length === 0) return toast.error('Adicione pelo menos uma variação na grade.');
     if (data.variacoes?.some((v: any) => !v.sku && !v.codigo_barras)) return toast.error('Toda variação precisa de SKU ou Cód. Barras.');
-    if (duplicateCheck.allDuplicateSkus.length > 0 || duplicateCheck.allDuplicateEans.length > 0) return toast.error('SKU ou Cód. de Barras duplicado.');
 
     const payload = { 
       ...data, 
@@ -217,8 +193,8 @@ export function NewProductPage() {
   
   const isSaving = isCreating || isUpdating;
 
-  // A TELA INTEIRA AGUARDA O CARREGAMENTO DOS DADOS PARA PREENCHER OS SELECTS CORRETAMENTE
-  const isPageLoading = isLoadingCats || isLoadingBrands || isLoadingGrids || isLoadingSubs || isLoadingProducts || ((isEditMode || isDuplicateMode) && isLoadingData);
+  // Mostra a tela de carregamento para garantir que nenhum flash aconteça com selects vazios
+  const isPageLoading = isLoadingCats || isLoadingBrands || isLoadingGrids || isLoadingSubs || ((isEditMode || isDuplicateMode) && isLoadingData);
 
   if (isPageLoading) return <div className="flex h-[80vh] items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-emerald-500" /></div>;
 
@@ -260,7 +236,6 @@ export function NewProductPage() {
           <VariationsSection 
             isEditMode={isEditMode} 
             isDuplicateMode={isDuplicateMode}
-            duplicateCheck={duplicateCheck} 
             grids={grids}
           />
 

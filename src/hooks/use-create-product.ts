@@ -4,9 +4,9 @@ import { Product } from '@/types';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 
-// DTO atualizado para suportar arquivos
+// DTO atualizado para suportar arquivos e os dois atacados separados
 export type ProductFormDTO = {
-  id?: number; // Opcional para create, obrigatório para update
+  id?: number; 
   nome: string;
   grade_id: string;
   subcategoria_id: string;
@@ -34,14 +34,16 @@ export type ProductFormDTO = {
   preco_custo: number;
   preco_varejo: number;
   
-  // Atacado
+  // Atacado Geral
   habilita_atacado_geral: boolean;
   preco_atacado_geral: number;
   
+  // Atacado Grade
   habilita_atacado_grade: boolean;
   usar_preco_atacado_unico: boolean;
   grade_atacado_id: string;
   preco_atacado_grade: number;
+  qtd_minima_atacado_grade: number;
   
   composicao_atacado: {
     tamanho: string;
@@ -74,17 +76,20 @@ const buildProductFormData = (formData: ProductFormDTO) => {
   payload.append('origem', formData.origem);
   payload.append('unidade_medida', formData.unidade_medida);
 
-  // Financeiro
+  // Financeiro Varejo/Custo
   payload.append('preco_custo', String(Number(formData.preco_custo) || 0));
   payload.append('preco_varejo', String(Number(formData.preco_varejo) || 0));
   
+  // Controle de Preço Único
+  payload.append('usar_preco_atacado_unico', String(formData.usar_preco_atacado_unico));
+
   // Atacado Geral
   payload.append('habilita_atacado_geral', String(formData.habilita_atacado_geral));
   payload.append('preco_atacado_geral', String(Number(formData.preco_atacado_geral) || 0));
   
   // Atacado Grade
   payload.append('habilita_atacado_grade', String(formData.habilita_atacado_grade));
-  payload.append('usar_preco_atacado_unico', String(formData.usar_preco_atacado_unico));
+  payload.append('qtd_minima_atacado_grade', String(Number(formData.qtd_minima_atacado_grade) || 0));
   
   if (formData.grade_atacado_id && formData.grade_atacado_id !== "null") {
     payload.append('grade_atacado_id', String(formData.grade_atacado_id));
@@ -92,6 +97,7 @@ const buildProductFormData = (formData: ProductFormDTO) => {
     payload.append('grade_atacado_id', '');
   }
   
+  // Regra de negócio: Se "usar preço único" for true, replica o preco_geral para o preco_grade no backend.
   const precoAtacadoGrade = formData.usar_preco_atacado_unico 
         ? (Number(formData.preco_atacado_geral) || 0) 
         : (Number(formData.preco_atacado_grade) || 0);
@@ -161,7 +167,7 @@ async function createProduct(formData: ProductFormDTO): Promise<Product> {
   } catch (error: any) {
     const description = error.response?.data?.error || error.response?.data?.message || 'Verifique os dados e tente novamente.';
     toast.error('Falha ao criar o produto.', { id: toastId, description });
-    throw error; // Re-throw for react-query's onError
+    throw error;
   }
 }
 
@@ -185,7 +191,7 @@ async function updateProduct(formData: ProductFormDTO): Promise<Product> {
   } catch (error: any) {
     const description = error.response?.data?.error || error.response?.data?.message || 'Verifique os dados e tente novamente.';
     toast.error('Falha ao atualizar o produto.', { id: toastId, description });
-    throw error; // Re-throw for react-query's onError
+    throw error;
   }
 }
 

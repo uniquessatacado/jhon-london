@@ -36,6 +36,7 @@ export function IdentificationSection({ categories, allSubcategories, brands, gr
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="grid gap-2">
             <Label>Categoria *</Label>
+            {/* O watch retorna um número ou string vazia, forçamos para string para o Radix Select entender */}
             <Select value={watch('categoria_id') ? String(watch('categoria_id')) : undefined} disabled>
               <SelectTrigger className="bg-black/40 h-14 text-base border-white/10 disabled:opacity-70 disabled:cursor-not-allowed">
                 <SelectValue placeholder="Automático pela subcategoria..." />

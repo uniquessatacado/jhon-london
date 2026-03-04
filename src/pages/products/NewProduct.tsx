@@ -88,7 +88,6 @@ export function NewProductPage() {
       preco_varejo: 0,
       preco_atacado_geral: 0,
       preco_atacado_grade: 0,
-      qtd_minima_atacado_grade: 0,
       categoria_id: '',
     }
   });
@@ -195,7 +194,6 @@ export function NewProductPage() {
             usar_preco_atacado_unico: !!productData.usar_preco_atacado_unico, 
             grade_atacado_id: String(productData.grade_atacado_id || ''),
             preco_atacado_grade: productData.preco_atacado_grade,
-            qtd_minima_atacado_grade: productData.qtd_minima_atacado_grade || 0,
             variacoes: variacoesComDimensoes,
             composicao_atacado: typeof productData.composicao_atacado_grade === 'string' 
                 ? JSON.parse(productData.composicao_atacado_grade || "[]") 
@@ -598,12 +596,7 @@ export function NewProductPage() {
                         </div>
                         {habilitaAtacadoGrade && (
                           <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
-                            {!usarPrecoUnico && (
-                              <div className="grid gap-2">
-                                <Label>Preço (Específico da Grade)</Label>
-                                <Input type="number" step="0.01" {...register('preco_atacado_grade')} className="bg-black/40 border-white/10 h-12" placeholder="R$ 0,00" />
-                              </div>
-                            )}
+                            
                             <div className="grid gap-2">
                               <Label>Grade Atacado</Label>
                               <Controller
@@ -617,10 +610,14 @@ export function NewProductPage() {
                                 )}
                               />
                             </div>
-                            <div className="grid gap-2">
-                              <Label>Qtd Mínima (Pacotes)</Label>
-                              <Input type="number" {...register('qtd_minima_atacado_grade', { valueAsNumber: true })} className="bg-black/40 border-white/10 h-12" placeholder="Ex: 1" />
-                            </div>
+
+                            {!usarPrecoUnico && (
+                              <div className="grid gap-2">
+                                <Label>Preço Unitário (Grade)</Label>
+                                <Input type="number" step="0.01" {...register('preco_atacado_grade')} className="bg-black/40 border-purple-500/30 h-12 text-lg font-bold text-purple-400" placeholder="R$ 0,00" />
+                                <p className="text-[10px] text-muted-foreground">Valor de cada peça dentro do pacote fechado.</p>
+                              </div>
+                            )}
 
                             {/* Tabela de composição */}
                             {composicaoFields.length > 0 && (
@@ -650,14 +647,14 @@ export function NewProductPage() {
                             )}
                             
                             {gradeAtacadoObj && (
-                               <div className="bg-black/40 rounded border border-white/10 p-3 text-sm space-y-1 mt-2">
-                                  <div className="flex justify-between">
+                               <div className="bg-black/40 rounded-xl border border-white/10 p-4 text-sm space-y-2 mt-4">
+                                  <div className="flex justify-between items-center">
                                      <span className="text-muted-foreground">Total Peças (1 pacote):</span>
-                                     <span className="font-bold">{totalPecasPacote} un</span>
+                                     <span className="font-bold text-lg">{totalPecasPacote} un</span>
                                   </div>
-                                  <div className="border-t border-white/10 my-1 pt-1 flex justify-between font-bold">
-                                     <span>Valor do Pacote:</span>
-                                     <span className="text-purple-400">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valorTotalPacote)}</span>
+                                  <div className="border-t border-white/10 pt-2 flex justify-between items-center font-bold">
+                                     <span>Valor Total do Pacote:</span>
+                                     <span className="text-purple-400 text-xl">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valorTotalPacote)}</span>
                                   </div>
                                </div>
                             )}

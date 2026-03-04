@@ -7,6 +7,7 @@ import { Rocket, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { api } from '@/lib/api';
 
+// Mapeamento exato das chaves do backend
 const featureMap: { [key: string]: { label: string; description: string } } = {
   pdv_liberado: { label: 'PDV / Vendas', description: 'Frente de caixa para realização de vendas.' },
   clientes_liberado: { label: 'Clientes', description: 'Cadastro e gerenciamento da base de clientes.' },
@@ -17,17 +18,20 @@ const featureMap: { [key: string]: { label: string; description: string } } = {
 export function FeatureReleasePage() {
   const { refetchFeatureStatus } = useAuth();
   
-  // Guardará o estado exato que veio do servidor
+  // Estado SEM valores hardcoded. Começa vazio.
   const [features, setFeatures] = useState<{ [key: string]: boolean }>({});
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Controla o spinner individual de cada botão enquanto salva
   const [loadingKeys, setLoadingKeys] = useState<{ [key: string]: boolean }>({});
 
+  // Faz o GET ao carregar a página
   const fetchStatus = async () => {
     try {
       setIsLoading(true);
       const { data } = await api.get('/features/status');
       
-      // Converte para garantir que o state seja booleano (true/false)
+      // Converte o JSON para booleanos estritos
       const parsedData: { [key: string]: boolean } = {};
       Object.keys(data).forEach(key => {
         parsedData[key] = data[key] === true || String(data[key]) === 'true';
@@ -41,38 +45,45 @@ export function FeatureReleasePage() {
     }
   };
 
-  // Ao carregar a página, busca o estado real do DB
   useEffect(() => {
     fetchStatus();
   }, []);
 
+  // Lida com o clique na chavinha
   const handleToggle = async (featureKey: string, newValue: boolean) => {
-    // Liga o loader APENAS na chave sendo clicada
+    // 1. Liga o spinner do botão específico
     setLoadingKeys(prev => ({ ...prev, [featureKey]: true }));
 
     try {
-      // Faz o PUT e AGUARDA resposta 200
+      // 2. Faz o PUT com o valor "true" ou "false" em string
       await api.put(`/configuracoes/${featureKey}`, { 
         valor: newValue ? 'true' : 'false'
       });
       
-      // Se deu certo (200), aí sim mudamos a chavinha na tela
+      // 3. APENAS se o PUT der sucesso (200 OK), atualizamos a tela
       setFeatures(prev => ({ ...prev, [featureKey]: newValue }));
-      toast.success(`Módulo atualizado com sucesso!`);
+      toast.success('Módulo atualizado com sucesso!');
       
-      // Atualiza o contexto global para que o Menu Lateral (Sidebar) reflita a mudança
+      // 4. Atualiza o contexto global para o Menu Lateral reagir
       refetchFeatureStatus();
 
     } catch (error) {
+      // Se der erro (400, 500, etc), o setFeatures não é chamado.
+      // Logo, o switch visualmente PERMANECE no estado anterior.
       toast.error('Falha ao salvar a alteração. A configuração não foi modificada.');
     } finally {
-      // Remove o spinner
+      // Desliga o spinner
       setLoadingKeys(prev => ({ ...prev, [featureKey]: false }));
     }
   };
 
+  // Trava a tela inteira num Loader até o primeiro GET terminar
   if (isLoading) {
-    return <div className="flex justify-center items-center h-[60vh]"><Loader2 className="h-10 w-10 animate-spin text-emerald-500" /></div>;
+    return (
+      <div className="flex justify-center items-center h-[60vh]">
+        <Loader2 className="h-10 w-10 animate-spin text-emerald-500" />
+      </div>
+    );
   }
 
   return (
@@ -99,11 +110,14 @@ export function FeatureReleasePage() {
                 <p className="text-sm text-muted-foreground">{featureMap[key].description}</p>
               </div>
               <div className="flex items-center gap-3">
+                  {/* Mostra um mini spinner do lado da chavinha enquanto o PUT não responde */}
                   {loadingKeys[key] && <Loader2 className="h-4 w-4 animate-spin text-emerald-500" />}
                   <Switch
                     id={`feature-${key}`}
+                    // Lê direto do state abastecido pelo backend
                     checked={features[key] ?? false}
                     onCheckedChange={(checked) => handleToggle(key, checked)}
+                    // Bloqueia o clique duplo enquanto está salvando
                     disabled={loadingKeys[key]}
                     className="data-[state=checked]:bg-emerald-500"
                   />

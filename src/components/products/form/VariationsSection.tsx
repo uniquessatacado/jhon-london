@@ -18,18 +18,22 @@ interface VariationsSectionProps {
   grids?: Grid[];
 }
 
-const MobileVariationCard = ({ field, currentVariation, index, register, skuErrorMsg, eanErrorMsg, validarSkuAoDigitar, onEditDimensions, isEditMode }: any) => {
+const MobileVariationCard = ({ field, currentVariation, index, register, setValue, skuErrorMsg, eanErrorMsg, validarSkuAoDigitar, validarSkuImediato, onEditDimensions, isEditMode }: any) => {
   const currentEan = currentVariation?.codigo_barras;
   const currentSku = currentVariation?.sku;
   const isMissingBoth = !currentEan && !currentSku;
 
-  const skuBorder = isMissingBoth ? "border-red-500/50 bg-red-500/5" : skuErrorMsg ? "border-red-500 text-red-200 focus-visible:ring-red-500" : "bg-black/40 border-white/10";
+  const skuBorder = isMissingBoth 
+    ? "border-red-500/50 bg-red-500/5" 
+    : skuErrorMsg 
+        ? "border-red-500 bg-red-500/10 text-white font-bold ring-2 ring-red-500" 
+        : "bg-black/40 border-white/10";
+        
   const eanBorder = isMissingBoth ? "border-red-500/50 bg-red-500/5" : eanErrorMsg ? "border-red-500 text-red-200 focus-visible:ring-red-500" : "bg-black/40 border-white/10";
 
   const hasDimensions = currentVariation?.peso_kg > 0 || currentVariation?.altura_cm > 0;
   
-  // Usamos a desestruturação do register para controlar o React Hook Form sem perder a referência
-  const { ref: skuRef, name: skuName, onChange: skuOnChange, onBlur: skuOnBlur } = register(`variacoes.${index}.sku`);
+  const { ref, name, onBlur } = register(`variacoes.${index}.sku`);
 
   return (
     <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-4">
@@ -43,21 +47,22 @@ const MobileVariationCard = ({ field, currentVariation, index, register, skuErro
       <div className="space-y-2">
         <Label className="text-xs">SKU</Label>
         <Input 
-          ref={skuRef}
-          name={skuName}
+          ref={ref}
+          name={name}
           onChange={(e) => {
-            e.target.value = e.target.value.toUpperCase(); // Força visualmente pra maiúsculo
-            skuOnChange(e); // Avisa o formulário que mudou (fundamental pra tela atualizar)
-            validarSkuAoDigitar(e.target.value, index, currentVariation?.id); // Dispara a verificação
+            const val = e.target.value.toUpperCase();
+            e.target.value = val;
+            setValue(`variacoes.${index}.sku`, val);
+            validarSkuAoDigitar(val, index, currentVariation?.id);
           }}
           onBlur={(e) => {
-            skuOnBlur(e);
-            validarSkuAoDigitar(e.target.value, index, currentVariation?.id); // Checagem dupla ao sair
+            onBlur(e);
+            validarSkuImediato(e.target.value, index, currentVariation?.id);
           }}
-          className={`${skuBorder} uppercase h-12`} 
+          className={`${skuBorder} uppercase h-12 transition-all`} 
           placeholder={currentEan ? "Opcional" : "Obrigatório"} 
         />
-        {skuErrorMsg && <p className="text-xs text-red-400 font-medium">{skuErrorMsg}</p>}
+        {skuErrorMsg && <p className="text-xs text-red-400 font-bold bg-red-500/10 p-2 rounded-md">{skuErrorMsg}</p>}
       </div>
       <div className="space-y-2">
         <Label className="text-xs">Cód. Barras</Label>
@@ -155,42 +160,65 @@ export function VariationsSection({ isEditMode, isDuplicateMode, grids }: Variat
     setBulkStockQty('');
   };
 
-  // ✅ VALIDAÇÃO NA API ENQUANTO DIGITA (TEMPO REAL COM DEBOUNCE E CACHE BUSTING)
-  const validarSkuAoDigitar = (sku: string, index: number, variacaoId?: number) => {
+  // ✅ VALIDAÇÃO NA API (NÚCLEO BLINDADO)
+  const validarSku = async (sku: string, index: number, variacaoId?: number) => {
     if (!sku) {
       setSkuBackendErrors(prev => {
         const next = { ...prev };
-        delete next[index]; // Remove o erro se apagar o campo
+        delete next[index];
         return next;
       });
       return;
     }
-
-    if (skuTimers.current[index]) {
-      clearTimeout(skuTimers.current[index]);
-    }
-
-    // Aguarda 300ms de pausa na digitação para não floodar o servidor
-    skuTimers.current[index] = setTimeout(async () => {
-      try {
-        // O `_t=${Date.now()}` impede o navegador de usar cache antigo e garante a checagem real!
-        const { data } = await api.get(`/produtos/verificar-sku?_t=${Date.now()}`, {
-          params: { sku, variacao_id: variacaoId }
-        });
-        
+    
+    try {
+      const params: any = { sku };
+      if (variacaoId) params.variacao_id = variacaoId;
+      params._t = Date.now(); // Quebra o cache agressivamente
+      
+      const { data } = await api.get('/produtos/verificar-sku', { params });
+      
+      if (data && data.existe) {
+        setSkuBackendErrors(prev => ({ ...prev, [index]: data.mensagem }));
+      } else {
         setSkuBackendErrors(prev => {
           const next = { ...prev };
-          if (data.existe) {
-            next[index] = data.mensagem;
-          } else {
-            delete next[index]; // Limpa o erro se o SKU for livre
-          }
+          delete next[index];
           return next;
         });
-      } catch (e) {
-        console.error("Erro ao validar SKU:", e);
       }
-    }, 300);
+    } catch (error: any) {
+      // Se a sua API retornar Status 400 ou 409 quando repetido, o Axios joga pra cá.
+      // Precisamos ler a resposta do erro!
+      const data = error.response?.data;
+      if (data && data.existe) {
+        setSkuBackendErrors(prev => ({ ...prev, [index]: data.mensagem }));
+      } else {
+        console.error("Falha na API de validação SKU:", error);
+      }
+    }
+  };
+
+  // Enquanto digita (com atraso para não floodar servidor)
+  const validarSkuAoDigitar = (skuRaw: string, index: number, variacaoId?: number) => {
+    const sku = skuRaw?.trim().toUpperCase();
+    
+    if (skuTimers.current[index]) clearTimeout(skuTimers.current[index]);
+
+    if (!sku) {
+      validarSku('', index, variacaoId);
+      return;
+    }
+
+    skuTimers.current[index] = setTimeout(() => {
+      validarSku(sku, index, variacaoId);
+    }, 400);
+  };
+
+  // Ao sair do campo (Imediato)
+  const validarSkuImediato = (skuRaw: string, index: number, variacaoId?: number) => {
+    if (skuTimers.current[index]) clearTimeout(skuTimers.current[index]);
+    validarSku(skuRaw?.trim().toUpperCase(), index, variacaoId);
   };
 
   if (variacaoFields.length === 0) return null;
@@ -221,7 +249,6 @@ export function VariationsSection({ isEditMode, isDuplicateMode, grids }: Variat
                 const isLocalSkuDuplicate = currentSku && localDuplicateSkus.includes(currentSku);
                 const isLocalEanDuplicate = currentEan && localDuplicateEans.includes(currentEan);
                 
-                // Puxa o erro local (da própria tela) ou do banco de dados
                 const skuErrorMsg = isLocalSkuDuplicate ? 'SKU repetido nesta mesma grade' : skuBackendErrors[index];
                 const eanErrorMsg = isLocalEanDuplicate ? 'Cód. Barras repetido nesta grade' : null;
 
@@ -236,6 +263,7 @@ export function VariationsSection({ isEditMode, isDuplicateMode, grids }: Variat
                     skuErrorMsg={skuErrorMsg}
                     eanErrorMsg={eanErrorMsg}
                     validarSkuAoDigitar={validarSkuAoDigitar}
+                    validarSkuImediato={validarSkuImediato}
                     onEditDimensions={setEditingDimensionsIndex} 
                     isEditMode={isEditMode} 
                   />
@@ -266,12 +294,10 @@ export function VariationsSection({ isEditMode, isDuplicateMode, grids }: Variat
                     const isLocalSkuDuplicate = currentSku && localDuplicateSkus.includes(currentSku);
                     const isLocalEanDuplicate = currentEan && localDuplicateEans.includes(currentEan);
                     
-                    // Une os erros visuais: Se for repetido na tela ganha preferência, senão exibe o erro do banco.
                     const skuErrorMsg = isLocalSkuDuplicate ? 'SKU repetido nesta mesma grade' : skuBackendErrors[index];
                     const eanErrorMsg = isLocalEanDuplicate ? 'Cód. Barras repetido nesta grade' : null;
                     
-                    // Amarrando corretamente o Input ao React Hook Form pra que a tela atualize em tempo real
-                    const { ref: skuRef, name: skuName, onChange: skuOnChange, onBlur: skuOnBlur } = register(`variacoes.${index}.sku`);
+                    const { ref, name, onBlur } = register(`variacoes.${index}.sku`);
 
                     return (
                       <TableRow key={field.id} className="border-white/10 hover:bg-white/5">
@@ -281,20 +307,21 @@ export function VariationsSection({ isEditMode, isDuplicateMode, grids }: Variat
                         <TableCell>
                           <div className="space-y-1">
                             <Input 
-                              ref={skuRef}
-                              name={skuName}
+                              ref={ref}
+                              name={name}
                               onChange={(e) => {
-                                e.target.value = e.target.value.toUpperCase(); // Força UI maiúsculo
-                                skuOnChange(e); // Avisa o RHF para a tela saber que o estado mudou
-                                validarSkuAoDigitar(e.target.value, index, currentVariation?.id);
+                                const val = e.target.value.toUpperCase();
+                                e.target.value = val;
+                                setValue(`variacoes.${index}.sku`, val);
+                                validarSkuAoDigitar(val, index, currentVariation?.id);
                               }}
                               onBlur={(e) => {
-                                skuOnBlur(e);
-                                validarSkuAoDigitar(e.target.value, index, currentVariation?.id); // Checagem dupla
+                                onBlur(e);
+                                validarSkuImediato(e.target.value, index, currentVariation?.id);
                               }}
-                              className={`uppercase h-9 transition-colors ${skuErrorMsg ? 'border-red-500 text-red-200 focus-visible:ring-red-500' : 'bg-black/40 border-white/10 focus-visible:ring-emerald-500'}`} 
+                              className={`uppercase h-9 transition-all ${skuErrorMsg ? 'border-red-500 bg-red-500/10 text-white font-bold ring-2 ring-red-500' : 'bg-black/40 border-white/10 focus-visible:ring-emerald-500'}`} 
                             />
-                            {skuErrorMsg && <span className="text-red-500 text-xs font-medium leading-tight block mt-1">{skuErrorMsg}</span>}
+                            {skuErrorMsg && <span className="text-red-400 text-xs font-bold leading-tight block mt-1 bg-red-500/10 p-1.5 rounded-md border border-red-500/20">{skuErrorMsg}</span>}
                           </div>
                         </TableCell>
                         

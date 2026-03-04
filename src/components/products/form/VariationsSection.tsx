@@ -18,7 +18,7 @@ interface VariationsSectionProps {
   grids?: Grid[];
 }
 
-const MobileVariationCard = ({ field, currentVariation, index, register, skuErrorMsg, eanErrorMsg, validarSku, onEditDimensions, isEditMode }: any) => {
+const MobileVariationCard = ({ field, currentVariation, index, register, setValue, skuErrorMsg, eanErrorMsg, validarSkuAoDigitar, onEditDimensions, isEditMode }: any) => {
   const currentEan = currentVariation?.codigo_barras;
   const currentSku = currentVariation?.sku;
   const isMissingBoth = !currentEan && !currentSku;
@@ -27,8 +27,7 @@ const MobileVariationCard = ({ field, currentVariation, index, register, skuErro
   const eanBorder = isMissingBoth ? "border-red-500/50 bg-red-500/5" : eanErrorMsg ? "border-red-500 text-red-200 focus-visible:ring-red-500" : "bg-black/40 border-white/10";
 
   const hasDimensions = currentVariation?.peso_kg > 0 || currentVariation?.altura_cm > 0;
-
-  const { ref, onChange, onBlur, name } = register(`variacoes.${index}.sku`);
+  const { ref, name } = register(`variacoes.${index}.sku`);
 
   return (
     <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-4">
@@ -44,15 +43,16 @@ const MobileVariationCard = ({ field, currentVariation, index, register, skuErro
         <Input 
           ref={ref}
           name={name}
-          onChange={onChange}
-          onBlur={(e) => {
-            onBlur(e);
-            validarSku(e.target.value, index, currentVariation?.id);
+          onChange={(e) => {
+            const val = e.target.value.toUpperCase();
+            e.target.value = val;
+            setValue(`variacoes.${index}.sku`, val);
+            validarSkuAoDigitar(val, index, currentVariation?.id);
           }}
           className={`${skuBorder} uppercase h-12`} 
           placeholder={currentEan ? "Opcional" : "Obrigatório"} 
         />
-        {skuErrorMsg && <p className="text-xs text-red-500 mt-1">{skuErrorMsg}</p>}
+        {skuErrorMsg && <p className="text-xs text-red-400 font-medium">{skuErrorMsg}</p>}
       </div>
       <div className="space-y-2">
         <Label className="text-xs">Cód. Barras</Label>
@@ -61,7 +61,7 @@ const MobileVariationCard = ({ field, currentVariation, index, register, skuErro
           className={`${eanBorder} h-12`} 
           placeholder="EAN-13" 
         />
-        {eanErrorMsg && <p className="text-xs text-red-500 mt-1">{eanErrorMsg}</p>}
+        {eanErrorMsg && <p className="text-xs text-red-400">{eanErrorMsg}</p>}
       </div>
       <Button type="button" variant="outline" className={`w-full h-12 ${hasDimensions ? 'border-emerald-500/30 bg-emerald-500/5 text-emerald-400' : 'border-white/10'}`} onClick={() => onEditDimensions(index)}>
         <Ruler className="mr-2 h-4 w-4" /> {hasDimensions ? 'Editar Dimensões' : 'Adicionar Dimensões'}
@@ -78,8 +78,10 @@ export function VariationsSection({ isEditMode, isDuplicateMode, grids }: Variat
   const [bulkStockQty, setBulkStockQty] = useState('');
   const [editingDimensionsIndex, setEditingDimensionsIndex] = useState<number | null>(null);
   
-  // Erros de SKU vindos da API
+  // Armazena erros da API
   const [skuBackendErrors, setSkuBackendErrors] = useState<Record<number, string>>({});
+  // Timers para não flodar o backend a cada milissegundo de digitação
+  const skuTimers = useRef<Record<number, NodeJS.Timeout>>({});
 
   const variacoesValues = watch('variacoes') || [];
   const selectedGridId = watch('grade_id');
@@ -87,7 +89,7 @@ export function VariationsSection({ isEditMode, isDuplicateMode, grids }: Variat
 
   const selectedGridObj = useMemo(() => grids?.find(g => String(g.id) === String(selectedGridId)), [grids, selectedGridId]);
 
-  // VALIDAÇÃO LOCAL (impede duplicação na mesma tela de cadastro)
+  // VALIDAÇÃO LOCAL (impede SKUs idênticos na mesma tela)
   const localDuplicateSkus = useMemo(() => {
     const skus = variacoesValues.map((v: any) => v.sku?.trim().toUpperCase()).filter(Boolean);
     return skus.filter((item: string, index: number) => skus.indexOf(item) !== index);
@@ -149,23 +151,31 @@ export function VariationsSection({ isEditMode, isDuplicateMode, grids }: Variat
     setBulkStockQty('');
   };
 
-  // ✅ VALIDAÇÃO NA API NO ONBLUR
-  const validarSku = async (sku: string, index: number, variacaoId?: number) => {
+  // ✅ VALIDAÇÃO NA API ENQUANTO DIGITA (TEMPO REAL COM DEBOUNCE)
+  const validarSkuAoDigitar = (sku: string, index: number, variacaoId?: number) => {
     if (!sku) {
       setSkuBackendErrors(prev => ({ ...prev, [index]: '' }));
       return;
     }
-    try {
-      const { data } = await api.get('/produtos/verificar-sku', {
-        params: { sku, variacao_id: variacaoId }
-      });
-      setSkuBackendErrors(prev => ({ 
-        ...prev, 
-        [index]: data.existe ? data.mensagem : '' 
-      }));
-    } catch (e) {
-      console.error("Erro ao validar SKU:", e);
+
+    if (skuTimers.current[index]) {
+      clearTimeout(skuTimers.current[index]);
     }
+
+    // Aguarda 300ms após a última tecla digitada para bater na API
+    skuTimers.current[index] = setTimeout(async () => {
+      try {
+        const { data } = await api.get('/produtos/verificar-sku', {
+          params: { sku, variacao_id: variacaoId }
+        });
+        setSkuBackendErrors(prev => ({ 
+          ...prev, 
+          [index]: data.existe ? data.mensagem : '' 
+        }));
+      } catch (e) {
+        console.error("Erro ao validar SKU:", e);
+      }
+    }, 300);
   };
 
   if (variacaoFields.length === 0) return null;
@@ -196,8 +206,7 @@ export function VariationsSection({ isEditMode, isDuplicateMode, grids }: Variat
                 const isLocalSkuDuplicate = currentSku && localDuplicateSkus.includes(currentSku);
                 const isLocalEanDuplicate = currentEan && localDuplicateEans.includes(currentEan);
                 
-                // Junta o erro local com o erro do backend
-                const skuErrorMsg = isLocalSkuDuplicate ? 'SKU repetido nesta grade' : skuBackendErrors[index];
+                const skuErrorMsg = isLocalSkuDuplicate ? 'SKU repetido nesta mesma grade' : skuBackendErrors[index];
                 const eanErrorMsg = isLocalEanDuplicate ? 'Cód. Barras repetido nesta grade' : null;
 
                 return (
@@ -207,9 +216,10 @@ export function VariationsSection({ isEditMode, isDuplicateMode, grids }: Variat
                     currentVariation={currentVariation} 
                     index={index} 
                     register={register} 
+                    setValue={setValue}
                     skuErrorMsg={skuErrorMsg}
                     eanErrorMsg={eanErrorMsg}
-                    validarSku={validarSku}
+                    validarSkuAoDigitar={validarSkuAoDigitar}
                     onEditDimensions={setEditingDimensionsIndex} 
                     isEditMode={isEditMode} 
                   />
@@ -240,10 +250,10 @@ export function VariationsSection({ isEditMode, isDuplicateMode, grids }: Variat
                     const isLocalSkuDuplicate = currentSku && localDuplicateSkus.includes(currentSku);
                     const isLocalEanDuplicate = currentEan && localDuplicateEans.includes(currentEan);
                     
-                    const skuErrorMsg = isLocalSkuDuplicate ? 'SKU repetido nesta grade' : skuBackendErrors[index];
+                    const skuErrorMsg = isLocalSkuDuplicate ? 'SKU repetido nesta mesma grade' : skuBackendErrors[index];
                     const eanErrorMsg = isLocalEanDuplicate ? 'Cód. Barras repetido nesta grade' : null;
                     
-                    const { ref, onChange, onBlur, name } = register(`variacoes.${index}.sku`);
+                    const { ref, name } = register(`variacoes.${index}.sku`);
 
                     return (
                       <TableRow key={field.id} className="border-white/10 hover:bg-white/5">
@@ -252,18 +262,19 @@ export function VariationsSection({ isEditMode, isDuplicateMode, grids }: Variat
                         
                         <TableCell>
                           <div className="space-y-1">
-                            {/* Input com o onBlur chamando a API */}
+                            {/* Input chamando a função imediatamente na digitação onChange */}
                             <Input 
                               ref={ref}
                               name={name}
-                              onChange={onChange}
-                              onBlur={(e) => {
-                                onBlur(e);
-                                validarSku(e.target.value, index, currentVariation?.id);
+                              onChange={(e) => {
+                                const val = e.target.value.toUpperCase();
+                                e.target.value = val;
+                                setValue(`variacoes.${index}.sku`, val);
+                                validarSkuAoDigitar(val, index, currentVariation?.id);
                               }}
                               className={`uppercase h-9 transition-colors ${skuErrorMsg ? 'border-red-500 text-red-200 focus-visible:ring-red-500' : 'bg-black/40 border-white/10 focus-visible:ring-emerald-500'}`} 
                             />
-                            {skuErrorMsg && <span className="text-red-500 text-xs leading-tight block mt-1">{skuErrorMsg}</span>}
+                            {skuErrorMsg && <span className="text-red-500 text-xs font-medium leading-tight block mt-1">{skuErrorMsg}</span>}
                           </div>
                         </TableCell>
                         
@@ -273,7 +284,7 @@ export function VariationsSection({ isEditMode, isDuplicateMode, grids }: Variat
                               {...register(`variacoes.${index}.codigo_barras`)} 
                               className={`h-9 transition-colors ${eanErrorMsg ? 'border-red-500 text-red-200 focus-visible:ring-red-500' : 'bg-black/40 border-white/10 focus-visible:ring-emerald-500'}`} 
                             />
-                            {eanErrorMsg && <span className="text-red-500 text-xs leading-tight block mt-1">{eanErrorMsg}</span>}
+                            {eanErrorMsg && <span className="text-red-500 text-[10px] leading-tight block mt-1">{eanErrorMsg}</span>}
                           </div>
                         </TableCell>
 

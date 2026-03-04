@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -60,6 +60,7 @@ export function NewProductPage() {
   const { data: productData, isLoading: isLoadingData } = useProductDetails(fetchId || undefined);
 
   const [globalAtacadoMin, setGlobalAtacadoMin] = useState('10');
+  const hasInitialized = useRef(false);
 
   // Estados de mídia
   const [mainImageFile, setMainImageFile] = useState<File | null>(null);
@@ -76,10 +77,11 @@ export function NewProductPage() {
       .catch(() => console.error("Failed to fetch global wholesale minimum quantity."));
   }, []);
 
-  // ✅ BUG 1 CORRIGIDO: Só preenchemos o form DEPOIS que todas as listas (marcas, cats, grades) forem carregadas!
+  // ✅ CORREÇÃO DEFINITIVA DO BUG DOS SELECTS VAZIOS
   useEffect(() => {
-    if (isLoadingCats || isLoadingSubs || isLoadingBrands || isLoadingGrids || isLoadingData) {
-      return; // Trava aqui enquanto estiver carregando
+    // 1. Só continua se TODOS os dados da API já tiverem chegado
+    if (isLoadingCats || isLoadingSubs || isLoadingBrands || isLoadingGrids || isLoadingData || hasInitialized.current) {
+      return; 
     }
 
     if (productData) {
@@ -130,6 +132,15 @@ export function NewProductPage() {
       
       reset(formData);
       
+      // 2. Injeção direta forçada com delay para garantir a UI montada do Radix UI
+      setTimeout(() => {
+        if (formData.categoria_id) setValue('categoria_id', formData.categoria_id, { shouldValidate: true });
+        if (formData.subcategoria_id) setValue('subcategoria_id', formData.subcategoria_id, { shouldValidate: true });
+        if (formData.marca_id) setValue('marca_id', formData.marca_id, { shouldValidate: true });
+        if (formData.grade_id) setValue('grade_id', formData.grade_id, { shouldValidate: true });
+        if (formData.grade_atacado_id) setValue('grade_atacado_id', formData.grade_atacado_id, { shouldValidate: true });
+      }, 100);
+
       if (!isDuplicateMode) {
         if (productData.imagem_principal) setMainImagePreview(productData.imagem_principal.startsWith('http') ? productData.imagem_principal : `${mediaBaseUrl}${productData.imagem_principal}`);
         if (productData.imagens_galeria?.length) {
@@ -142,9 +153,11 @@ export function NewProductPage() {
           setVideoPreview(videoSrc.startsWith('http') ? videoSrc : `${mediaBaseUrl}${videoSrc}`);
         }
       }
+
+      hasInitialized.current = true;
     }
   }, [
-    productData, reset, isDuplicateMode, allSubcategories, brands, grids, categories, 
+    productData, reset, setValue, isDuplicateMode, allSubcategories, brands, grids, categories, 
     isLoadingCats, isLoadingSubs, isLoadingBrands, isLoadingGrids, isLoadingData
   ]);
 
@@ -158,7 +171,8 @@ export function NewProductPage() {
   }, [selectedSubcategoryId, allSubcategories, setValue]);
 
   useEffect(() => {
-    const shouldFill = (!isEditMode && !isDuplicateMode) || !watch('ncm');
+    // Só busca dados fiscais se for produto novo OU se o usuário alterou a subcategoria manualmente após a tela carregar
+    const shouldFill = (!isEditMode && !isDuplicateMode) || (hasInitialized.current && !watch('ncm'));
     if (selectedSubcategoryId && shouldFill) {
       api.get(`/subcategorias/${selectedSubcategoryId}/fiscal`).then(response => {
         const fiscalData = response.data;
@@ -178,6 +192,7 @@ export function NewProductPage() {
     if (!data.variacoes || data.variacoes.length === 0) return toast.error('Adicione pelo menos uma variação na grade.');
     if (data.variacoes?.some((v: any) => !v.sku && !v.codigo_barras)) return toast.error('Toda variação precisa de SKU ou Cód. Barras.');
 
+    // Segurança final: Verifica se há SKUs repetidos vazando
     const skus = data.variacoes.map((v: any) => v.sku?.trim().toUpperCase()).filter(Boolean);
     if (new Set(skus).size !== skus.length) return toast.error('Existem SKUs repetidos na grade do produto. Corrija os erros em vermelho.');
 
@@ -194,7 +209,6 @@ export function NewProductPage() {
   
   const isSaving = isCreating || isUpdating;
 
-  // Tela de Loading para travar até as rotas carregarem
   const isPageLoading = isLoadingCats || isLoadingBrands || isLoadingGrids || isLoadingSubs || ((isEditMode || isDuplicateMode) && isLoadingData);
 
   if (isPageLoading) return <div className="flex h-[80vh] items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-emerald-500" /></div>;

@@ -31,6 +31,7 @@ export function NewProductPage() {
   const fetchId = id || duplicateId;
   
   const methods = useForm<any>({
+    mode: 'onChange', // Fundamental para destravar validação contínua (como bloqueio de erros de SKU)
     defaultValues: {
       variacoes: [],
       composicao_atacado: [], 
@@ -48,8 +49,9 @@ export function NewProductPage() {
     }
   });
 
-  const { watch, setValue, reset, handleSubmit, getValues, formState: { isSubmitting } } = methods;
+  const { watch, setValue, reset, handleSubmit, formState: { isSubmitting, errors } } = methods;
   
+  // Queries de tabelas auxiliares
   const { data: categories, isLoading: isLoadingCats } = useCategories();
   const { data: brands, isLoading: isLoadingBrands } = useBrands();
   const { data: grids, isLoading: isLoadingGrids } = useGrids();
@@ -57,6 +59,8 @@ export function NewProductPage() {
   
   const { mutate: createProduct, isPending: isCreating } = useCreateProduct();
   const { mutate: updateProduct, isPending: isUpdating } = useUpdateProduct();
+  
+  // Carrega os dados do produto sendo editado/duplicado
   const { data: productData, isLoading: isLoadingData } = useProductDetails(fetchId || undefined);
 
   const [globalAtacadoMin, setGlobalAtacadoMin] = useState('10');
@@ -71,135 +75,115 @@ export function NewProductPage() {
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [videoPreview, setVideoPreview] = useState<string | null>(null);
 
+  // Carrega configs globais
   useEffect(() => {
     api.get('/configuracoes/qtd_minima_atacado_geral')
       .then(res => setGlobalAtacadoMin(res.data?.valor || '10'))
       .catch(() => console.error("Failed to fetch global wholesale minimum quantity."));
   }, []);
 
+  // CARREGAMENTO SEGURO DA EDIÇÃO: Aguarda TODAS as dependências antes de injetar os dados no form.
   useEffect(() => {
-    if (isLoadingCats || isLoadingSubs || isLoadingBrands || isLoadingGrids || isLoadingData || hasInitialized.current) {
+    // Se ainda está carregando o produto ou qualquer tabela auxiliar, pausa a injeção.
+    if (!productData || isLoadingCats || isLoadingSubs || isLoadingBrands || isLoadingGrids || hasInitialized.current) {
       return; 
     }
 
-    if (productData) {
-      let categoryId = productData.categoria_id;
-      if (!categoryId && productData.subcategoria_id) {
-        const sub = allSubcategories?.find(s => s.id === productData.subcategoria_id);
-        if (sub) categoryId = sub.categoria_id;
-      }
-
-      const variacoesComDimensoes = productData.variacoes?.map(v => {
-        const dim = productData.dimensoes_grade?.find(d => d.tamanho === v.tamanho);
-        return {
-          ...v,
-          id: v.id,
-          estoque: isDuplicateMode ? 0 : v.estoque,
-          sku: isDuplicateMode ? '' : v.sku,
-          codigo_barras: isDuplicateMode ? '' : v.codigo_barras,
-          peso_kg: dim?.peso_kg || 0,
-          altura_cm: dim?.altura_cm || 0,
-          largura_cm: dim?.largura_cm || 0,
-          comprimento_cm: dim?.comprimento_cm || 0,
-        };
-      }) || [];
-
-      const formData = {
-        nome: isDuplicateMode ? `${productData.nome} - Cópia` : productData.nome,
-        grade_id: productData.grade_id ? String(productData.grade_id) : '',
-        categoria_id: categoryId ? String(categoryId) : '',
-        subcategoria_id: productData.subcategoria_id ? String(productData.subcategoria_id) : '',
-        marca_id: productData.marca_id ? String(productData.marca_id) : '',
-        ncm: productData.ncm,
-        cfop_padrao: productData.cfop_padrao,
-        cst_icms: productData.cst_icms,
-        origem: productData.origem,
-        unidade_medida: productData.unidade_medida,
-        preco_custo: Number(productData.preco_custo) || 0,
-        preco_varejo: Number(productData.preco_varejo) || 0,
-        habilita_atacado_geral: !!productData.habilita_atacado_geral, 
-        preco_atacado_geral: Number(productData.preco_atacado_geral) || 0,
-        habilita_atacado_grade: !!productData.habilita_atacado_grade, 
-        grade_atacado_id: productData.grade_atacado_id ? String(productData.grade_atacado_id) : '',
-        preco_atacado_grade: Number(productData.preco_atacado_grade) || 0,
-        variacoes: variacoesComDimensoes,
-        composicao_atacado: typeof productData.composicao_atacado_grade === 'string' 
-          ? JSON.parse(productData.composicao_atacado_grade || "[]") 
-          : (productData.composicao_atacado_grade || [])
-      };
-      
-      reset(formData);
-      
-      setTimeout(() => {
-        if (formData.categoria_id) setValue('categoria_id', formData.categoria_id, { shouldValidate: true });
-        if (formData.subcategoria_id) setValue('subcategoria_id', formData.subcategoria_id, { shouldValidate: true });
-        if (formData.marca_id) setValue('marca_id', formData.marca_id, { shouldValidate: true });
-        if (formData.grade_id) setValue('grade_id', formData.grade_id, { shouldValidate: true });
-        if (formData.grade_atacado_id) setValue('grade_atacado_id', formData.grade_atacado_id, { shouldValidate: true });
-      }, 100);
-
-      if (!isDuplicateMode) {
-        if (productData.imagem_principal) setMainImagePreview(productData.imagem_principal.startsWith('http') ? productData.imagem_principal : `${mediaBaseUrl}${productData.imagem_principal}`);
-        if (productData.imagens_galeria?.length) {
-          const fullUrls = productData.imagens_galeria.map(img => img.startsWith('http') ? img : `${mediaBaseUrl}${img}`);
-          setGalleryPreviews(fullUrls);
-          setExistingGallery(fullUrls);
-        }
-        const videoSrc = productData.video_url || productData.video;
-        if (videoSrc) {
-          setVideoPreview(videoSrc.startsWith('http') ? videoSrc : `${mediaBaseUrl}${videoSrc}`);
-        }
-      }
-
-      hasInitialized.current = true;
+    let categoryId = productData.categoria_id;
+    if (!categoryId && productData.subcategoria_id) {
+      const sub = allSubcategories?.find(s => s.id === productData.subcategoria_id);
+      if (sub) categoryId = sub.categoria_id;
     }
-  }, [
-    productData, reset, setValue, isDuplicateMode, allSubcategories, brands, grids, categories, 
-    isLoadingCats, isLoadingSubs, isLoadingBrands, isLoadingGrids, isLoadingData
-  ]);
+
+    const variacoesComDimensoes = productData.variacoes?.map(v => {
+      const dim = productData.dimensoes_grade?.find(d => d.tamanho === v.tamanho);
+      return {
+        ...v,
+        id: v.id,
+        estoque: isDuplicateMode ? 0 : v.estoque,
+        sku: isDuplicateMode ? '' : v.sku,
+        codigo_barras: isDuplicateMode ? '' : v.codigo_barras,
+        peso_kg: dim?.peso_kg || 0,
+        altura_cm: dim?.altura_cm || 0,
+        largura_cm: dim?.largura_cm || 0,
+        comprimento_cm: dim?.comprimento_cm || 0,
+      };
+    }) || [];
+
+    // Prepara o objeto com tipagem 100% igual à exigida pelo Select Component (strings)
+    const formData = {
+      nome: isDuplicateMode ? `${productData.nome} - Cópia` : productData.nome,
+      categoria_id: categoryId ? String(categoryId) : '',
+      subcategoria_id: productData.subcategoria_id ? String(productData.subcategoria_id) : '',
+      marca_id: productData.marca_id ? String(productData.marca_id) : '',
+      grade_id: productData.grade_id ? String(productData.grade_id) : '',
+      grade_atacado_id: productData.grade_atacado_id ? String(productData.grade_atacado_id) : '',
+      
+      ncm: productData.ncm,
+      cfop_padrao: productData.cfop_padrao,
+      cst_icms: productData.cst_icms,
+      origem: productData.origem,
+      unidade_medida: productData.unidade_medida,
+      preco_custo: Number(productData.preco_custo) || 0,
+      preco_varejo: Number(productData.preco_varejo) || 0,
+      habilita_atacado_geral: !!productData.habilita_atacado_geral, 
+      preco_atacado_geral: Number(productData.preco_atacado_geral) || 0,
+      habilita_atacado_grade: !!productData.habilita_atacado_grade, 
+      preco_atacado_grade: Number(productData.preco_atacado_grade) || 0,
+      variacoes: variacoesComDimensoes,
+      composicao_atacado: typeof productData.composicao_atacado_grade === 'string' 
+        ? JSON.parse(productData.composicao_atacado_grade || "[]") 
+        : (productData.composicao_atacado_grade || [])
+    };
+    
+    // Injeta tudo de uma vez. O React Hook Form atualizará os Selects imediatamente
+    reset(formData);
+    
+    // Carrega Imagens / Vídeo
+    if (!isDuplicateMode) {
+      if (productData.imagem_principal) setMainImagePreview(productData.imagem_principal.startsWith('http') ? productData.imagem_principal : `${mediaBaseUrl}${productData.imagem_principal}`);
+      if (productData.imagens_galeria?.length) {
+        const fullUrls = productData.imagens_galeria.map(img => img.startsWith('http') ? img : `${mediaBaseUrl}${img}`);
+        setGalleryPreviews(fullUrls);
+        setExistingGallery(fullUrls);
+      }
+      const videoSrc = productData.video_url || productData.video;
+      if (videoSrc) {
+        setVideoPreview(videoSrc.startsWith('http') ? videoSrc : `${mediaBaseUrl}${videoSrc}`);
+      }
+    }
+
+    hasInitialized.current = true;
+  }, [productData, isLoadingCats, isLoadingSubs, isLoadingBrands, isLoadingGrids, allSubcategories, reset, isDuplicateMode]);
 
   const selectedSubcategoryId = watch('subcategoria_id');
 
+  // Autopreenchimento Inteligente (Apenas para novos produtos ou alterações feitas pelo usuário)
   useEffect(() => {
-    if (selectedSubcategoryId && allSubcategories) {
+    if (selectedSubcategoryId && allSubcategories && (!isEditMode && !isDuplicateMode || hasInitialized.current)) {
       const selectedSub = allSubcategories.find(sub => String(sub.id) === String(selectedSubcategoryId));
       if (selectedSub) {
-        setValue('categoria_id', String(selectedSub.categoria_id));
+        setValue('categoria_id', String(selectedSub.categoria_id), { shouldValidate: true });
         
-        // NOVIDADE: Auto-preenche a grade baseada na subcategoria selecionada!
-        const currentGrid = getValues('grade_id');
-        if (((!isEditMode && !isDuplicateMode) || hasInitialized.current) && selectedSub.grade_id) {
-           if (String(currentGrid) !== String(selectedSub.grade_id)) {
-               setValue('grade_id', String(selectedSub.grade_id), { shouldValidate: true });
-           }
-        }
+        // Puxa NCM e Fiscal
+        api.get(`/subcategorias/${selectedSubcategoryId}/fiscal`).then(response => {
+          const fiscalData = response.data;
+          if (fiscalData) {
+            if (!watch('ncm')) setValue('ncm', fiscalData.ncm);
+            if (!watch('cfop_padrao')) setValue('cfop_padrao', fiscalData.cfop_padrao);
+            if (!watch('cst_icms')) setValue('cst_icms', fiscalData.cst_icms);
+            if (!watch('origem')) setValue('origem', fiscalData.origem);
+            if (!watch('unidade_medida')) setValue('unidade_medida', fiscalData.unidade_medida);
+          }
+        }).catch(() => null);
       }
     }
-  }, [selectedSubcategoryId, allSubcategories, setValue, isEditMode, isDuplicateMode, getValues]);
-
-  useEffect(() => {
-    const shouldFill = (!isEditMode && !isDuplicateMode) || (hasInitialized.current && !watch('ncm'));
-    if (selectedSubcategoryId && shouldFill) {
-      api.get(`/subcategorias/${selectedSubcategoryId}/fiscal`).then(response => {
-        const fiscalData = response.data;
-        if (fiscalData) {
-          setValue('ncm', fiscalData.ncm);
-          setValue('cfop_padrao', fiscalData.cfop_padrao);
-          setValue('cst_icms', fiscalData.cst_icms);
-          setValue('origem', fiscalData.origem);
-          setValue('unidade_medida', fiscalData.unidade_medida);
-        }
-      }).catch(err => console.error(err));
-    }
-  }, [selectedSubcategoryId, setValue, isEditMode, isDuplicateMode, watch]);
+  }, [selectedSubcategoryId, allSubcategories, setValue, isEditMode, isDuplicateMode, watch]);
 
   const onSubmit = (data: any) => {
     if (!data.nome || !data.grade_id || !data.subcategoria_id || !data.marca_id) return toast.error('Preencha todos os campos obrigatórios da Identificação.');
     if (!data.variacoes || data.variacoes.length === 0) return toast.error('Adicione pelo menos uma variação na grade.');
     if (data.variacoes?.some((v: any) => !v.sku && !v.codigo_barras)) return toast.error('Toda variação precisa de SKU ou Cód. Barras.');
-
-    const skus = data.variacoes.map((v: any) => v.sku?.trim().toUpperCase()).filter(Boolean);
-    if (new Set(skus).size !== skus.length) return toast.error('Existem SKUs repetidos na grade do produto. Corrija os erros em vermelho.');
 
     const payload = { 
       ...data, 
@@ -214,9 +198,12 @@ export function NewProductPage() {
   
   const isSaving = isCreating || isUpdating;
 
+  // Trava o carregamento da página inteira até que todas as tabelas e dados do produto estejam prontos
   const isPageLoading = isLoadingCats || isLoadingBrands || isLoadingGrids || isLoadingSubs || ((isEditMode || isDuplicateMode) && isLoadingData);
-
   if (isPageLoading) return <div className="flex h-[80vh] items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-emerald-500" /></div>;
+
+  // Desabilita o botão Salvar se houver QUALQUER erro detectado (incluindo o retorno da API de SKU duplicado injetado via setError)
+  const hasValidationErrors = Object.keys(errors).length > 0;
 
   return (
     <FormProvider {...methods}>
@@ -232,8 +219,13 @@ export function NewProductPage() {
               <p className="text-muted-foreground text-sm hidden md:block">{isEditMode ? 'Alterar dados, preços e estoque.' : 'Cadastro completo.'}</p>
             </div>
           </div>
-          <Button size={isMobile ? 'default' : 'lg'} type="submit" disabled={isSaving || isSubmitting} className="bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20">
-            {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />} {isEditMode ? 'Salvar' : 'Salvar'}
+          <Button 
+            size={isMobile ? 'default' : 'lg'} 
+            type="submit" 
+            disabled={isSaving || isSubmitting || hasValidationErrors} 
+            className="bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />} {isEditMode ? 'Salvar Alterações' : 'Salvar Produto'}
           </Button>
         </div>
 

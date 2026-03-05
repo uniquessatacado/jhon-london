@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -75,29 +75,23 @@ export function NewProductPage() {
   // Bloqueador de Renderização
   const isPageLoading = isLoadingCats || isLoadingBrands || isLoadingGrids || isLoadingSubs || ((isEditMode || isDuplicateMode) && isLoadingData);
 
-  const methods = useForm<any>({
-    mode: 'onChange',
-    defaultValues: {
-      variacoes: [],
-      composicao_atacado: [],
-      habilita_atacado_geral: false,
-      habilita_atacado_grade: false,
-      preco_custo: 0,
-      preco_varejo: 0,
-      preco_atacado_geral: 0,
-      preco_atacado_grade: 0,
-      categoria_id: '',
-      subcategoria_id: '',
-      marca_id: '',
-      grade_id: '',
-      grade_atacado_id: ''
-    }
-  });
+  const defaultValues = {
+    variacoes: [],
+    composicao_atacado: [],
+    habilita_atacado_geral: false,
+    habilita_atacado_grade: false,
+    preco_custo: 0,
+    preco_varejo: 0,
+    preco_atacado_geral: 0,
+    preco_atacado_grade: 0,
+    categoria_id: '',
+    subcategoria_id: '',
+    marca_id: '',
+    grade_id: '',
+    grade_atacado_id: ''
+  };
 
-  const { watch, setValue, handleSubmit, getValues, reset, formState: { isSubmitting, errors } } = methods;
-
-  // Injeção cravada dos dados assim que a página é liberada para renderizar
-  useEffect(() => {
+  const formValues = useMemo(() => {
     if (productData && !isPageLoading) {
       let categoryId = productData.categoria_id?.toString() || '';
       const subcategoryId = productData.subcategoria_id?.toString() || '';
@@ -125,7 +119,7 @@ export function NewProductPage() {
         };
       }) || [];
 
-      reset({
+      return {
         nome: isDuplicateMode ? `${productData.nome} - Cópia` : productData.nome,
         categoria_id: categoryId,
         subcategoria_id: subcategoryId,
@@ -147,9 +141,18 @@ export function NewProductPage() {
         composicao_atacado: typeof productData.composicao_atacado_grade === 'string'
           ? JSON.parse(productData.composicao_atacado_grade || "[]")
           : (productData.composicao_atacado_grade || [])
-      });
+      };
     }
-  }, [productData, isPageLoading, isDuplicateMode, allSubcategories, reset]);
+    return defaultValues;
+  }, [productData, isPageLoading, isDuplicateMode, allSubcategories]);
+
+  const methods = useForm<any>({
+    mode: 'onChange',
+    defaultValues,
+    values: productData ? formValues : undefined
+  });
+
+  const { watch, setValue, handleSubmit, getValues, formState: { isSubmitting, errors } } = methods;
 
   const selectedSubcategoryId = watch('subcategoria_id');
 

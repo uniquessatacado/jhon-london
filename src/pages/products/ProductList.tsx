@@ -223,7 +223,7 @@ export function ProductListPage() {
   );
 
   const renderMobileView = () => (
-    <div className="space-y-4 px-4 pb-24">
+    <div className="space-y-4 p-4 pb-24">
       {isLoading ? (
         Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-40 w-full rounded-2xl bg-white/10" />)
       ) : filteredProducts.length > 0 ? (

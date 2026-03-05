@@ -59,7 +59,7 @@ function ProductFormContent({
   // Mapeamos os dados UMA ÚNICA VEZ para ser o estado inicial absoluto do form
   const mappedData = useMemo(() => {
     if (!isEditMode && !isDuplicateMode) return defaultFormValues;
-    if (!productData) return defaultFormValues;
+    if (!productData) return undefined; // Retorna undefined para o Form "esperar" os dados
 
     let categoryId = productData.categoria_id ? String(productData.categoria_id) : '';
     const subcategoryId = productData.subcategoria_id ? String(productData.subcategoria_id) : '';
@@ -115,11 +115,10 @@ function ProductFormContent({
     };
   }, [productData, isEditMode, isDuplicateMode, allSubcategories]);
 
-  // INICIALIZAÇÃO BLINDADA: Como esse componente só é montado após o loading,
-  // os defaultValues serão injetados de primeira nos Selects e Inputs.
   const methods = useForm<any>({
     mode: 'onChange',
-    defaultValues: mappedData,
+    defaultValues: defaultFormValues,
+    values: mappedData, // <--- Sincronização Perfeita
   });
 
   const { handleSubmit, formState: { isSubmitting, errors } } = methods;
@@ -133,21 +132,38 @@ function ProductFormContent({
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [videoPreview, setVideoPreview] = useState<string | null>(null);
 
-  // Injeção de mídias na montagem
+  // Injeção de mídias na montagem (Corrigido com dica do Kimi)
   useEffect(() => {
     if (productData && !isDuplicateMode) {
-      if (productData.imagem_principal) setMainImagePreview(productData.imagem_principal.startsWith('http') ? productData.imagem_principal : `${mediaBaseUrl}${productData.imagem_principal}`);
+      if (productData.imagem_principal) {
+        setMainImagePreview(productData.imagem_principal.startsWith('http') ? productData.imagem_principal : `${mediaBaseUrl}${productData.imagem_principal}`);
+      } else {
+        setMainImagePreview(null);
+      }
+
       if (productData.imagens_galeria?.length) {
         const fullUrls = productData.imagens_galeria.map((img: string) => img.startsWith('http') ? img : `${mediaBaseUrl}${img}`);
         setGalleryPreviews(fullUrls);
         setExistingGallery(fullUrls);
+      } else {
+        setGalleryPreviews([]);
+        setExistingGallery([]);
       }
+
       const videoSrc = productData.video_url || productData.video;
       if (videoSrc) {
         setVideoPreview(videoSrc.startsWith('http') ? videoSrc : `${mediaBaseUrl}${videoSrc}`);
+      } else {
+        setVideoPreview(null);
       }
+    } else {
+      // Garante que o form nasça limpo ao criar novo produto ou duplicar
+      setMainImagePreview(null);
+      setGalleryPreviews([]);
+      setExistingGallery([]);
+      setVideoPreview(null);
     }
-  }, []);
+  }, [productData, isDuplicateMode]); // ✅ Correção aplicada: Reage às mudanças de rota/produto
 
   const onSubmit = (data: any) => {
     if (!data.nome || !data.grade_id || !data.subcategoria_id || !data.marca_id) {

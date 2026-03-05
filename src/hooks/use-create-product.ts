@@ -123,16 +123,6 @@ const buildProductFormData = (formData: ProductFormDTO) => {
       }
   }
   payload.append('composicao_atacado_grade', composicaoJson);
-  
-  // === LOGS PARA DEBUG NO CONSOLE (PRESSIONE F12 NO NAVEGADOR) ===
-  console.log('--- ENVIANDO DADOS PARA API ---');
-  for (let [key, value] of payload.entries()) {
-    if (key === 'composicao_atacado_grade' || key === 'variacoes' || key.includes('id')) {
-        console.log(`Campo: ${key} | Valor: ${value}`);
-    }
-  }
-  console.log('-------------------------------');
-  // ==============================================================
 
   return payload;
 };
@@ -210,8 +200,12 @@ export function useUpdateProduct() {
 
   return useMutation({
     mutationFn: updateProduct,
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
+      // 👈 KIMI FIX: Invalida o cache geral e o específico do produto salvo!
       queryClient.invalidateQueries({ queryKey: ['products'] });
+      if (variables.id) {
+         queryClient.invalidateQueries({ queryKey: ['product', String(variables.id)] });
+      }
       navigate('/produtos');
     },
     onError: (error: any) => {

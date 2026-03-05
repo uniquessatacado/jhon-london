@@ -10,7 +10,6 @@ const safeParseArray = (value: any): any[] => {
   if (typeof value === 'string') {
     try {
       const parsed = JSON.parse(value);
-      // Se depois de dar o parse, ainda for uma string (JSON duplo salvo errado no banco)
       if (typeof parsed === 'string') {
         try {
           const doubleParsed = JSON.parse(parsed);
@@ -31,7 +30,7 @@ const safeParseArray = (value: any): any[] => {
 async function fetchProduct(id: string): Promise<Product> {
   const { data } = await api.get(`/produtos/${id}`);
   
-  // Intercepta e higieniza os dados antes de entregar para a tela (nunca vai quebrar o .map)
+  // Intercepta e higieniza os dados antes de entregar para a tela
   return {
     ...data,
     variacoes: safeParseArray(data.variacoes),
@@ -46,5 +45,8 @@ export function useProductDetails(id: string | undefined) {
     queryKey: ['product', id],
     queryFn: () => fetchProduct(id!),
     enabled: !!id, // Só roda se tiver ID
+    staleTime: 0, // 👈 KIMI FIX: Dados ficam obsoletos imediatamente
+    gcTime: 0,    // 👈 KIMI FIX: Não guarda em cache longo
+    refetchOnMount: true, // 👈 KIMI FIX: Força buscar dados novos ao montar
   });
 }

@@ -56,10 +56,17 @@ function ProductFormContent({
   const { mutate: createProduct, isPending: isCreating } = useCreateProduct();
   const { mutate: updateProduct, isPending: isUpdating } = useUpdateProduct();
 
+  // 👈 KIMI FIX: LOGS DE DEBUG
+  console.log('=== ProductFormContent MONTADO ===');
+  console.log('ID:', id || 'NOVO');
+  console.log('ProductData recebido:', productData);
+
   // Mapeamos os dados UMA ÚNICA VEZ para ser o estado inicial absoluto do form
   const mappedData = useMemo(() => {
     if (!isEditMode && !isDuplicateMode) return defaultFormValues;
-    if (!productData) return undefined; // Retorna undefined para o Form "esperar" os dados
+    if (!productData) return defaultFormValues;
+    
+    console.log('Calculando mappedData com:', productData?.marca_id, productData?.subcategoria_id); // 👈 KIMI FIX: DEBUG
 
     let categoryId = productData.categoria_id ? String(productData.categoria_id) : '';
     const subcategoryId = productData.subcategoria_id ? String(productData.subcategoria_id) : '';
@@ -113,12 +120,11 @@ function ProductFormContent({
       variacoes: variacoesComDimensoes,
       composicao_atacado: composicaoParsed
     };
-  }, [productData, isEditMode, isDuplicateMode, allSubcategories]);
+  }, [productData?.id, isEditMode, isDuplicateMode]); // 👈 KIMI FIX: Dependência específica no ID
 
   const methods = useForm<any>({
     mode: 'onChange',
-    defaultValues: defaultFormValues,
-    values: mappedData, // <--- Sincronização Perfeita
+    defaultValues: mappedData,
   });
 
   const { handleSubmit, formState: { isSubmitting, errors } } = methods;
@@ -132,7 +138,6 @@ function ProductFormContent({
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [videoPreview, setVideoPreview] = useState<string | null>(null);
 
-  // Injeção de mídias na montagem (Corrigido com dica do Kimi)
   useEffect(() => {
     if (productData && !isDuplicateMode) {
       if (productData.imagem_principal) {
@@ -157,13 +162,19 @@ function ProductFormContent({
         setVideoPreview(null);
       }
     } else {
-      // Garante que o form nasça limpo ao criar novo produto ou duplicar
       setMainImagePreview(null);
       setGalleryPreviews([]);
       setExistingGallery([]);
       setVideoPreview(null);
     }
-  }, [productData, isDuplicateMode]); // ✅ Correção aplicada: Reage às mudanças de rota/produto
+
+    // 👈 KIMI FIX: Limpeza ao desmontar
+    return () => {
+        setMainImagePreview(null);
+        setGalleryPreviews([]);
+        setVideoPreview(null);
+    };
+  }, [productData, isDuplicateMode]);
 
   const onSubmit = (data: any) => {
     if (!data.nome || !data.grade_id || !data.subcategoria_id || !data.marca_id) {
@@ -337,9 +348,9 @@ export function NewProductPage() {
     );
   }
 
-  // Quando chega aqui, garantimos 100% que productData, brands, etc. não estão mais em "loading"
   return (
     <ProductFormContent 
+      key={fetchId || 'new'} // 👈 KIMI FIX: FORÇA REMONTAGEM COMPLETA AO MUDAR O PRODUTO
       isEditMode={isEditMode}
       isDuplicateMode={isDuplicateMode}
       id={id}

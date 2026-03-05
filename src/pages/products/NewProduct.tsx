@@ -148,16 +148,11 @@ export function NewProductPage() {
 
   const methods = useForm<any>({
     mode: 'onChange',
-    defaultValues
+    defaultValues,
+    values: (!isPageLoading && productData) ? formValues : undefined
   });
 
   const { watch, setValue, handleSubmit, getValues, reset, formState: { isSubmitting, errors } } = methods;
-
-  useEffect(() => {
-    if (productData && !isPageLoading) {
-      reset(formValues);
-    }
-  }, [productData, isPageLoading, formValues, reset]);
 
   const selectedSubcategoryId = watch('subcategoria_id');
 

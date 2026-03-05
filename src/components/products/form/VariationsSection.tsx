@@ -85,10 +85,11 @@ const VariationRow = ({ field, index, isEditMode, isDuplicateMode, variacoesValu
         <Input {...register(`variacoes.${index}.codigo_barras`)} className="bg-black/40 border-white/10 focus-visible:ring-emerald-500 h-9" />
       </TableCell>
 
-      <TableCell><Input type="number" step="0.01" {...register(`variacoes.${index}.peso_kg`)} className="bg-black/40 border-white/10 h-9 w-20" /></TableCell>
-      <TableCell><Input type="number" {...register(`variacoes.${index}.altura_cm`)} className="bg-black/40 border-white/10 h-9 w-16" /></TableCell>
-      <TableCell><Input type="number" {...register(`variacoes.${index}.largura_cm`)} className="bg-black/40 border-white/10 h-9 w-16" /></TableCell>
-      <TableCell><Input type="number" {...register(`variacoes.${index}.comprimento_cm`)} className="bg-black/40 border-white/10 h-9 w-16" /></TableCell>
+      {/* Alterados de type="number" para type="text" para permitir vírgulas (ex: 0,500) sem o navegador travar o valor */}
+      <TableCell><Input type="text" {...register(`variacoes.${index}.peso_kg`)} className="bg-black/40 border-white/10 h-9 w-20" /></TableCell>
+      <TableCell><Input type="text" {...register(`variacoes.${index}.altura_cm`)} className="bg-black/40 border-white/10 h-9 w-16" /></TableCell>
+      <TableCell><Input type="text" {...register(`variacoes.${index}.largura_cm`)} className="bg-black/40 border-white/10 h-9 w-16" /></TableCell>
+      <TableCell><Input type="text" {...register(`variacoes.${index}.comprimento_cm`)} className="bg-black/40 border-white/10 h-9 w-16" /></TableCell>
     </TableRow>
   );
 };
@@ -131,7 +132,7 @@ export function VariationsSection({ isEditMode, isDuplicateMode, grids }: Variat
             comprimento_cm: t.comprimento_cm || 0,
         })));
     }
-  }, [selectedGridObj, isEditMode, isDuplicateMode, replace]);
+  }, [selectedGridObj, isEditMode, isDuplicateMode, replace, variacaoFields]);
 
   const handleApplyBulkStock = () => {
     const qty = Number(bulkStockQty);

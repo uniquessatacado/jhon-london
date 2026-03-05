@@ -13,6 +13,7 @@ export type ProductFormDTO = {
   marca_id: string;
   
   variacoes: {
+    id?: number;
     tamanho: string;
     estoque: number | string;
     sku: string;
@@ -107,6 +108,7 @@ const buildProductFormData = (formData: ProductFormDTO) => {
   }
 
   const variacoesJson = JSON.stringify(formData.variacoes?.map(v => ({
+    id: v.id, // O Backend precisa saber o ID para não zerar as coisas na edição
     tamanho: v.tamanho,
     estoque: parseToNumber(v.estoque),
     sku: v.sku || '',

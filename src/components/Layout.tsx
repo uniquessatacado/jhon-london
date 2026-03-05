@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useLocation, Navigate } from 'react-router-dom';
-import { Home, Package, ShoppingCart, Settings, Menu, LogOut, ChevronDown, Tag, Building, CircleUser, Server, Grid as GridIcon, Settings2, Users, Rocket } from 'lucide-react';
+import { Home, Package, ShoppingCart, Settings, Menu, LogOut, ChevronDown, Tag, Building, CircleUser, Server, Grid as GridIcon, Settings2, Users, Rocket, Sun, Moon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import {
@@ -15,6 +15,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { UserProfileDialog } from '@/components/users/UserProfileDialog';
 import { UserPermissions } from '@/types/auth';
+import { useTheme } from '@/hooks/useTheme';
 
 const navItems = [
   { to: '/', icon: Home, label: 'Dashboard.', permissionKey: 'dashboard' as keyof UserPermissions },
@@ -78,6 +79,7 @@ const AnimatedLogo = () => {
 
 export function Layout() {
   const { user, logout, isLoading, featureStatus } = useAuth();
+  const { theme, setTheme } = useTheme();
   const location = useLocation();
   const isSettingsOpen = location.pathname.startsWith('/configuracoes') || location.pathname.startsWith('/usuarios');
   const [scrolled, setScrolled] = useState(false);
@@ -226,6 +228,17 @@ export function Layout() {
 
           <div className="w-full flex-1 hidden md:block"></div>
           
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            className="rounded-full hover:bg-white/10"
+          >
+            <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+            <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+            <span className="sr-only">Toggle theme</span>
+          </Button>
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="rounded-full hover:bg-white/10">

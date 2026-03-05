@@ -66,6 +66,11 @@
 
   body {
     @apply bg-background text-foreground;
+    background-attachment: fixed;
+    background-size: cover;
+  }
+
+  .dark body {
     /* 
        Novo Background:
        Removemos o azul marinho pesado.
@@ -75,8 +80,6 @@
     background-image: 
         radial-gradient(circle at 50% 0%, hsla(150, 100%, 20%, 0.15), transparent 60%),
         radial-gradient(circle at 100% 0%, hsla(160, 100%, 10%, 0.1), transparent 40%);
-    background-attachment: fixed;
-    background-size: cover;
   }
 
   /* REMOVE SPINNERS (SETAS) DE INPUT NUMBER */

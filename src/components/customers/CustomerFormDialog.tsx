@@ -163,25 +163,30 @@ export function CustomerFormDialog({ open, onOpenChange, customer }: CustomerFor
     }
   };
 
+  const inputClasses = "bg-black/40 border-white/10 focus-visible:ring-emerald-500/50";
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
-        <DialogHeader>
+      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col bg-zinc-950 border-white/10 p-0 overflow-hidden">
+        <DialogHeader className="px-6 pt-6 pb-2 shrink-0">
           <DialogTitle>{customer ? 'Editar Cliente' : 'Novo Cliente'}</DialogTitle>
           <DialogDescription>Preencha os dados para gerenciar o cliente.</DialogDescription>
         </DialogHeader>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 overflow-hidden">
-          <Tabs defaultValue="personal" className="flex flex-col h-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="personal"><User className="mr-2 h-4 w-4" /> Dados Pessoais</TabsTrigger>
-              <TabsTrigger value="address"><MapPin className="mr-2 h-4 w-4" /> Endereço</TabsTrigger>
-              <TabsTrigger value="other"><Settings2 className="mr-2 h-4 w-4" /> Outros</TabsTrigger>
-            </TabsList>
-            <div className="flex-1 overflow-y-auto p-4 space-y-6">
-              <TabsContent value="personal" className="space-y-4">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 overflow-hidden">
+          <Tabs defaultValue="personal" className="flex flex-col flex-1 overflow-hidden">
+            <div className="px-6">
+              <TabsList className="grid w-full grid-cols-3 bg-white/5 border border-white/10">
+                <TabsTrigger value="personal" className="data-[state=active]:bg-emerald-500/10 data-[state=active]:text-emerald-400"><User className="mr-2 h-4 w-4" /> Pessoais</TabsTrigger>
+                <TabsTrigger value="address" className="data-[state=active]:bg-emerald-500/10 data-[state=active]:text-emerald-400"><MapPin className="mr-2 h-4 w-4" /> Endereço</TabsTrigger>
+                <TabsTrigger value="other" className="data-[state=active]:bg-emerald-500/10 data-[state=active]:text-emerald-400"><Settings2 className="mr-2 h-4 w-4" /> Outros</TabsTrigger>
+              </TabsList>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
+              <TabsContent value="personal" className="m-0 space-y-4">
                 <div className="grid gap-2">
                   <Label htmlFor="nome">Nome Completo *</Label>
-                  <Input id="nome" {...form.register('nome')} />
+                  <Input id="nome" className={inputClasses} {...form.register('nome')} />
                   {form.formState.errors.nome && <p className="text-red-500 text-xs">{form.formState.errors.nome.message}</p>}
                 </div>
                 <Controller
@@ -207,6 +212,7 @@ export function CustomerFormDialog({ open, onOpenChange, customer }: CustomerFor
                           onAccept={(value) => field.onChange(value)}
                           as={Input as any}
                           id="cpf_cnpj"
+                          className={inputClasses}
                         />
                       )}
                     />
@@ -214,7 +220,7 @@ export function CustomerFormDialog({ open, onOpenChange, customer }: CustomerFor
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="rg_ie">{tipoPessoa === 'F' ? 'RG' : 'Inscrição Estadual'}</Label>
-                    <Input id="rg_ie" {...form.register('rg_ie')} />
+                    <Input id="rg_ie" className={inputClasses} {...form.register('rg_ie')} />
                   </div>
                 </div>
                 {tipoPessoa === 'F' && (
@@ -226,12 +232,12 @@ export function CustomerFormDialog({ open, onOpenChange, customer }: CustomerFor
                       render={({ field }) => (
                         <Popover>
                           <PopoverTrigger asChild>
-                            <Button variant="outline" className="w-full justify-start text-left font-normal">
+                            <Button variant="outline" className={`w-full justify-start text-left font-normal ${inputClasses}`}>
                               <CalendarIcon className="mr-2 h-4 w-4" />
-                              {field.value ? format(field.value, 'PPP', { locale: ptBR }) : <span>Selecione uma data</span>}
+                              {field.value ? format(field.value, 'PPP', { locale: ptBR }) : <span className="text-muted-foreground">Selecione uma data</span>}
                             </Button>
                           </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0">
+                          <PopoverContent className="w-auto p-0 bg-zinc-950 border-white/10">
                             <Calendar mode="single" selected={field.value || undefined} onSelect={field.onChange} initialFocus />
                           </PopoverContent>
                         </Popover>
@@ -252,6 +258,7 @@ export function CustomerFormDialog({ open, onOpenChange, customer }: CustomerFor
                           onAccept={(value) => field.onChange(value)}
                           as={Input as any}
                           id="whatsapp"
+                          className={inputClasses}
                         />
                       )}
                     />
@@ -259,12 +266,13 @@ export function CustomerFormDialog({ open, onOpenChange, customer }: CustomerFor
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="email">Email</Label>
-                    <Input id="email" type="email" {...form.register('email')} />
+                    <Input id="email" type="email" className={inputClasses} {...form.register('email')} />
                     {form.formState.errors.email && <p className="text-red-500 text-xs">{form.formState.errors.email.message}</p>}
                   </div>
                 </div>
               </TabsContent>
-              <TabsContent value="address" className="space-y-4">
+
+              <TabsContent value="address" className="m-0 space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="grid gap-2 md:col-span-1">
                     <Label htmlFor="cep">CEP</Label>
@@ -280,6 +288,7 @@ export function CustomerFormDialog({ open, onOpenChange, customer }: CustomerFor
                             onBlur={(e) => handleCepBlur(e.currentTarget.value)}
                             as={Input as any}
                             id="cep"
+                            className={inputClasses}
                           />
                         )}
                       />
@@ -290,39 +299,40 @@ export function CustomerFormDialog({ open, onOpenChange, customer }: CustomerFor
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="logradouro">Logradouro</Label>
-                  <Input id="logradouro" {...form.register('logradouro')} />
+                  <Input id="logradouro" className={inputClasses} {...form.register('logradouro')} />
                   {form.formState.errors.logradouro && <p className="text-red-500 text-xs">{form.formState.errors.logradouro.message}</p>}
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="grid gap-2">
                     <Label htmlFor="numero">Número</Label>
-                    <Input id="numero" {...form.register('numero')} />
+                    <Input id="numero" className={inputClasses} {...form.register('numero')} />
                     {form.formState.errors.numero && <p className="text-red-500 text-xs">{form.formState.errors.numero.message}</p>}
                   </div>
                   <div className="grid gap-2 md:col-span-2">
                     <Label htmlFor="complemento">Complemento</Label>
-                    <Input id="complemento" {...form.register('complemento')} />
+                    <Input id="complemento" className={inputClasses} {...form.register('complemento')} />
                   </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="grid gap-2">
                     <Label htmlFor="bairro">Bairro</Label>
-                    <Input id="bairro" {...form.register('bairro')} />
+                    <Input id="bairro" className={inputClasses} {...form.register('bairro')} />
                     {form.formState.errors.bairro && <p className="text-red-500 text-xs">{form.formState.errors.bairro.message}</p>}
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="cidade">Cidade</Label>
-                    <Input id="cidade" {...form.register('cidade')} />
+                    <Input id="cidade" className={inputClasses} {...form.register('cidade')} />
                     {form.formState.errors.cidade && <p className="text-red-500 text-xs">{form.formState.errors.cidade.message}</p>}
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="estado">Estado</Label>
-                    <Input id="estado" {...form.register('estado')} />
+                    <Input id="estado" className={inputClasses} {...form.register('estado')} />
                     {form.formState.errors.estado && <p className="text-red-500 text-xs">{form.formState.errors.estado.message}</p>}
                   </div>
                 </div>
               </TabsContent>
-              <TabsContent value="other" className="space-y-4">
+
+              <TabsContent value="other" className="m-0 space-y-4">
                 <div className="grid gap-2">
                   <Label>Tipo de Cliente</Label>
                   <Controller
@@ -330,8 +340,8 @@ export function CustomerFormDialog({ open, onOpenChange, customer }: CustomerFor
                     control={form.control}
                     render={({ field }) => (
                       <Select onValueChange={field.onChange} value={field.value}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
+                        <SelectTrigger className={inputClasses}><SelectValue /></SelectTrigger>
+                        <SelectContent className="bg-zinc-950 border-white/10">
                           <SelectItem value="varejo">Varejo</SelectItem>
                           <SelectItem value="atacado">Atacado</SelectItem>
                           <SelectItem value="ambos">Ambos</SelectItem>
@@ -342,22 +352,23 @@ export function CustomerFormDialog({ open, onOpenChange, customer }: CustomerFor
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="observacoes">Observações</Label>
-                  <Textarea id="observacoes" {...form.register('observacoes')} />
+                  <Textarea id="observacoes" className={`resize-none h-24 ${inputClasses}`} {...form.register('observacoes')} />
                 </div>
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-2 pt-2">
                   <Controller
                     name="ativo"
                     control={form.control}
-                    render={({ field }) => <Switch id="ativo" checked={field.value} onCheckedChange={field.onChange} />}
+                    render={({ field }) => <Switch id="ativo" checked={field.value} onCheckedChange={field.onChange} className="data-[state=checked]:bg-emerald-500" />}
                   />
-                  <Label htmlFor="ativo">Cliente Ativo</Label>
+                  <Label htmlFor="ativo" className="font-medium cursor-pointer">Cliente Ativo no Sistema</Label>
                 </div>
               </TabsContent>
             </div>
           </Tabs>
-          <DialogFooter className="mt-4 pt-4 border-t">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-            <Button type="submit" disabled={isCreating || isUpdating}>
+
+          <DialogFooter className="px-6 py-4 border-t border-white/10 bg-black/20 shrink-0">
+            <Button type="button" variant="outline" className="bg-transparent border-white/10 hover:bg-white/5" onClick={() => onOpenChange(false)}>Cancelar</Button>
+            <Button type="submit" disabled={isCreating || isUpdating} className="bg-emerald-500 hover:bg-emerald-600 text-white">
               {isCreating || isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Salvar Cliente
             </Button>

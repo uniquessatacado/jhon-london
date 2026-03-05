@@ -33,7 +33,7 @@ const formSchema = z.object({
   nome: z.string().min(3, 'Nome é obrigatório'),
   tipo_pessoa: z.enum(['F', 'J']),
   cpf_cnpj: z.string().optional().or(z.literal('')),
-  whatsapp: z.string().min(15, 'WhatsApp é obrigatório'),
+  whatsapp: z.string().min(14, 'WhatsApp inválido').optional().or(z.literal('')),
   email: z.string().email('Email inválido').optional().or(z.literal('')),
   rg_ie: z.string().optional(),
   data_nascimento: z.date().optional().nullable(),
@@ -100,8 +100,24 @@ export function CustomerFormDialog({ open, onOpenChange, customer }: CustomerFor
 
   useEffect(() => {
     if (customer) {
+      // Usamos || '' para evitar que valores null vindos do backend quebrem o formulário
       form.reset({
-        ...customer,
+        nome: customer.nome || '',
+        tipo_pessoa: customer.tipo_pessoa || 'F',
+        cpf_cnpj: customer.cpf_cnpj || '',
+        whatsapp: customer.whatsapp || '',
+        email: customer.email || '',
+        rg_ie: customer.rg_ie || '',
+        cep: customer.cep || '',
+        logradouro: customer.logradouro || '',
+        numero: customer.numero || '',
+        complemento: customer.complemento || '',
+        bairro: customer.bairro || '',
+        cidade: customer.cidade || '',
+        estado: customer.estado || '',
+        tipo_cliente: customer.tipo_cliente || 'varejo',
+        observacoes: customer.observacoes || '',
+        ativo: customer.ativo ?? true,
         data_nascimento: customer.data_nascimento ? new Date(customer.data_nascimento) : null,
       });
     } else {
@@ -163,6 +179,13 @@ export function CustomerFormDialog({ open, onOpenChange, customer }: CustomerFor
     }
   };
 
+  const onInvalid = (errors: any) => {
+    console.error('Erros de validação:', errors);
+    toast.error('Campos inválidos', {
+      description: 'Verifique as abas de Pessoais e Endereço para corrigir os erros.',
+    });
+  };
+
   const inputClasses = "bg-black/40 border-white/10 focus-visible:ring-emerald-500/50";
 
   return (
@@ -172,7 +195,7 @@ export function CustomerFormDialog({ open, onOpenChange, customer }: CustomerFor
           <DialogTitle>{customer ? 'Editar Cliente' : 'Novo Cliente'}</DialogTitle>
           <DialogDescription>Preencha os dados para gerenciar o cliente.</DialogDescription>
         </DialogHeader>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 overflow-hidden">
+        <form onSubmit={form.handleSubmit(onSubmit, onInvalid)} className="flex flex-col flex-1 overflow-hidden">
           <Tabs defaultValue="personal" className="flex flex-col flex-1 overflow-hidden">
             <div className="px-6">
               <TabsList className="grid w-full grid-cols-3 bg-white/5 border border-white/10">
@@ -254,7 +277,7 @@ export function CustomerFormDialog({ open, onOpenChange, customer }: CustomerFor
                       render={({ field }) => (
                         <IMaskInput
                           mask="(00) 00000-0000"
-                          value={field.value}
+                          value={field.value || ''}
                           onAccept={(value) => field.onChange(value)}
                           as={Input as any}
                           id="whatsapp"

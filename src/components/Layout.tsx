@@ -123,20 +123,26 @@ export function Layout() {
   // O Super Admin agora é validado pelo e-mail
   const isMasterAdmin = user.email.toLowerCase() === 'ussloja@gmail.com';
 
+  // Helper para verificar permissões de forma 100% segura (previne crash se permissoes for null)
+  const checkPermission = (key: keyof UserPermissions | undefined) => {
+    if (!key) return false;
+    return !!(user?.permissoes?.[key]);
+  };
+
   const allowedNavItems = isMasterAdmin ? navItems : navItems.filter(item => {
-    const hasPermission = user.role === 'admin' || (user.permissoes && user.permissoes[item.permissionKey]);
+    const hasPermission = user.role === 'admin' || checkPermission(item.permissionKey);
     if (!hasPermission) return false;
 
-    // Se a rota depende de uma liberação global, verifica no featureStatus
+    // Se a rota depende de uma liberação global, verifica no featureStatus de forma segura
     if (item.featureKey) {
-      return !!featureStatus[item.featureKey];
+      return !!featureStatus?.[item.featureKey];
     }
     return true;
   });
 
   const allowedSettingsItems = isMasterAdmin ? settingsNavItems : settingsNavItems.filter(item => {
     if (item.specialPermission === 'super_admin') return false;
-    return user.role === 'admin' || (user.permissoes && item.permissionKey && user.permissoes[item.permissionKey]);
+    return user.role === 'admin' || checkPermission(item.permissionKey);
   });
 
   const canAccessSettings = allowedSettingsItems.length > 0;

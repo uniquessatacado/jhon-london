@@ -83,13 +83,13 @@ export function UserPage() {
         senha: '' // Password is optional on edit
       });
 
-      // Robust permission merging logic
-      let currentPerms = userToEdit.permissoes;
+      // Robust permission merging logic (com fallback para null)
+      let currentPerms = userToEdit.permissoes || {};
       
       // Handle potential stringified JSON from API
       if (typeof currentPerms === 'string') {
           try {
-              currentPerms = JSON.parse(currentPerms);
+              currentPerms = JSON.parse(currentPerms) || {};
           } catch (e) {
               currentPerms = defaultPermissions;
           }
@@ -226,7 +226,7 @@ export function UserPage() {
                       {['dashboard', 'produtos', 'clientes', 'financeiro', 'cadastros', 'usuarios'].filter(k => (u.permissoes as any)?.[k]).map(k => (
                         <Badge key={k} variant="secondary" className="text-[10px] bg-white/10 text-white capitalize">{k}</Badge>
                       ))}
-                      {(u.permissoes?.dashboard && Object.keys(u.permissoes).filter(k => k.startsWith('dash_') && (u.permissoes as any)[k]).length > 0) && (
+                      {(u.permissoes?.dashboard && Object.keys(u.permissoes || {}).filter(k => k.startsWith('dash_') && (u.permissoes as any)[k]).length > 0) && (
                          <Badge variant="outline" className="text-[10px] border-emerald-500/30 text-emerald-500">+ Métricas</Badge>
                       )}
                     </div>

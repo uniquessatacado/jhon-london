@@ -98,12 +98,18 @@ export function NewProductPage() {
   const { watch, setValue, handleSubmit, getValues, reset, formState: { isSubmitting, errors, dirtyFields } } = methods;
 
   // =======================================================================
-  // 1. CARREGAMENTO DOS DADOS (O SEGREDO PARA NÃO QUEBRAR OS SELECTS)
+  // 1. CARREGAMENTO DOS DADOS (COM LOGS DE DEBUG RIGOROSOS)
   // =======================================================================
   useEffect(() => {
     if (productData && !isPageLoading) {
       
-      // CRÍTICO: Garantir que todos os IDs sejam STRINGS, senão o Select do Shadcn fica vazio!
+      console.log('=== DEBUG DYAD : INICIO DO RESET ===');
+      console.log('Dados brutos da API (productData):', productData);
+      console.log('subcategoria_id API:', productData.subcategoria_id, '| Tipo:', typeof productData.subcategoria_id);
+      console.log('marca_id API:', productData.marca_id, '| Tipo:', typeof productData.marca_id);
+      console.log('grade_id API:', productData.grade_id, '| Tipo:', typeof productData.grade_id);
+
+      // CRÍTICO: Garantir que todos os IDs sejam STRINGS
       let categoryId = productData.categoria_id ? String(productData.categoria_id) : '';
       const subcategoryId = productData.subcategoria_id ? String(productData.subcategoria_id) : '';
       const brandId = productData.marca_id ? String(productData.marca_id) : '';
@@ -135,14 +141,13 @@ export function NewProductPage() {
           ? JSON.parse(productData.composicao_atacado_grade || "[]")
           : (productData.composicao_atacado_grade || []);
 
-      // RESET COMPLETO DO FORMULÁRIO COM DADOS TIPADOS CORRETAMENTE
-      reset({
+      const dadosMapeados = {
         nome: isDuplicateMode ? `${productData.nome} - Cópia` : productData.nome,
         categoria_id: categoryId,
-        subcategoria_id: subcategoryId, // CRÍTICO (String)
-        marca_id: brandId,               // CRÍTICO (String)
-        grade_id: gridId,               // CRÍTICO (String)
-        grade_atacado_id: gradeAtacadoId, // CRÍTICO (String)
+        subcategoria_id: subcategoryId,
+        marca_id: brandId,
+        grade_id: gridId,
+        grade_atacado_id: gradeAtacadoId,
         ncm: productData.ncm || '',
         cfop_padrao: productData.cfop_padrao || '',
         cst_icms: productData.cst_icms || '',
@@ -156,7 +161,17 @@ export function NewProductPage() {
         preco_atacado_grade: Number(productData.preco_atacado_grade) || 0,
         variacoes: variacoesComDimensoes,
         composicao_atacado: composicaoParsed
+      };
+
+      console.log('Dados MAPEADOS que serão enviados para o reset():', {
+        subcategoria_id: dadosMapeados.subcategoria_id,
+        marca_id: dadosMapeados.marca_id,
+        grade_id: dadosMapeados.grade_id
       });
+
+      // RESET COMPLETO DO FORMULÁRIO
+      reset(dadosMapeados);
+      console.log('=== DEBUG DYAD : RESET CHAMADO! ===');
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [productData, isPageLoading, isDuplicateMode, allSubcategories, reset]);
@@ -169,8 +184,8 @@ export function NewProductPage() {
   // =======================================================================
   useEffect(() => {
     // CRÍTICO: Só executa se o campo "subcategoria_id" estiver "sujo" (alterado manualmente pelo usuário)
-    // Isso impede que o autopreenchimento sobrescreva a grade que veio do reset() acima.
     if (dirtyFields.subcategoria_id && selectedSubcategoryId && allSubcategories) {
+      console.log('Autopreenchimento ativado! (Usuário mudou a subcategoria manualmente)');
       const selectedSub = allSubcategories.find(sub => String(sub.id) === String(selectedSubcategoryId));
       if (selectedSub) {
         // Preenche Categoria

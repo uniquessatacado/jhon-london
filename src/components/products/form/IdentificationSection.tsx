@@ -57,22 +57,25 @@ export function IdentificationSection({ categories, allSubcategories, brands, gr
               control={control}
               name="subcategoria_id"
               rules={{ required: true }}
-              render={({ field }) => (
-                <Select 
-                  onValueChange={field.onChange} 
-                  // CRÍTICO: field.value convertido para String
-                  value={field.value ? String(field.value) : undefined}
-                >
-                  <SelectTrigger className={`bg-black/40 h-14 text-base ${errors.subcategoria_id ? 'border-red-500' : 'border-white/10'}`}>
-                    <SelectValue placeholder="Selecione..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {allSubcategories?.map(sub => (
-                      <SelectItem key={sub.id} value={String(sub.id)}>{sub.nome}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
+              render={({ field }) => {
+                console.log('--- RENDER SELECT SUBCATEGORIA --- | field.value:', field.value, '| Tipo:', typeof field.value);
+                return (
+                  <Select 
+                    onValueChange={field.onChange} 
+                    // CRÍTICO: field.value convertido para String
+                    value={field.value ? String(field.value) : undefined}
+                  >
+                    <SelectTrigger className={`bg-black/40 h-14 text-base ${errors.subcategoria_id ? 'border-red-500' : 'border-white/10'}`}>
+                      <SelectValue placeholder="Selecione..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {allSubcategories?.map(sub => (
+                        <SelectItem key={sub.id} value={String(sub.id)}>{sub.nome}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )
+              }}
             />
           </div>
           <div className="grid gap-2">
@@ -81,21 +84,24 @@ export function IdentificationSection({ categories, allSubcategories, brands, gr
               control={control}
               name="marca_id"
               rules={{ required: true }}
-              render={({ field }) => (
-                <Select 
-                  onValueChange={field.onChange} 
-                  value={field.value ? String(field.value) : undefined}
-                >
-                  <SelectTrigger className={`bg-black/40 h-14 text-base ${errors.marca_id ? 'border-red-500' : 'border-white/10'}`}>
-                    <SelectValue placeholder="Selecione..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {brands?.map(brand => (
-                      <SelectItem key={brand.id} value={String(brand.id)}>{brand.nome}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
+              render={({ field }) => {
+                console.log('--- RENDER SELECT MARCA --- | field.value:', field.value, '| Tipo:', typeof field.value);
+                return (
+                  <Select 
+                    onValueChange={field.onChange} 
+                    value={field.value ? String(field.value) : undefined}
+                  >
+                    <SelectTrigger className={`bg-black/40 h-14 text-base ${errors.marca_id ? 'border-red-500' : 'border-white/10'}`}>
+                      <SelectValue placeholder="Selecione..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {brands?.map(brand => (
+                        <SelectItem key={brand.id} value={String(brand.id)}>{brand.nome}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )
+              }}
             />
           </div>
           <div className="grid gap-2">
@@ -104,21 +110,24 @@ export function IdentificationSection({ categories, allSubcategories, brands, gr
               control={control}
               name="grade_id"
               rules={{ required: true }}
-              render={({ field }) => (
-                <Select 
-                  onValueChange={field.onChange} 
-                  value={field.value ? String(field.value) : undefined}
-                >
-                  <SelectTrigger className={`bg-black/40 h-14 text-base ${errors.grade_id ? 'border-red-500' : 'border-white/10'}`}>
-                    <SelectValue placeholder="Escolha uma grade..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {grids?.map(g => (
-                      <SelectItem key={g.id} value={String(g.id)}>{g.nome}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
+              render={({ field }) => {
+                console.log('--- RENDER SELECT GRADE --- | field.value:', field.value, '| Tipo:', typeof field.value);
+                return (
+                  <Select 
+                    onValueChange={field.onChange} 
+                    value={field.value ? String(field.value) : undefined}
+                  >
+                    <SelectTrigger className={`bg-black/40 h-14 text-base ${errors.grade_id ? 'border-red-500' : 'border-white/10'}`}>
+                      <SelectValue placeholder="Escolha uma grade..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {grids?.map(g => (
+                        <SelectItem key={g.id} value={String(g.id)}>{g.nome}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )
+              }}
             />
           </div>
         </div>

@@ -10,9 +10,9 @@ interface TopProductsProps {
 
 export function TopProducts({ products, isLoading }: TopProductsProps) {
   return (
-    <Card className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl border-white/10 shadow-lg">
-      <CardHeader className="border-b border-white/5 pb-4">
-        <CardTitle className="text-xl font-medium flex items-center gap-2 text-white">
+    <Card className="bg-card backdrop-blur-xl border shadow-lg">
+      <CardHeader className="border-b pb-4">
+        <CardTitle className="text-xl font-medium flex items-center gap-2 text-foreground">
             <Trophy className="h-5 w-5 text-yellow-400" /> Produtos Mais Vendidos
         </CardTitle>
       </CardHeader>
@@ -20,7 +20,7 @@ export function TopProducts({ products, isLoading }: TopProductsProps) {
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {Array.from({ length: 4 }).map((_, i) => (
-                <Skeleton key={i} className="h-64 w-full rounded-2xl bg-white/5" />
+                <Skeleton key={i} className="h-64 w-full rounded-2xl bg-muted" />
             ))}
           </div>
         ) : !products || products.length === 0 ? (
@@ -31,14 +31,14 @@ export function TopProducts({ products, isLoading }: TopProductsProps) {
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             {products.map((product, index) => (
-              <div key={product.id} className="group relative bg-black/40 border border-white/10 rounded-2xl overflow-hidden hover:border-emerald-500/50 hover:shadow-[0_0_20px_rgba(16,185,129,0.1)] transition-all duration-300">
+              <div key={product.id} className="group relative bg-background/50 border rounded-2xl overflow-hidden hover:border-emerald-500/50 hover:shadow-[0_0_20px_rgba(16,185,129,0.1)] transition-all duration-300">
                 {/* Ranking Badge */}
                 <div className="absolute top-2 left-2 z-10 h-6 w-6 rounded-full bg-emerald-500 flex items-center justify-center text-xs font-bold text-white shadow-lg">
                     {index + 1}
                 </div>
                 
                 {/* Image Area */}
-                <div className="aspect-[4/3] bg-white/5 relative overflow-hidden">
+                <div className="aspect-[4/3] bg-muted relative overflow-hidden">
                     {product.imagem ? (
                         <img 
                             src={product.imagem} 
@@ -59,13 +59,13 @@ export function TopProducts({ products, isLoading }: TopProductsProps) {
 
                 {/* Stats */}
                 <div className="p-3 grid grid-cols-2 gap-2 text-xs">
-                    <div className="bg-white/5 rounded-lg p-2 text-center">
+                    <div className="bg-muted rounded-lg p-2 text-center">
                         <span className="block text-muted-foreground text-[10px] uppercase">Qtd.</span>
                         <span className="font-bold text-emerald-400 text-lg">{product.quantidade_vendida}</span>
                     </div>
-                    <div className="bg-white/5 rounded-lg p-2 text-center">
+                    <div className="bg-muted rounded-lg p-2 text-center">
                         <span className="block text-muted-foreground text-[10px] uppercase">Total</span>
-                        <span className="font-bold text-white">
+                        <span className="font-bold text-foreground">
                             {new Intl.NumberFormat('pt-BR', { notation: 'compact', style: 'currency', currency: 'BRL' }).format(product.valor_total_vendido)}
                         </span>
                     </div>

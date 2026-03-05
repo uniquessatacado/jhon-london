@@ -39,12 +39,12 @@ export function ProductCardMobile({ product, onView, onReplenish, onEdit, onDele
   const stockIsLow = totalEstoque <= product.estoque_minimo;
 
   return (
-    <div className="bg-black/40 border border-white/10 rounded-2xl shadow-lg p-4 flex flex-col gap-4">
+    <div className="bg-card border rounded-2xl shadow-lg p-4 flex flex-col gap-4">
       <div className="flex gap-4">
         <button
           onClick={() => imageUrl && onImageView(imageUrl)}
           disabled={!imageUrl}
-          className="w-24 h-24 flex-shrink-0 rounded-xl bg-gradient-to-br from-white/10 to-transparent border border-white/10 overflow-hidden flex items-center justify-center shadow-inner disabled:cursor-default"
+          className="w-24 h-24 flex-shrink-0 rounded-xl bg-gradient-to-br from-muted to-transparent border overflow-hidden flex items-center justify-center shadow-inner disabled:cursor-default"
         >
           {imageUrl ? (
             <img src={imageUrl} alt={product.nome} className="h-full w-full object-cover" />
@@ -56,7 +56,7 @@ export function ProductCardMobile({ product, onView, onReplenish, onEdit, onDele
         </button>
         <div className="flex-1 flex flex-col justify-between">
           <div>
-            <h3 className="font-bold text-lg text-white leading-tight">{product.nome}</h3>
+            <h3 className="font-bold text-lg text-foreground leading-tight">{product.nome}</h3>
             <p className="text-xs text-muted-foreground mt-1">{product.categoria_nome || 'N/A'} • {product.marca_nome || 'N/A'}</p>
           </div>
           <div className="flex items-end justify-between mt-2">
@@ -83,10 +83,10 @@ export function ProductCardMobile({ product, onView, onReplenish, onEdit, onDele
         </div>
       </div>
       <div className="grid grid-cols-5 gap-2">
-        <Button variant="outline" size="icon" className="h-12 w-full bg-white/5 border-white/10" onClick={() => onView(product)}><Eye className="h-5 w-5" /></Button>
-        <Button variant="outline" size="icon" className="h-12 w-full bg-white/5 border-white/10" onClick={() => onViewStock(product)}><Warehouse className="h-5 w-5" /></Button>
-        <Button variant="outline" size="icon" className="h-12 w-full bg-white/5 border-white/10" onClick={() => onReplenish(product)}><PackagePlus className="h-5 w-5" /></Button>
-        <Button variant="outline" size="icon" className="h-12 w-full bg-white/5 border-white/10" onClick={() => onEdit(product.id)}><Pencil className="h-5 w-5" /></Button>
+        <Button variant="outline" size="icon" className="h-12 w-full bg-muted/50 border" onClick={() => onView(product)}><Eye className="h-5 w-5" /></Button>
+        <Button variant="outline" size="icon" className="h-12 w-full bg-muted/50 border" onClick={() => onViewStock(product)}><Warehouse className="h-5 w-5" /></Button>
+        <Button variant="outline" size="icon" className="h-12 w-full bg-muted/50 border" onClick={() => onReplenish(product)}><PackagePlus className="h-5 w-5" /></Button>
+        <Button variant="outline" size="icon" className="h-12 w-full bg-muted/50 border" onClick={() => onEdit(product.id)}><Pencil className="h-5 w-5" /></Button>
         <Button variant="destructive" size="icon" className="h-12 w-full" onClick={() => onDelete(product)}><Trash2 className="h-5 w-5" /></Button>
       </div>
     </div>

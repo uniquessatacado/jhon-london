@@ -128,8 +128,8 @@ export function ProductListPage() {
 
   const renderDesktopView = () => (
     <Table>
-      <TableHeader className="bg-white/[0.03]">
-        <TableRow className="border-white/5 hover:bg-transparent">
+      <TableHeader className="bg-muted/50">
+        <TableRow className="border-b hover:bg-transparent">
           <TableHead className="w-[80px] pl-6">Foto</TableHead>
           <TableHead className="text-emerald-500 font-semibold w-[50px]">ID</TableHead>
           <TableHead className="text-emerald-500 font-semibold">Produto</TableHead>
@@ -142,13 +142,13 @@ export function ProductListPage() {
       <TableBody>
         {isLoading ? (
           Array.from({ length: 5 }).map((_, i) => (
-            <TableRow key={i} className="border-white/5 hover:bg-white/5">
-              <TableCell className="pl-6"><Skeleton className="h-10 w-10 rounded-lg bg-white/10" /></TableCell>
-              <TableCell><Skeleton className="h-4 w-8 bg-white/10" /></TableCell>
-              <TableCell><Skeleton className="h-4 w-48 bg-white/10 mb-2" /><Skeleton className="h-3 w-24 bg-white/5" /></TableCell>
-              <TableCell><Skeleton className="h-4 w-32 bg-white/10" /></TableCell>
-              <TableCell><Skeleton className="h-5 w-16 ml-auto bg-white/10 rounded-full" /></TableCell>
-              <TableCell><Skeleton className="h-4 w-20 ml-auto bg-white/10" /></TableCell>
+            <TableRow key={i} className="border-b hover:bg-accent">
+              <TableCell className="pl-6"><Skeleton className="h-10 w-10 rounded-lg bg-muted" /></TableCell>
+              <TableCell><Skeleton className="h-4 w-8 bg-muted" /></TableCell>
+              <TableCell><Skeleton className="h-4 w-48 bg-muted mb-2" /><Skeleton className="h-3 w-24 bg-muted/50" /></TableCell>
+              <TableCell><Skeleton className="h-4 w-32 bg-muted" /></TableCell>
+              <TableCell><Skeleton className="h-5 w-16 ml-auto bg-muted rounded-full" /></TableCell>
+              <TableCell><Skeleton className="h-4 w-20 ml-auto bg-muted" /></TableCell>
               <TableCell></TableCell>
             </TableRow>
           ))
@@ -165,12 +165,12 @@ export function ProductListPage() {
             const imageUrl = getImageUrl(product.imagem_principal);
 
             return (
-              <TableRow key={product.id} className="border-white/5 hover:bg-white/[0.04] transition-colors group">
+              <TableRow key={product.id} className="border-b hover:bg-accent transition-colors group">
                 <TableCell className="pl-6 py-4">
                     <button
                       onClick={() => imageUrl && handleOpenImageViewer(imageUrl)}
                       disabled={!imageUrl}
-                      className="h-12 w-12 rounded-xl bg-gradient-to-br from-white/10 to-transparent border border-white/10 overflow-hidden flex items-center justify-center shadow-inner disabled:cursor-default"
+                      className="h-12 w-12 rounded-xl bg-gradient-to-br from-accent to-transparent border overflow-hidden flex items-center justify-center shadow-inner disabled:cursor-default"
                     >
                         {imageUrl ? (
                             <img src={imageUrl} alt="" className="h-full w-full object-cover" />
@@ -182,9 +182,9 @@ export function ProductListPage() {
                     </button>
                 </TableCell>
                 <TableCell><span className="text-muted-foreground font-mono text-xs">#{product.id}</span></TableCell>
-                <TableCell><span className="font-medium text-white group-hover:text-emerald-400 transition-colors">{product.nome}</span></TableCell>
+                <TableCell><span className="font-medium text-foreground group-hover:text-emerald-400 transition-colors">{product.nome}</span></TableCell>
                 <TableCell>
-                    <span className="text-sm font-medium text-gray-300">
+                    <span className="text-sm font-medium text-muted-foreground">
                         {categoryName ? `${categoryName} / ` : ''}
                         {product.subcategoria_nome || '-'}
                     </span>
@@ -198,11 +198,11 @@ export function ProductListPage() {
                 <TableCell>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button aria-haspopup="true" size="icon" variant="ghost" className="h-8 w-8 hover:bg-white/10 rounded-lg text-muted-foreground hover:text-white">
+                      <Button aria-haspopup="true" size="icon" variant="ghost" className="h-8 w-8 hover:bg-accent rounded-lg text-muted-foreground hover:text-foreground">
                         <MoreHorizontal className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="bg-zinc-900/95 backdrop-blur-xl border-white/10 rounded-xl w-48">
+                    <DropdownMenuContent align="end" className="bg-popover text-popover-foreground w-48">
                       <DropdownMenuItem onClick={() => handleViewProduct(product)}><Eye className="mr-2 h-4 w-4" /> Visualizar Detalhes</DropdownMenuItem>
                       <DropdownMenuItem onClick={() => handleViewStock(product)}><Warehouse className="mr-2 h-4 w-4" /> Ver Estoque</DropdownMenuItem>
                       <DropdownMenuItem onClick={() => handleReplenishProduct(product)}><PackagePlus className="mr-2 h-4 w-4" /> Repor Estoque</DropdownMenuItem>
@@ -225,7 +225,7 @@ export function ProductListPage() {
   const renderMobileView = () => (
     <div className="space-y-4 p-4 pb-24">
       {isLoading ? (
-        Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-40 w-full rounded-2xl bg-white/10" />)
+        Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-40 w-full rounded-2xl bg-muted" />)
       ) : filteredProducts.length > 0 ? (
         filteredProducts.map(product => (
           <ProductCardMobile 
@@ -254,7 +254,7 @@ export function ProductListPage() {
       <div className="px-4 md:px-0">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-white">Produtos</h1>
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">Produtos</h1>
             <p className="text-muted-foreground">Gerenciamento de catálogo e estoque.</p>
           </div>
           <Link to="/produtos/novo" className="hidden md:block">
@@ -266,13 +266,13 @@ export function ProductListPage() {
         </div>
       </div>
 
-      <div className="rounded-3xl md:border md:border-white/10 md:bg-black/40 md:backdrop-blur-xl md:shadow-2xl overflow-hidden md:ring-1 md:ring-white/5">
-        <div className="p-4 md:p-6 border-b border-white/10 flex flex-col md:flex-row gap-4 bg-white/[0.02]">
+      <div className="rounded-3xl md:border md:bg-card md:backdrop-blur-xl md:shadow-2xl overflow-hidden md:ring-1">
+        <div className="p-4 md:p-6 border-b flex flex-col md:flex-row gap-4 bg-muted/50">
            <div className="relative flex-1 group">
                 <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground group-focus-within:text-emerald-500 transition-colors" />
                 <Input 
                     placeholder="Buscar por nome..." 
-                    className="pl-9 bg-black/20 border-white/10 rounded-xl focus:border-emerald-500/50 focus:ring-emerald-500/20 transition-all h-10"
+                    className="pl-9 bg-background border rounded-xl focus:border-emerald-500/50 focus:ring-emerald-500/20 transition-all h-10"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                 />
@@ -280,18 +280,18 @@ export function ProductListPage() {
            <Button 
                 variant={showFilters ? "secondary" : "outline"} 
                 onClick={() => setShowFilters(!showFilters)}
-                className={`rounded-xl border-white/10 h-10 transition-all ${showFilters ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-black/20 hover:bg-white/5 text-muted-foreground hover:text-white'}`}
+                className={`rounded-xl border h-10 transition-all ${showFilters ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-background hover:bg-accent text-muted-foreground hover:text-foreground'}`}
            >
                 <Filter className="mr-2 h-4 w-4" /> Filtros
            </Button>
         </div>
         
         {showFilters && (
-            <div className="p-4 md:p-6 bg-black/40 border-b border-white/10 grid grid-cols-1 md:grid-cols-3 gap-6 animate-in slide-in-from-top-2">
+            <div className="p-4 md:p-6 bg-card border-b grid grid-cols-1 md:grid-cols-3 gap-6 animate-in slide-in-from-top-2">
                 <div className="space-y-2">
                     <span className="text-xs font-medium text-emerald-500 uppercase tracking-wider">Categoria</span>
                     <Select value={filterCat} onValueChange={handleCatChange}>
-                        <SelectTrigger className="bg-white/5 border-white/10 rounded-lg"><SelectValue placeholder="Todas" /></SelectTrigger>
+                        <SelectTrigger className="bg-background border rounded-lg"><SelectValue placeholder="Todas" /></SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">Todas</SelectItem>
                             {categories?.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.nome}</SelectItem>)}
@@ -301,7 +301,7 @@ export function ProductListPage() {
                 <div className="space-y-2">
                     <span className="text-xs font-medium text-emerald-500 uppercase tracking-wider">Subcategoria</span>
                     <Select value={filterSub} onValueChange={setFilterSub} disabled={filterCat === 'all'}>
-                        <SelectTrigger className="bg-white/5 border-white/10 rounded-lg"><SelectValue placeholder="Todas" /></SelectTrigger>
+                        <SelectTrigger className="bg-background border rounded-lg"><SelectValue placeholder="Todas" /></SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">Todas</SelectItem>
                             {subcategories?.map(s => <SelectItem key={s.id} value={String(s.id)}>{s.nome}</SelectItem>)}

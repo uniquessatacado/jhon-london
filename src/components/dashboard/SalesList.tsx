@@ -13,8 +13,8 @@ interface SalesListProps {
 
 export function SalesList({ title, sales, isLoading, type = 'recent' }: SalesListProps) {
   return (
-    <Card className="bg-black/20 border-white/10 backdrop-blur-sm h-full flex flex-col">
-      <CardHeader className="border-b border-white/5 pb-4">
+    <Card className="bg-card border backdrop-blur-sm h-full flex flex-col">
+      <CardHeader className="border-b pb-4">
         <CardTitle className="text-lg font-medium flex items-center gap-2">
             <ShoppingBag className="h-4 w-4 text-emerald-500" /> {title}
         </CardTitle>
@@ -25,10 +25,10 @@ export function SalesList({ title, sales, isLoading, type = 'recent' }: SalesLis
             {Array.from({ length: 5 }).map((_, i) => (
                <div key={i} className="flex justify-between items-center">
                   <div className="space-y-2">
-                    <Skeleton className="h-4 w-32 bg-white/5" />
-                    <Skeleton className="h-3 w-20 bg-white/5" />
+                    <Skeleton className="h-4 w-32 bg-muted" />
+                    <Skeleton className="h-3 w-20 bg-muted" />
                   </div>
-                  <Skeleton className="h-5 w-16 bg-white/5" />
+                  <Skeleton className="h-5 w-16 bg-muted" />
                </div>
             ))}
           </div>
@@ -37,15 +37,15 @@ export function SalesList({ title, sales, isLoading, type = 'recent' }: SalesLis
             <p className="text-sm">Nenhuma venda encontrada.</p>
           </div>
         ) : (
-          <div className="divide-y divide-white/5">
+          <div className="divide-y">
             {sales.map((sale) => (
-              <div key={sale.id} className="p-4 hover:bg-white/5 transition-colors flex items-center justify-between group">
+              <div key={sale.id} className="p-4 hover:bg-accent transition-colors flex items-center justify-between group">
                 <div className="flex items-start gap-3">
-                    <div className="h-10 w-10 rounded-full bg-white/5 flex items-center justify-center text-xs font-bold text-muted-foreground border border-white/10 group-hover:border-emerald-500/30 group-hover:text-emerald-400 transition-colors">
+                    <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center text-xs font-bold text-muted-foreground border group-hover:border-emerald-500/30 group-hover:text-emerald-400 transition-colors">
                         {(sale.cliente_nome || '??').substring(0, 2).toUpperCase()}
                     </div>
                     <div>
-                        <p className="text-sm font-medium text-white group-hover:text-emerald-400 transition-colors">{sale.cliente_nome || 'Cliente não identificado'}</p>
+                        <p className="text-sm font-medium text-foreground group-hover:text-emerald-400 transition-colors">{sale.cliente_nome || 'Cliente não identificado'}</p>
                         <p className="text-xs text-muted-foreground">
                             {type === 'recent' ? new Date(sale.data).toLocaleDateString('pt-BR') : `${sale.itens_count} itens`}
                         </p>
@@ -55,7 +55,7 @@ export function SalesList({ title, sales, isLoading, type = 'recent' }: SalesLis
                     <div className="text-sm font-bold text-emerald-400">
                         {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(sale.valor_total)}
                     </div>
-                    <Badge variant="outline" className="text-[10px] h-5 border-white/10 text-muted-foreground">
+                    <Badge variant="outline" className="text-[10px] h-5 border text-muted-foreground">
                         {sale.status}
                     </Badge>
                 </div>
@@ -65,7 +65,7 @@ export function SalesList({ title, sales, isLoading, type = 'recent' }: SalesLis
         )}
       </CardContent>
       {sales && sales.length > 0 && (
-          <div className="p-3 border-t border-white/5 bg-white/[0.02]">
+          <div className="p-3 border-t bg-muted/50">
             <button className="w-full text-xs text-muted-foreground hover:text-emerald-400 flex items-center justify-center gap-1 transition-colors">
                 Ver tudo <ArrowUpRight className="h-3 w-3" />
             </button>

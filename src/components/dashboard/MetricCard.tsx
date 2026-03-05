@@ -28,10 +28,8 @@ export function MetricCard({
     orange: 'text-orange-500 bg-orange-500/10 border-orange-500/20',
   };
 
-  const borderClass = colorMap[color].split(' ').pop(); // Get border color
-
   return (
-    <Card className={`bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-md border-white/10 shadow-xl hover:shadow-${color}-500/10 hover:border-${color}-500/30 transition-all duration-300 group`}>
+    <Card className={`bg-card backdrop-blur-md border shadow-xl hover:shadow-${color}-500/10 hover:border-${color}-500/30 transition-all duration-300 group`}>
       <CardContent className="p-6">
         <div className="flex items-center justify-between space-y-0 pb-2">
           <p className="text-sm font-medium text-muted-foreground">{title}</p>
@@ -41,10 +39,10 @@ export function MetricCard({
         </div>
         <div className="mt-2">
           {isLoading ? (
-            <Skeleton className="h-9 w-28 bg-white/5 rounded-lg" />
+            <Skeleton className="h-9 w-28 bg-muted rounded-lg" />
           ) : (
             <div className="flex flex-col gap-1">
-                <div className="text-3xl font-bold text-white tracking-tight">{value}</div>
+                <div className="text-3xl font-bold text-foreground tracking-tight">{value}</div>
                 {subtext && (
                     <p className="text-xs text-muted-foreground">{subtext}</p>
                 )}

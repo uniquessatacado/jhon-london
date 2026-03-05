@@ -27,9 +27,9 @@ export function DashboardHeader({ filters, onFilterChange, onRefresh }: Dashboar
   };
 
   return (
-    <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-black/40 backdrop-blur-xl border border-white/10 p-4 rounded-3xl shadow-lg">
+    <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-card backdrop-blur-xl border p-4 rounded-3xl shadow-lg">
       <div className="flex flex-col">
-        <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+        <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
             <span className="bg-gradient-to-r from-emerald-400 to-teal-200 bg-clip-text text-transparent">
                 Dashboard.
             </span>
@@ -40,7 +40,7 @@ export function DashboardHeader({ filters, onFilterChange, onRefresh }: Dashboar
       <div className="flex flex-wrap items-center gap-3">
         
         {/* Type Selector */}
-        <div className="w-full md:w-auto bg-white/5 p-1 rounded-xl flex border border-white/5">
+        <div className="w-full md:w-auto bg-muted p-1 rounded-xl flex border">
             {(['tudo', 'varejo', 'atacado'] as const).map((t) => (
                 <button
                     key={t}
@@ -48,7 +48,7 @@ export function DashboardHeader({ filters, onFilterChange, onRefresh }: Dashboar
                     className={`flex-1 md:flex-none px-4 py-1.5 text-sm font-medium rounded-lg transition-all ${
                         localType === t
                         ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
-                        : 'text-muted-foreground hover:text-white hover:bg-white/5'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
                     }`}
                 >
                     {t.charAt(0).toUpperCase() + t.slice(1)}
@@ -56,12 +56,12 @@ export function DashboardHeader({ filters, onFilterChange, onRefresh }: Dashboar
             ))}
         </div>
 
-        <div className="h-8 w-px bg-white/10 hidden md:block" />
+        <div className="h-8 w-px bg-border hidden md:block" />
 
         {/* Period Selector */}
         <div className="w-full md:w-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
             <Select value={localPeriod} onValueChange={(v) => setLocalPeriod(v as PeriodOption)}>
-                <SelectTrigger className="w-full sm:w-[180px] bg-white/5 border-white/10 h-10 rounded-xl focus:ring-emerald-500/20">
+                <SelectTrigger className="w-full sm:w-[180px] bg-background border h-10 rounded-xl focus:ring-emerald-500/20">
                     <Calendar className="mr-2 h-4 w-4 text-emerald-500" />
                     <SelectValue placeholder="Período" />
                 </SelectTrigger>
@@ -82,14 +82,14 @@ export function DashboardHeader({ filters, onFilterChange, onRefresh }: Dashboar
                         type="date"
                         value={dateStart}
                         onChange={(e) => setDateStart(e.target.value)}
-                        className="flex-1 sm:w-36 bg-white/5 border-white/10 h-10 rounded-xl"
+                        className="flex-1 sm:w-36 bg-background border h-10 rounded-xl"
                     />
                     <span className="text-muted-foreground">-</span>
                     <Input
                         type="date"
                         value={dateEnd}
                         onChange={(e) => setDateEnd(e.target.value)}
-                        className="flex-1 sm:w-36 bg-white/5 border-white/10 h-10 rounded-xl"
+                        className="flex-1 sm:w-36 bg-background border h-10 rounded-xl"
                     />
                 </div>
             )}
@@ -107,7 +107,7 @@ export function DashboardHeader({ filters, onFilterChange, onRefresh }: Dashboar
               variant="ghost"
               size="icon"
               onClick={onRefresh}
-              className="h-10 w-10 shrink-0 rounded-xl hover:bg-white/10 hover:text-emerald-400 text-muted-foreground bg-white/5 md:bg-transparent"
+              className="h-10 w-10 shrink-0 rounded-xl hover:bg-accent hover:text-emerald-400 text-muted-foreground bg-background md:bg-transparent"
           >
               <RefreshCcw className="h-4 w-4" />
           </Button>

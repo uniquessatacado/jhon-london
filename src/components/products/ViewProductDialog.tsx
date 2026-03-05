@@ -52,10 +52,10 @@ const ViewProductDialogContent = ({ product }: { product: Product }) => {
       const dim = dimensoes.find(d => d.tamanho === v.tamanho);
       return {
         ...v,
-        peso_kg: v.peso_kg || dim?.peso_kg,
-        altura_cm: v.altura_cm || dim?.altura_cm,
-        largura_cm: v.largura_cm || dim?.largura_cm,
-        comprimento_cm: v.comprimento_cm || dim?.comprimento_cm,
+        peso_kg: dim?.peso_kg || v.peso_kg,
+        altura_cm: dim?.altura_cm || v.altura_cm,
+        largura_cm: dim?.largura_cm || v.largura_cm,
+        comprimento_cm: dim?.comprimento_cm || v.comprimento_cm,
       };
     });
   }, [product]);

@@ -124,6 +124,16 @@ const buildProductFormData = (formData: ProductFormDTO) => {
   }
   payload.append('composicao_atacado_grade', composicaoJson);
   
+  // === LOGS PARA DEBUG NO CONSOLE (PRESSIONE F12 NO NAVEGADOR) ===
+  console.log('--- ENVIANDO DADOS PARA API ---');
+  for (let [key, value] of payload.entries()) {
+    if (key === 'composicao_atacado_grade' || key === 'variacoes' || key.includes('id')) {
+        console.log(`Campo: ${key} | Valor: ${value}`);
+    }
+  }
+  console.log('-------------------------------');
+  // ==============================================================
+
   return payload;
 };
 

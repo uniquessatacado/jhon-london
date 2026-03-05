@@ -116,16 +116,10 @@ function ProductFormContent({
 
   const methods = useForm<any>({
     mode: 'onChange',
+    defaultValues: mappedData,
   });
 
-  const { handleSubmit, formState: { isSubmitting, errors }, reset } = methods;
-
-  // Garante que o formulário seja preenchido com os dados assíncronos
-  useEffect(() => {
-    if (productData) {
-      reset(mappedData);
-    }
-  }, [productData, mappedData, reset]);
+  const { handleSubmit, formState: { isSubmitting, errors } } = methods;
 
   // Estados de Mídia
   const [mainImageFile, setMainImageFile] = useState<File | null>(null);

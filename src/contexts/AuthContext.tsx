@@ -58,7 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Garantir fallback global para evitar crashes se vier null do DB
         parsedUser.permissoes = parsedUser.permissoes || {};
         
-        setUser(parsedUser);
+        setUser(parsedUser as User);
         api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
         fetchFeatureStatus();
       } catch (e) {
@@ -79,7 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = (token: string, userData: User) => {
     // Tratamento de fallback
-    const safeUser = { ...userData, permissoes: userData.permissoes || {} };
+    const safeUser = { ...userData, permissoes: userData.permissoes || {} } as User;
     localStorage.setItem('jl_token', token);
     localStorage.setItem('jl_user', JSON.stringify(safeUser));
     api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
@@ -89,7 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const updateUser = (userData: User) => {
     // Tratamento de fallback
-    const safeUser = { ...userData, permissoes: userData.permissoes || {} };
+    const safeUser = { ...userData, permissoes: userData.permissoes || {} } as User;
     setUser(safeUser);
     localStorage.setItem('jl_user', JSON.stringify(safeUser));
   };

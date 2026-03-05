@@ -57,8 +57,8 @@ export function useCreateGrid() {
 async function updateGrid(updatedGrid: UpdateGridDTO): Promise<Grid> {
   const payload = {
     nome: updatedGrid.nome,
-    // Mapeamos estritamente os campos necessários, descartando IDs temporários do React Hook Form
     tamanhos: updatedGrid.tamanhos.map(t => ({
+      id: t.id, // Opcional, mas ajuda a API a saber qual linha atualizar
       tamanho: t.tamanho,
       peso_kg: parseToNumber(t.peso_kg),
       altura_cm: parseToNumber(t.altura_cm),

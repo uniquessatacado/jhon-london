@@ -16,11 +16,12 @@ import { Grid } from '@/types';
 type GridForm = {
   nome: string;
   tamanhos: {
+    id?: number;
     tamanho: string;
-    peso_kg: number;
-    altura_cm: number;
-    largura_cm: number;
-    comprimento_cm: number;
+    peso_kg: number | string;
+    altura_cm: number | string;
+    largura_cm: number | string;
+    comprimento_cm: number | string;
   }[];
 };
 
@@ -51,6 +52,7 @@ export function GridPage() {
       reset({
         nome: gridToEdit.nome,
         tamanhos: gridToEdit.tamanhos.map(t => ({
+            id: t.id,
             tamanho: t.tamanho,
             peso_kg: t.peso_kg || 0,
             altura_cm: t.altura_cm || 0,
@@ -183,16 +185,16 @@ export function GridPage() {
                                     <Input {...register(`tamanhos.${index}.tamanho`, { required: true })} placeholder="Ex: P" className="h-10 bg-black/40 border-white/10 font-bold text-emerald-400 uppercase" />
                                 </div>
                                 <div className="col-span-2">
-                                    <Input type="number" step="0.001" {...register(`tamanhos.${index}.peso_kg`, { required: true })} placeholder="0.000" className="h-10 bg-black/40 border-white/10" />
+                                    <Input type="text" {...register(`tamanhos.${index}.peso_kg`, { required: true })} placeholder="0.000" className="h-10 bg-black/40 border-white/10" />
                                 </div>
                                 <div className="col-span-2">
-                                    <Input type="number" {...register(`tamanhos.${index}.altura_cm`, { required: true })} placeholder="0" className="h-10 bg-black/40 border-white/10" />
+                                    <Input type="text" {...register(`tamanhos.${index}.altura_cm`, { required: true })} placeholder="0" className="h-10 bg-black/40 border-white/10" />
                                 </div>
                                 <div className="col-span-2">
-                                    <Input type="number" {...register(`tamanhos.${index}.largura_cm`, { required: true })} placeholder="0" className="h-10 bg-black/40 border-white/10" />
+                                    <Input type="text" {...register(`tamanhos.${index}.largura_cm`, { required: true })} placeholder="0" className="h-10 bg-black/40 border-white/10" />
                                 </div>
                                 <div className="col-span-3">
-                                    <Input type="number" {...register(`tamanhos.${index}.comprimento_cm`, { required: true })} placeholder="0" className="h-10 bg-black/40 border-white/10" />
+                                    <Input type="text" {...register(`tamanhos.${index}.comprimento_cm`, { required: true })} placeholder="0" className="h-10 bg-black/40 border-white/10" />
                                 </div>
                                 <div className="col-span-1 flex justify-center">
                                     <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} className="h-8 w-8 text-red-500 hover:bg-red-500/10 rounded-lg">

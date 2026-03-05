@@ -17,10 +17,9 @@ interface IdentificationSectionProps {
 export function IdentificationSection({ categories, allSubcategories, brands, grids }: IdentificationSectionProps) {
   const { register, control, watch, setValue, formState: { errors } } = useFormContext<any>();
 
-  // Categoria é apenas "visual" neste select
+  // Categoria é apenas "visual" neste select, ela é controlada nativamente pelo watch
   const categoriaId = watch('categoria_id');
 
-  // Lógica de Autopreenchimento acionada EXCLUSIVAMENTE pelo clique do usuário (onValueChange)
   const handleSubcategoryChange = async (val: string) => {
     if (!allSubcategories) return;
     
@@ -92,8 +91,8 @@ export function IdentificationSection({ categories, allSubcategories, brands, gr
               render={({ field }) => (
                 <Select 
                   onValueChange={(val) => {
-                    field.onChange(val); // Atualiza o form
-                    handleSubcategoryChange(val); // Roda o autopreenchimento
+                    field.onChange(val); // RHF State Update
+                    handleSubcategoryChange(val); // Custom Side effects
                   }} 
                   value={field.value ? String(field.value) : undefined}
                 >

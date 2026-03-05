@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,23 @@ import { VariationsSection } from '@/components/products/form/VariationsSection'
 import { FinancialSection } from '@/components/products/form/FinancialSection';
 import { MediaSection } from '@/components/products/form/MediaSection';
 import { FiscalSection } from '@/components/products/form/FiscalSection';
+
+const defaultFormValues = {
+  nome: '',
+  variacoes: [],
+  composicao_atacado: [],
+  habilita_atacado_geral: false,
+  habilita_atacado_grade: false,
+  preco_custo: 0,
+  preco_varejo: 0,
+  preco_atacado_geral: 0,
+  preco_atacado_grade: 0,
+  categoria_id: '',
+  subcategoria_id: '',
+  marca_id: '',
+  grade_id: '',
+  grade_atacado_id: ''
+};
 
 export function NewProductPage() {
   const navigate = useNavigate();
@@ -52,9 +69,6 @@ export function NewProductPage() {
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [videoPreview, setVideoPreview] = useState<string | null>(null);
 
-  // Ref para garantir que o reset só aconteça uma única vez
-  const hasLoadedDataRef = useRef(false);
-
   useEffect(() => {
     api.get('/configuracoes/qtd_minima_atacado_geral')
       .then(res => setGlobalAtacadoMin(res.data?.valor || '10'))
@@ -79,90 +93,75 @@ export function NewProductPage() {
 
   const isPageLoading = isLoadingCats || isLoadingBrands || isLoadingGrids || isLoadingSubs || ((isEditMode || isDuplicateMode) && isLoadingData);
 
+  // =======================================================================
+  // MAGIA DO REACT HOOK FORM: Usa o useMemo para mapear os dados uma vez
+  // e entrega para a prop `values`. Isso força a sincronização perfeita.
+  // =======================================================================
+  const mappedData = useMemo(() => {
+    if (!isEditMode && !isDuplicateMode) return defaultFormValues;
+    if (!productData) return undefined; // Retorna undefined para o Form "esperar" os dados
+
+    let categoryId = productData.categoria_id ? String(productData.categoria_id) : '';
+    const subcategoryId = productData.subcategoria_id ? String(productData.subcategoria_id) : '';
+    const brandId = productData.marca_id ? String(productData.marca_id) : '';
+    const gridId = productData.grade_id ? String(productData.grade_id) : '';
+    const gradeAtacadoId = productData.grade_atacado_id ? String(productData.grade_atacado_id) : '';
+
+    if (!categoryId && subcategoryId && allSubcategories) {
+      const sub = allSubcategories.find(s => String(s.id) === subcategoryId);
+      if (sub) categoryId = String(sub.categoria_id);
+    }
+
+    const variacoesComDimensoes = productData.variacoes?.map(v => {
+      const dim = productData.dimensoes_grade?.find(d => d.tamanho === v.tamanho);
+      return {
+        ...v,
+        id: v.id,
+        estoque: isDuplicateMode ? 0 : v.estoque,
+        sku: isDuplicateMode ? '' : v.sku,
+        codigo_barras: isDuplicateMode ? '' : v.codigo_barras,
+        peso_kg: v.peso_kg || dim?.peso_kg || 0,
+        altura_cm: v.altura_cm || dim?.altura_cm || 0,
+        largura_cm: v.largura_cm || dim?.largura_cm || 0,
+        comprimento_cm: v.comprimento_cm || dim?.comprimento_cm || 0,
+      };
+    }) || [];
+
+    const composicaoParsed = typeof productData.composicao_atacado_grade === 'string'
+        ? JSON.parse(productData.composicao_atacado_grade || "[]")
+        : (productData.composicao_atacado_grade || []);
+
+    return {
+      ...defaultFormValues,
+      nome: isDuplicateMode ? `${productData.nome} - Cópia` : productData.nome,
+      categoria_id: categoryId,
+      subcategoria_id: subcategoryId, 
+      marca_id: brandId,               
+      grade_id: gridId,               
+      grade_atacado_id: gradeAtacadoId, 
+      ncm: productData.ncm || '',
+      cfop_padrao: productData.cfop_padrao || '',
+      cst_icms: productData.cst_icms || '',
+      origem: String(productData.origem || ''),
+      unidade_medida: productData.unidade_medida || '',
+      preco_custo: Number(productData.preco_custo) || 0,
+      preco_varejo: Number(productData.preco_varejo) || 0,
+      habilita_atacado_geral: !!productData.habilita_atacado_geral,
+      preco_atacado_geral: Number(productData.preco_atacado_geral) || 0,
+      habilita_atacado_grade: !!productData.habilita_atacado_grade,
+      preco_atacado_grade: Number(productData.preco_atacado_grade) || 0,
+      variacoes: variacoesComDimensoes,
+      composicao_atacado: composicaoParsed
+    };
+  }, [productData, isEditMode, isDuplicateMode, allSubcategories]);
+
   const methods = useForm<any>({
     mode: 'onChange',
-    defaultValues: {
-      variacoes: [],
-      composicao_atacado: [],
-      habilita_atacado_geral: false,
-      habilita_atacado_grade: false,
-      preco_custo: 0,
-      preco_varejo: 0,
-      preco_atacado_geral: 0,
-      preco_atacado_grade: 0,
-      categoria_id: '',
-      subcategoria_id: '',
-      marca_id: '',
-      grade_id: '',
-      grade_atacado_id: ''
-    }
+    defaultValues: defaultFormValues,
+    values: mappedData, // <--- Isso substitui o useEffect de reset() com precisão cirúrgica
   });
 
-  const { handleSubmit, reset, formState: { isSubmitting, errors } } = methods;
-
-  // =======================================================================
-  // 1. CARREGAMENTO DOS DADOS - SEGURO E ÚNICO
-  // =======================================================================
-  useEffect(() => {
-    if (productData && !isPageLoading && !hasLoadedDataRef.current) {
-      hasLoadedDataRef.current = true; // Trava para rodar só uma vez
-
-      let categoryId = productData.categoria_id ? String(productData.categoria_id) : '';
-      const subcategoryId = productData.subcategoria_id ? String(productData.subcategoria_id) : '';
-      const brandId = productData.marca_id ? String(productData.marca_id) : '';
-      const gridId = productData.grade_id ? String(productData.grade_id) : '';
-      const gradeAtacadoId = productData.grade_atacado_id ? String(productData.grade_atacado_id) : '';
-
-      // Tenta recuperar a categoria pai se o backend não mandou
-      if (!categoryId && subcategoryId && allSubcategories) {
-        const sub = allSubcategories.find(s => String(s.id) === subcategoryId);
-        if (sub) categoryId = String(sub.categoria_id);
-      }
-
-      const variacoesComDimensoes = productData.variacoes?.map(v => {
-        const dim = productData.dimensoes_grade?.find(d => d.tamanho === v.tamanho);
-        return {
-          ...v,
-          id: v.id,
-          estoque: isDuplicateMode ? 0 : v.estoque,
-          sku: isDuplicateMode ? '' : v.sku,
-          codigo_barras: isDuplicateMode ? '' : v.codigo_barras,
-          peso_kg: v.peso_kg || dim?.peso_kg || 0,
-          altura_cm: v.altura_cm || dim?.altura_cm || 0,
-          largura_cm: v.largura_cm || dim?.largura_cm || 0,
-          comprimento_cm: v.comprimento_cm || dim?.comprimento_cm || 0,
-        };
-      }) || [];
-
-      const composicaoParsed = typeof productData.composicao_atacado_grade === 'string'
-          ? JSON.parse(productData.composicao_atacado_grade || "[]")
-          : (productData.composicao_atacado_grade || []);
-
-      const dadosMapeados = {
-        nome: isDuplicateMode ? `${productData.nome} - Cópia` : productData.nome,
-        categoria_id: categoryId,
-        subcategoria_id: subcategoryId, 
-        marca_id: brandId,               
-        grade_id: gridId,               
-        grade_atacado_id: gradeAtacadoId, 
-        ncm: productData.ncm || '',
-        cfop_padrao: productData.cfop_padrao || '',
-        cst_icms: productData.cst_icms || '',
-        origem: productData.origem || '',
-        unidade_medida: productData.unidade_medida || '',
-        preco_custo: Number(productData.preco_custo) || 0,
-        preco_varejo: Number(productData.preco_varejo) || 0,
-        habilita_atacado_geral: !!productData.habilita_atacado_geral,
-        preco_atacado_geral: Number(productData.preco_atacado_geral) || 0,
-        habilita_atacado_grade: !!productData.habilita_atacado_grade,
-        preco_atacado_grade: Number(productData.preco_atacado_grade) || 0,
-        variacoes: variacoesComDimensoes,
-        composicao_atacado: composicaoParsed
-      };
-
-      reset(dadosMapeados);
-    }
-  }, [productData, isPageLoading, isDuplicateMode, allSubcategories, reset]);
+  const { handleSubmit, formState: { isSubmitting, errors } } = methods;
 
   const onSubmit = (data: any) => {
     if (!data.nome || !data.grade_id || !data.subcategoria_id || !data.marca_id) {

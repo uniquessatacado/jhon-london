@@ -11,6 +11,8 @@ import { Badge } from '@/components/ui/badge';
 import { Grid as GridIcon, Ruler, AlertCircle } from 'lucide-react';
 import { useMediaQuery } from '@/hooks/use-media-query';
 import { Grid } from '@/types';
+import { api } from '@/lib/api';
+import { useDebounce } from '@/hooks/use-debounce';
 
 interface VariationsSectionProps {
   isEditMode: boolean;
@@ -18,13 +20,9 @@ interface VariationsSectionProps {
   grids?: Grid[];
 }
 
-// COMPONENTE ISOLADO PARA CADA LINHA DA TABELA
 const VariationRow = ({ field, index, isEditMode, isDuplicateMode, variacoesValues, onEditDimensions, isMobile }: any) => {
-  const { register, formState: { errors } } = useFormContext();
+  const { register, watch, setError, clearErrors, formState: { errors } } = useFormContext();
   const currentVariation = variacoesValues[index];
-
-  // REMOVIDO A CHAMADA DE API (validateSku) PARA EVITAR O ERRO 404.
-  // O backend já faz a validação principal no momento do clique em "Salvar".
 
   const skuErrorMsg = errors.variacoes?.[index]?.sku?.message;
   const hasDimensions = currentVariation?.peso_kg > 0 || currentVariation?.altura_cm > 0;
@@ -115,9 +113,10 @@ export function VariationsSection({ isEditMode, isDuplicateMode, grids }: Variat
     const currentSizes = variacaoFields.map((v:any) => v.tamanho);
     const newSizes = selectedGridObj.tamanhos.map(t => t.tamanho);
 
+    // Evita o clear da grade durante o primeiro inject via mappedData
     if ((isEditMode || isDuplicateMode) && !initialGridLoaded.current) {
       initialGridLoaded.current = true;
-      if (currentSizes.length > 0) return;
+      return; 
     }
 
     if (JSON.stringify(currentSizes) !== JSON.stringify(newSizes)) {

@@ -28,13 +28,7 @@ export function FinancialSection({ grids, globalAtacadoMin, isEditMode, isDuplic
   const composicaoAtacadoValues = watch('composicao_atacado') || [];
 
   const gradeAtacadoObj = useMemo(() => grids?.find(g => String(g.id) === String(selectedGradeAtacadoId)), [grids, selectedGradeAtacadoId]);
-  const initialGradeAtacadoIdRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    if ((isEditMode || isDuplicateMode) && selectedGradeAtacadoId && !initialGradeAtacadoIdRef.current) {
-        initialGradeAtacadoIdRef.current = String(selectedGradeAtacadoId);
-    }
-  }, [selectedGradeAtacadoId, isEditMode, isDuplicateMode]);
+  const initialGradeAtacadoLoaded = useRef(false);
 
   useEffect(() => {
     if (!gradeAtacadoObj) return;
@@ -42,10 +36,9 @@ export function FinancialSection({ grids, globalAtacadoMin, isEditMode, isDuplic
     const currentSizes = composicaoFields.map((v:any) => v.tamanho);
     const newSizes = gradeAtacadoObj.tamanhos.map(t => t.tamanho);
 
-    if ((isEditMode || isDuplicateMode) && String(gradeAtacadoObj.id) === initialGradeAtacadoIdRef.current) {
-        if (currentSizes.length === 0) {
-            replace(gradeAtacadoObj.tamanhos.map(t => ({ tamanho: t.tamanho, quantidade: 0 })));
-        }
+    // Evita o clear dos dados carregados do banco no primeiro render
+    if ((isEditMode || isDuplicateMode) && !initialGradeAtacadoLoaded.current) {
+        initialGradeAtacadoLoaded.current = true;
         return; 
     }
     

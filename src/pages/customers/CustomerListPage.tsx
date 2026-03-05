@@ -37,12 +37,12 @@ export function CustomerListPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold">Clientes</h1>
           <p className="text-muted-foreground">Gerencie sua base de clientes.</p>
         </div>
-        <Button onClick={handleNew} className="bg-emerald-500 hover:bg-emerald-600 text-white">
+        <Button onClick={handleNew} className="bg-emerald-500 hover:bg-emerald-600 text-white w-full md:w-auto">
           <PlusCircle className="mr-2 h-4 w-4" /> Novo Cliente
         </Button>
       </div>
@@ -59,8 +59,9 @@ export function CustomerListPage() {
             />
           </div>
         </div>
-        <Table>
-          <TableHeader className="bg-white/5">
+        <div className="overflow-x-auto">
+          <Table className="min-w-[800px]">
+            <TableHeader className="bg-white/5">
             <TableRow className="border-white/5 hover:bg-transparent">
               <TableHead>Nome</TableHead>
               <TableHead>CPF/CNPJ</TableHead>
@@ -114,7 +115,8 @@ export function CustomerListPage() {
               </TableRow>
             ))}
           </TableBody>
-        </Table>
+          </Table>
+        </div>
       </div>
 
       <CustomerFormDialog

@@ -126,40 +126,40 @@ export function DashboardPage() {
       </div>
 
       {/* SALES & ORDERS GRID */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[450px]">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:h-[450px]">
          {canSee('dash_vendas_recentes') && (
-             <SalesList 
-                title="Últimas Vendas" 
-                sales={data?.recentSales} 
-                isLoading={isLoading} 
+             <SalesList
+                title="Últimas Vendas"
+                sales={data?.recentSales}
+                isLoading={isLoading}
                 type="recent"
              />
          )}
          {canSee('dash_maiores_pedidos') && (
-             <SalesList 
-                title="Maiores Pedidos" 
-                sales={data?.biggestOrders} 
-                isLoading={isLoading} 
+             <SalesList
+                title="Maiores Pedidos"
+                sales={data?.biggestOrders}
+                isLoading={isLoading}
                 type="biggest"
              />
          )}
       </div>
 
       {/* CUSTOMERS GRID */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[400px]">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:h-[400px]">
           {canSee('dash_novos_clientes') && (
-              <CustomerList 
-                 title="Novos Clientes" 
-                 customers={data?.newCustomers} 
-                 isLoading={isLoading} 
+              <CustomerList
+                 title="Novos Clientes"
+                 customers={data?.newCustomers}
+                 isLoading={isLoading}
                  type="new"
               />
           )}
           {canSee('dash_clientes_elite') && (
-              <CustomerList 
-                 title="Clientes Elite (Top 5)" 
-                 customers={data?.eliteCustomers} 
-                 isLoading={isLoading} 
+              <CustomerList
+                 title="Clientes Elite (Top 5)"
+                 customers={data?.eliteCustomers}
+                 isLoading={isLoading}
                  type="elite"
               />
           )}

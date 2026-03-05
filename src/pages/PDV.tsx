@@ -87,14 +87,14 @@ export function PDVPage() {
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-120px)]">
+    <div className="flex flex-col lg:grid lg:grid-cols-3 gap-6 lg:h-[calc(100vh-120px)]">
       {/* Coluna Esquerda: Busca e Produtos */}
-      <div className="lg:col-span-2 flex flex-col gap-6">
-        <Card className="bg-black/20 border-white/10">
+      <div className="lg:col-span-2 flex flex-col gap-6 h-[60vh] lg:h-auto">
+        <Card className="bg-black/20 border-white/10 shrink-0">
           <CardContent className="p-4">
             <div className="relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-              <Input 
+              <Input
                 placeholder="Buscar por nome, SKU ou código de barras..."
                 className="h-16 text-lg pl-12 bg-black/40 border-white/10 focus:border-emerald-500/50"
                 value={searchTerm}
@@ -104,8 +104,8 @@ export function PDVPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-black/20 border-white/10 flex-1 flex flex-col">
-          <CardHeader className="border-b border-white/5 pb-4">
+        <Card className="bg-black/20 border-white/10 flex-1 flex flex-col overflow-hidden">
+          <CardHeader className="border-b border-white/5 pb-4 shrink-0">
             <CardTitle className="text-lg flex items-center gap-2">
               <Package className="h-5 w-5 text-emerald-400" />
               Produtos

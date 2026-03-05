@@ -36,70 +36,30 @@ const defaultFormValues = {
   grade_atacado_id: ''
 };
 
-export function NewProductPage() {
+// ============================================================================
+// COMPONENTE INTERNO: SÓ É MONTADO QUANDO TODOS OS DADOS JÁ ESTÃO NA MÃO
+// ============================================================================
+function ProductFormContent({ 
+  isEditMode, 
+  isDuplicateMode, 
+  productData, 
+  categories, 
+  brands, 
+  grids, 
+  allSubcategories, 
+  globalAtacadoMin,
+  id
+}: any) {
   const navigate = useNavigate();
-  const { id } = useParams();
-  const [searchParams] = useSearchParams();
-  const duplicateId = searchParams.get('duplicate_id');
-  
   const isMobile = useMediaQuery('(max-width: 768px)');
-  const isEditMode = !!id;
-  const isDuplicateMode = !!duplicateId;
-  const fetchId = id || duplicateId;
-  
-  const { data: categories, isLoading: isLoadingCats } = useCategories();
-  const { data: brands, isLoading: isLoadingBrands } = useBrands();
-  const { data: grids, isLoading: isLoadingGrids } = useGrids();
-  const { data: allSubcategories, isLoading: isLoadingSubs } = useAllSubcategories();
   
   const { mutate: createProduct, isPending: isCreating } = useCreateProduct();
   const { mutate: updateProduct, isPending: isUpdating } = useUpdateProduct();
-  
-  // Busca dos dados do produto (Backend)
-  const { data: productData, isLoading: isLoadingData } = useProductDetails(fetchId || undefined);
 
-  const [globalAtacadoMin, setGlobalAtacadoMin] = useState('10');
-
-  // Estados de mídia
-  const [mainImageFile, setMainImageFile] = useState<File | null>(null);
-  const [mainImagePreview, setMainImagePreview] = useState<string | null>(null);
-  const [galleryFiles, setGalleryFiles] = useState<File[]>([]);
-  const [galleryPreviews, setGalleryPreviews] = useState<string[]>([]);
-  const [existingGallery, setExistingGallery] = useState<string[]>([]);
-  const [videoFile, setVideoFile] = useState<File | null>(null);
-  const [videoPreview, setVideoPreview] = useState<string | null>(null);
-
-  useEffect(() => {
-    api.get('/configuracoes/qtd_minima_atacado_geral')
-      .then(res => setGlobalAtacadoMin(res.data?.valor || '10'))
-      .catch(() => console.error("Failed to fetch global wholesale minimum quantity."));
-  }, []);
-
-  // Inicializa imagens/vídeo
-  useEffect(() => {
-    if (productData && !isDuplicateMode) {
-      if (productData.imagem_principal) setMainImagePreview(productData.imagem_principal.startsWith('http') ? productData.imagem_principal : `${mediaBaseUrl}${productData.imagem_principal}`);
-      if (productData.imagens_galeria?.length) {
-        const fullUrls = productData.imagens_galeria.map((img: string) => img.startsWith('http') ? img : `${mediaBaseUrl}${img}`);
-        setGalleryPreviews(fullUrls);
-        setExistingGallery(fullUrls);
-      }
-      const videoSrc = productData.video_url || productData.video;
-      if (videoSrc) {
-        setVideoPreview(videoSrc.startsWith('http') ? videoSrc : `${mediaBaseUrl}${videoSrc}`);
-      }
-    }
-  }, [productData, isDuplicateMode]);
-
-  const isPageLoading = isLoadingCats || isLoadingBrands || isLoadingGrids || isLoadingSubs || ((isEditMode || isDuplicateMode) && isLoadingData);
-
-  // =======================================================================
-  // MAGIA DO REACT HOOK FORM: Usa o useMemo para mapear os dados uma vez
-  // e entrega para a prop `values`. Isso força a sincronização perfeita.
-  // =======================================================================
+  // Mapeamos os dados UMA ÚNICA VEZ para ser o estado inicial absoluto do form
   const mappedData = useMemo(() => {
     if (!isEditMode && !isDuplicateMode) return defaultFormValues;
-    if (!productData) return undefined; // Retorna undefined para o Form "esperar" os dados
+    if (!productData) return defaultFormValues;
 
     let categoryId = productData.categoria_id ? String(productData.categoria_id) : '';
     const subcategoryId = productData.subcategoria_id ? String(productData.subcategoria_id) : '';
@@ -108,12 +68,12 @@ export function NewProductPage() {
     const gradeAtacadoId = productData.grade_atacado_id ? String(productData.grade_atacado_id) : '';
 
     if (!categoryId && subcategoryId && allSubcategories) {
-      const sub = allSubcategories.find(s => String(s.id) === subcategoryId);
+      const sub = allSubcategories.find((s:any) => String(s.id) === subcategoryId);
       if (sub) categoryId = String(sub.categoria_id);
     }
 
-    const variacoesComDimensoes = productData.variacoes?.map(v => {
-      const dim = productData.dimensoes_grade?.find(d => d.tamanho === v.tamanho);
+    const variacoesComDimensoes = productData.variacoes?.map((v:any) => {
+      const dim = productData.dimensoes_grade?.find((d:any) => d.tamanho === v.tamanho);
       return {
         ...v,
         id: v.id,
@@ -155,13 +115,39 @@ export function NewProductPage() {
     };
   }, [productData, isEditMode, isDuplicateMode, allSubcategories]);
 
+  // INICIALIZAÇÃO BLINDADA: Como esse componente só é montado após o loading,
+  // os defaultValues serão injetados de primeira nos Selects e Inputs.
   const methods = useForm<any>({
     mode: 'onChange',
-    defaultValues: defaultFormValues,
-    values: mappedData, // <--- Isso substitui o useEffect de reset() com precisão cirúrgica
+    defaultValues: mappedData,
   });
 
   const { handleSubmit, formState: { isSubmitting, errors } } = methods;
+
+  // Estados de Mídia
+  const [mainImageFile, setMainImageFile] = useState<File | null>(null);
+  const [mainImagePreview, setMainImagePreview] = useState<string | null>(null);
+  const [galleryFiles, setGalleryFiles] = useState<File[]>([]);
+  const [galleryPreviews, setGalleryPreviews] = useState<string[]>([]);
+  const [existingGallery, setExistingGallery] = useState<string[]>([]);
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [videoPreview, setVideoPreview] = useState<string | null>(null);
+
+  // Injeção de mídias na montagem
+  useEffect(() => {
+    if (productData && !isDuplicateMode) {
+      if (productData.imagem_principal) setMainImagePreview(productData.imagem_principal.startsWith('http') ? productData.imagem_principal : `${mediaBaseUrl}${productData.imagem_principal}`);
+      if (productData.imagens_galeria?.length) {
+        const fullUrls = productData.imagens_galeria.map((img: string) => img.startsWith('http') ? img : `${mediaBaseUrl}${img}`);
+        setGalleryPreviews(fullUrls);
+        setExistingGallery(fullUrls);
+      }
+      const videoSrc = productData.video_url || productData.video;
+      if (videoSrc) {
+        setVideoPreview(videoSrc.startsWith('http') ? videoSrc : `${mediaBaseUrl}${videoSrc}`);
+      }
+    }
+  }, []);
 
   const onSubmit = (data: any) => {
     if (!data.nome || !data.grade_id || !data.subcategoria_id || !data.marca_id) {
@@ -217,9 +203,6 @@ export function NewProductPage() {
   };
 
   const isSaving = isCreating || isUpdating;
-
-  if (isPageLoading) return <div className="flex h-[80vh] items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-emerald-500" /></div>;
-
   const hasValidationErrors = Object.keys(errors).length > 0;
 
   return (
@@ -295,5 +278,61 @@ export function NewProductPage() {
         </div>
       </form>
     </FormProvider>
+  );
+}
+
+// ============================================================================
+// COMPONENTE PRINCIPAL (CONTAINER): GERENCIA O LOADING E AS REQUISIÇÕES
+// ============================================================================
+export function NewProductPage() {
+  const { id } = useParams();
+  const [searchParams] = useSearchParams();
+  const duplicateId = searchParams.get('duplicate_id');
+  
+  const isEditMode = !!id;
+  const isDuplicateMode = !!duplicateId;
+  const fetchId = id || duplicateId;
+  
+  const { data: categories, isLoading: isLoadingCats } = useCategories();
+  const { data: brands, isLoading: isLoadingBrands } = useBrands();
+  const { data: grids, isLoading: isLoadingGrids } = useGrids();
+  const { data: allSubcategories, isLoading: isLoadingSubs } = useAllSubcategories();
+  
+  // Busca dos dados do produto se for edição ou duplicação
+  const { data: productData, isLoading: isLoadingData } = useProductDetails(fetchId || undefined);
+
+  const [globalAtacadoMin, setGlobalAtacadoMin] = useState('10');
+
+  useEffect(() => {
+    api.get('/configuracoes/qtd_minima_atacado_geral')
+      .then(res => setGlobalAtacadoMin(res.data?.valor || '10'))
+      .catch(() => console.error("Failed to fetch global wholesale minimum quantity."));
+  }, []);
+
+  // Bloqueio de tela: Se qualquer uma das APIS estiver carregando, mostra o spinner.
+  const isPageLoading = isLoadingCats || isLoadingBrands || isLoadingGrids || isLoadingSubs || ((isEditMode || isDuplicateMode) && isLoadingData);
+
+  if (isPageLoading) {
+    return (
+      <div className="flex h-[80vh] items-center justify-center flex-col gap-4">
+        <Loader2 className="h-12 w-12 animate-spin text-emerald-500" />
+        <p className="text-muted-foreground animate-pulse">Carregando dados estruturais...</p>
+      </div>
+    );
+  }
+
+  // Quando chega aqui, garantimos 100% que productData, brands, etc. não estão mais em "loading"
+  return (
+    <ProductFormContent 
+      isEditMode={isEditMode}
+      isDuplicateMode={isDuplicateMode}
+      id={id}
+      productData={productData}
+      categories={categories}
+      brands={brands}
+      grids={grids}
+      allSubcategories={allSubcategories}
+      globalAtacadoMin={globalAtacadoMin}
+    />
   );
 }

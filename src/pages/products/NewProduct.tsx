@@ -148,28 +148,13 @@ export function NewProductPage() {
 
   const methods = useForm<any>({
     mode: 'onChange',
-    defaultValues
+    defaultValues,
+    // A mágica acontece aqui: ao invés do reset() manual que gerava race condition, 
+    // o React Hook Form injeta os dados de forma perfeitamente segura.
+    values: !isPageLoading ? formValues : defaultValues 
   });
 
-  const { watch, setValue, handleSubmit, getValues, reset, formState: { isSubmitting, errors } } = methods;
-
-  // Injeção explícita e blindada dos dados do backend
-  useEffect(() => {
-    if (!isPageLoading && productData) {
-      console.log("%c=== DEBUG PARA O KIMI: RETORNO DO GET /api/produtos/:id ===", "color: #10b981; font-weight: bold; font-size: 14px;");
-      console.log({
-          ID_do_Produto: productData.id,
-          subcategoria_id: productData.subcategoria_id,
-          marca_id: productData.marca_id,
-          grade_id: productData.grade_id,
-          grade_atacado_id: productData.grade_atacado_id,
-          composicao: productData.composicao_atacado_grade
-      });
-      console.log("%cSe esses dados acima estiverem NULL na primeira edição após a criação, o POST no backend falhou e o GET está apenas refletindo a falha.", "color: #ef4444; font-weight: bold;");
-      
-      reset(formValues);
-    }
-  }, [isPageLoading, productData, formValues, reset]);
+  const { watch, setValue, handleSubmit, getValues, formState: { isSubmitting, errors } } = methods;
 
   const selectedSubcategoryId = watch('subcategoria_id');
 

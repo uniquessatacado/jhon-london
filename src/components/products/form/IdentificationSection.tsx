@@ -39,7 +39,7 @@ export function IdentificationSection({ categories, allSubcategories, brands, gr
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="grid gap-2">
             <Label>Categoria *</Label>
-            <Select value={categoriaId !== undefined && categoriaId !== null && categoriaId !== '' ? String(categoriaId) : undefined} disabled>
+            <Select value={categoriaId && String(categoriaId) !== 'null' ? String(categoriaId) : undefined} disabled>
               <SelectTrigger className="bg-black/40 h-14 text-base border-white/10 disabled:opacity-70 disabled:cursor-not-allowed">
                 <SelectValue placeholder="Automático pela subcategoria..." />
               </SelectTrigger>
@@ -57,7 +57,7 @@ export function IdentificationSection({ categories, allSubcategories, brands, gr
               name="subcategoria_id"
               rules={{ required: true }}
               render={({ field }) => (
-                <Select onValueChange={field.onChange} value={field.value?.toString() || undefined}>
+                <Select onValueChange={field.onChange} value={field.value && String(field.value) !== 'null' ? String(field.value) : undefined}>
                   <SelectTrigger className={`bg-black/40 h-14 text-base ${errors.subcategoria_id ? 'border-red-500' : 'border-white/10'}`}>
                     <SelectValue placeholder="Selecione..." />
                   </SelectTrigger>
@@ -77,7 +77,7 @@ export function IdentificationSection({ categories, allSubcategories, brands, gr
               name="marca_id"
               rules={{ required: true }}
               render={({ field }) => (
-                <Select onValueChange={field.onChange} value={field.value?.toString() || undefined}>
+                <Select onValueChange={field.onChange} value={field.value && String(field.value) !== 'null' ? String(field.value) : undefined}>
                   <SelectTrigger className={`bg-black/40 h-14 text-base ${errors.marca_id ? 'border-red-500' : 'border-white/10'}`}>
                     <SelectValue placeholder="Selecione..." />
                   </SelectTrigger>
@@ -97,7 +97,7 @@ export function IdentificationSection({ categories, allSubcategories, brands, gr
               name="grade_id"
               rules={{ required: true }}
               render={({ field }) => (
-                <Select onValueChange={field.onChange} value={field.value?.toString() || undefined}>
+                <Select onValueChange={field.onChange} value={field.value && String(field.value) !== 'null' ? String(field.value) : undefined}>
                   <SelectTrigger className={`bg-black/40 h-14 text-base ${errors.grade_id ? 'border-red-500' : 'border-white/10'}`}>
                     <SelectValue placeholder="Escolha uma grade..." />
                   </SelectTrigger>

@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -37,6 +37,8 @@ export function NewProductPage() {
   
   const { mutate: createProduct, isPending: isCreating } = useCreateProduct();
   const { mutate: updateProduct, isPending: isUpdating } = useUpdateProduct();
+  
+  // Busca dos dados do produto (Backend)
   const { data: productData, isLoading: isLoadingData } = useProductDetails(fetchId || undefined);
 
   const [globalAtacadoMin, setGlobalAtacadoMin] = useState('10');
@@ -72,33 +74,43 @@ export function NewProductPage() {
     }
   }, [productData, isDuplicateMode]);
 
-  // Bloqueador de Renderização
   const isPageLoading = isLoadingCats || isLoadingBrands || isLoadingGrids || isLoadingSubs || ((isEditMode || isDuplicateMode) && isLoadingData);
 
-  const defaultValues = {
-    variacoes: [],
-    composicao_atacado: [],
-    habilita_atacado_geral: false,
-    habilita_atacado_grade: false,
-    preco_custo: 0,
-    preco_varejo: 0,
-    preco_atacado_geral: 0,
-    preco_atacado_grade: 0,
-    categoria_id: '',
-    subcategoria_id: '',
-    marca_id: '',
-    grade_id: '',
-    grade_atacado_id: ''
-  };
+  const methods = useForm<any>({
+    mode: 'onChange',
+    defaultValues: {
+      variacoes: [],
+      composicao_atacado: [],
+      habilita_atacado_geral: false,
+      habilita_atacado_grade: false,
+      preco_custo: 0,
+      preco_varejo: 0,
+      preco_atacado_geral: 0,
+      preco_atacado_grade: 0,
+      categoria_id: '',
+      subcategoria_id: '',
+      marca_id: '',
+      grade_id: '',
+      grade_atacado_id: ''
+    }
+  });
 
-  const formValues = useMemo(() => {
+  const { watch, setValue, handleSubmit, getValues, reset, formState: { isSubmitting, errors, dirtyFields } } = methods;
+
+  // =======================================================================
+  // 1. CARREGAMENTO DOS DADOS (O SEGREDO PARA NÃO QUEBRAR OS SELECTS)
+  // =======================================================================
+  useEffect(() => {
     if (productData && !isPageLoading) {
-      let categoryId = productData.categoria_id?.toString() || '';
-      const subcategoryId = productData.subcategoria_id?.toString() || '';
-      const brandId = productData.marca_id?.toString() || '';
-      const gridId = productData.grade_id?.toString() || '';
-      const gradeAtacadoId = productData.grade_atacado_id?.toString() || '';
+      
+      // CRÍTICO: Garantir que todos os IDs sejam STRINGS, senão o Select do Shadcn fica vazio!
+      let categoryId = productData.categoria_id ? String(productData.categoria_id) : '';
+      const subcategoryId = productData.subcategoria_id ? String(productData.subcategoria_id) : '';
+      const brandId = productData.marca_id ? String(productData.marca_id) : '';
+      const gridId = productData.grade_id ? String(productData.grade_id) : '';
+      const gradeAtacadoId = productData.grade_atacado_id ? String(productData.grade_atacado_id) : '';
 
+      // Tenta recuperar a categoria pai se o backend não mandou
       if (!categoryId && subcategoryId && allSubcategories) {
         const sub = allSubcategories.find(s => String(s.id) === subcategoryId);
         if (sub) categoryId = String(sub.categoria_id);
@@ -119,13 +131,18 @@ export function NewProductPage() {
         };
       }) || [];
 
-      return {
+      const composicaoParsed = typeof productData.composicao_atacado_grade === 'string'
+          ? JSON.parse(productData.composicao_atacado_grade || "[]")
+          : (productData.composicao_atacado_grade || []);
+
+      // RESET COMPLETO DO FORMULÁRIO COM DADOS TIPADOS CORRETAMENTE
+      reset({
         nome: isDuplicateMode ? `${productData.nome} - Cópia` : productData.nome,
         categoria_id: categoryId,
-        subcategoria_id: subcategoryId,
-        marca_id: brandId,
-        grade_id: gridId,
-        grade_atacado_id: gradeAtacadoId,
+        subcategoria_id: subcategoryId, // CRÍTICO (String)
+        marca_id: brandId,               // CRÍTICO (String)
+        grade_id: gridId,               // CRÍTICO (String)
+        grade_atacado_id: gradeAtacadoId, // CRÍTICO (String)
         ncm: productData.ncm || '',
         cfop_padrao: productData.cfop_padrao || '',
         cst_icms: productData.cst_icms || '',
@@ -138,57 +155,48 @@ export function NewProductPage() {
         habilita_atacado_grade: !!productData.habilita_atacado_grade,
         preco_atacado_grade: Number(productData.preco_atacado_grade) || 0,
         variacoes: variacoesComDimensoes,
-        composicao_atacado: typeof productData.composicao_atacado_grade === 'string'
-          ? JSON.parse(productData.composicao_atacado_grade || "[]")
-          : (productData.composicao_atacado_grade || [])
-      };
+        composicao_atacado: composicaoParsed
+      });
     }
-    return defaultValues;
-  }, [productData, isPageLoading, isDuplicateMode, allSubcategories]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [productData, isPageLoading, isDuplicateMode, allSubcategories, reset]);
 
-  const methods = useForm<any>({
-    mode: 'onChange',
-    defaultValues,
-    values: !isPageLoading ? formValues : defaultValues 
-  });
-
-  const { watch, setValue, handleSubmit, getValues, reset, formState: { isSubmitting, errors } } = methods;
 
   const selectedSubcategoryId = watch('subcategoria_id');
 
-  // Autopreenchimento Inteligente (Dispara quando o usuário altera a subcategoria manualmente)
+  // =======================================================================
+  // 2. AUTOPREENCHIMENTO PROTEGIDO (Só roda se o usuário alterar a subcategoria)
+  // =======================================================================
   useEffect(() => {
-    if (selectedSubcategoryId && allSubcategories) {
+    // CRÍTICO: Só executa se o campo "subcategoria_id" estiver "sujo" (alterado manualmente pelo usuário)
+    // Isso impede que o autopreenchimento sobrescreva a grade que veio do reset() acima.
+    if (dirtyFields.subcategoria_id && selectedSubcategoryId && allSubcategories) {
       const selectedSub = allSubcategories.find(sub => String(sub.id) === String(selectedSubcategoryId));
       if (selectedSub) {
+        // Preenche Categoria
         setValue('categoria_id', String(selectedSub.categoria_id));
         
-        // Evita reescrever a Grade ou Fiscal na hora de abrir a tela de edição
-        const isManualChange = productData ? String(selectedSubcategoryId) !== String(productData.subcategoria_id) : true;
-        
-        if (!isEditMode && !isDuplicateMode || isManualChange) {
-           const currentGrid = getValues('grade_id');
-           if (selectedSub.grade_id && String(currentGrid) !== String(selectedSub.grade_id)) {
-               setValue('grade_id', String(selectedSub.grade_id), { shouldValidate: true });
-           }
-           
-           api.get(`/subcategorias/${selectedSubcategoryId}/fiscal`).then(response => {
-             const fiscalData = response.data;
-             if (fiscalData) {
-               setValue('ncm', fiscalData.ncm);
-               setValue('cfop_padrao', fiscalData.cfop_padrao);
-               setValue('cst_icms', fiscalData.cst_icms);
-               setValue('origem', fiscalData.origem);
-               setValue('unidade_medida', fiscalData.unidade_medida);
-             }
-           }).catch(() => null);
+        // Preenche Grade (Apenas se a subcategoria tiver uma grade padrão vinculada)
+        if (selectedSub.grade_id) {
+            setValue('grade_id', String(selectedSub.grade_id), { shouldValidate: true });
         }
+        
+        // Busca os dados fiscais da subcategoria
+        api.get(`/subcategorias/${selectedSubcategoryId}/fiscal`).then(response => {
+            const fiscalData = response.data;
+            if (fiscalData) {
+              setValue('ncm', fiscalData.ncm);
+              setValue('cfop_padrao', fiscalData.cfop_padrao);
+              setValue('cst_icms', fiscalData.cst_icms);
+              setValue('origem', String(fiscalData.origem));
+              setValue('unidade_medida', fiscalData.unidade_medida);
+            }
+        }).catch(() => null);
       }
     }
-  }, [selectedSubcategoryId, allSubcategories, setValue, isEditMode, isDuplicateMode, getValues, productData]);
+  }, [selectedSubcategoryId, allSubcategories, dirtyFields.subcategoria_id, setValue]);
 
   const onSubmit = (data: any) => {
-    // 1. Validações Básicas
     if (!data.nome || !data.grade_id || !data.subcategoria_id || !data.marca_id) {
         return toast.error('Preencha todos os campos obrigatórios da Identificação.');
     }
@@ -196,24 +204,20 @@ export function NewProductPage() {
         return toast.error('Adicione pelo menos uma variação na grade.');
     }
 
-    // 2. Validação Flexível de SKU (Só exige se tiver estoque)
     const variacoesInvalidas = data.variacoes.filter((v: any) => Number(v.estoque) > 0 && !v.sku?.trim() && !v.codigo_barras?.trim());
     if (variacoesInvalidas.length > 0) {
         return toast.error('Tamanho com estoque MAIOR QUE ZERO exige que o SKU ou Cód. Barras seja preenchido.');
     }
 
-    // 3. Validação de SKU repetido local (mesma grade)
     const skus = data.variacoes.map((v: any) => v.sku?.trim().toUpperCase()).filter(Boolean);
     if (new Set(skus).size !== skus.length) {
         return toast.error('Existem SKUs repetidos na grade do produto. Verifique os avisos em vermelho.');
     }
 
-    // 4. Validação do Atacado Geral
     if (data.habilita_atacado_geral && Number(data.preco_atacado_geral) <= 0) {
         return toast.error('O Atacado Geral está ativo, portanto o Preço do Atacado Geral deve ser maior que zero.');
     }
 
-    // 5. Validações do Atacado Grade
     if (data.habilita_atacado_grade) {
         if (Number(data.preco_atacado_grade) <= 0) {
             return toast.error('O Atacado Grade está ativo, portanto o Preço do Pacote Fechado deve ser maior que zero.');
@@ -247,7 +251,6 @@ export function NewProductPage() {
 
   const isSaving = isCreating || isUpdating;
 
-  // Renderiza apenas o loader até todos os requests do backend terem respondido.
   if (isPageLoading) return <div className="flex h-[80vh] items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-emerald-500" /></div>;
 
   const hasValidationErrors = Object.keys(errors).length > 0;

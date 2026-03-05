@@ -21,10 +21,11 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401 || error.response?.status === 403) {
+    if (error.response?.status === 401) {
       // Dispara evento global para deslogar o usuário em caso de token inválido
       window.dispatchEvent(new Event('auth-error'));
     }
+    // 403 - Acesso negado: não deslogar, apenas mostrar erro na tela
     return Promise.reject(error);
   }
 );

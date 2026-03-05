@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -30,27 +30,6 @@ export function NewProductPage() {
   const isDuplicateMode = !!duplicateId;
   const fetchId = id || duplicateId;
   
-  const methods = useForm<any>({
-    mode: 'onChange', 
-    defaultValues: {
-      variacoes: [],
-      composicao_atacado: [], 
-      habilita_atacado_geral: false,
-      habilita_atacado_grade: false,
-      preco_custo: 0,
-      preco_varejo: 0,
-      preco_atacado_geral: 0,
-      preco_atacado_grade: 0,
-      categoria_id: '',
-      subcategoria_id: '',
-      marca_id: '',
-      grade_id: '',
-      grade_atacado_id: ''
-    }
-  });
-
-  const { watch, setValue, reset, handleSubmit, getValues, formState: { isSubmitting, errors } } = methods;
-  
   const { data: categories, isLoading: isLoadingCats } = useCategories();
   const { data: brands, isLoading: isLoadingBrands } = useBrands();
   const { data: grids, isLoading: isLoadingGrids } = useGrids();
@@ -61,7 +40,6 @@ export function NewProductPage() {
   const { data: productData, isLoading: isLoadingData } = useProductDetails(fetchId || undefined);
 
   const [globalAtacadoMin, setGlobalAtacadoMin] = useState('10');
-  const hasInitialized = useRef(false);
 
   // Estados de mídia
   const [mainImageFile, setMainImageFile] = useState<File | null>(null);
@@ -78,11 +56,28 @@ export function NewProductPage() {
       .catch(() => console.error("Failed to fetch global wholesale minimum quantity."));
   }, []);
 
-  // CARREGAMENTO SEGURO DA EDIÇÃO: Aguarda TODAS as dependências
+  // Inicializa imagens/vídeo
   useEffect(() => {
-    if (!productData || isLoadingCats || isLoadingSubs || isLoadingBrands || isLoadingGrids || hasInitialized.current) {
-      return;
+    if (productData && !isDuplicateMode) {
+      if (productData.imagem_principal) setMainImagePreview(productData.imagem_principal.startsWith('http') ? productData.imagem_principal : `${mediaBaseUrl}${productData.imagem_principal}`);
+      if (productData.imagens_galeria?.length) {
+        const fullUrls = productData.imagens_galeria.map((img: string) => img.startsWith('http') ? img : `${mediaBaseUrl}${img}`);
+        setGalleryPreviews(fullUrls);
+        setExistingGallery(fullUrls);
+      }
+      const videoSrc = productData.video_url || productData.video;
+      if (videoSrc) {
+        setVideoPreview(videoSrc.startsWith('http') ? videoSrc : `${mediaBaseUrl}${videoSrc}`);
+      }
     }
+  }, [productData, isDuplicateMode]);
+
+  // Bloqueador de Renderização: Espera TODAS as requisições vitais terminarem
+  const isPageLoading = isLoadingCats || isLoadingBrands || isLoadingGrids || isLoadingSubs || ((isEditMode || isDuplicateMode) && isLoadingData);
+
+  // Mapeamento dos dados do backend direto para os nomes dos campos que o form espera
+  const mappedValues = useMemo(() => {
+    if (!productData) return undefined;
 
     let categoryId = productData.categoria_id?.toString() || '';
     const subcategoryId = productData.subcategoria_id?.toString() || '';
@@ -90,8 +85,8 @@ export function NewProductPage() {
     const gridId = productData.grade_id?.toString() || '';
     const gradeAtacadoId = productData.grade_atacado_id?.toString() || '';
 
-    if (!categoryId && subcategoryId) {
-      const sub = allSubcategories?.find(s => String(s.id) === subcategoryId);
+    if (!categoryId && subcategoryId && allSubcategories) {
+      const sub = allSubcategories.find(s => String(s.id) === subcategoryId);
       if (sub) categoryId = String(sub.categoria_id);
     }
 
@@ -110,19 +105,18 @@ export function NewProductPage() {
       };
     }) || [];
 
-    // Preencher os dados de uma única vez com reset
-    reset({
+    return {
       nome: isDuplicateMode ? `${productData.nome} - Cópia` : productData.nome,
       categoria_id: categoryId,
       subcategoria_id: subcategoryId,
       marca_id: brandId,
       grade_id: gridId,
       grade_atacado_id: gradeAtacadoId,
-      ncm: productData.ncm,
-      cfop_padrao: productData.cfop_padrao,
-      cst_icms: productData.cst_icms,
-      origem: productData.origem,
-      unidade_medida: productData.unidade_medida,
+      ncm: productData.ncm || '',
+      cfop_padrao: productData.cfop_padrao || '',
+      cst_icms: productData.cst_icms || '',
+      origem: productData.origem || '',
+      unidade_medida: productData.unidade_medida || '',
       preco_custo: Number(productData.preco_custo) || 0,
       preco_varejo: Number(productData.preco_varejo) || 0,
       habilita_atacado_geral: !!productData.habilita_atacado_geral,
@@ -133,36 +127,42 @@ export function NewProductPage() {
       composicao_atacado: typeof productData.composicao_atacado_grade === 'string'
         ? JSON.parse(productData.composicao_atacado_grade || "[]")
         : (productData.composicao_atacado_grade || [])
-    });
-    
-    // Imagens / Vídeo
-    if (!isDuplicateMode) {
-      if (productData.imagem_principal) setMainImagePreview(productData.imagem_principal.startsWith('http') ? productData.imagem_principal : `${mediaBaseUrl}${productData.imagem_principal}`);
-      if (productData.imagens_galeria?.length) {
-        const fullUrls = productData.imagens_galeria.map(img => img.startsWith('http') ? img : `${mediaBaseUrl}${img}`);
-        setGalleryPreviews(fullUrls);
-        setExistingGallery(fullUrls);
-      }
-      const videoSrc = productData.video_url || productData.video;
-      if (videoSrc) {
-        setVideoPreview(videoSrc.startsWith('http') ? videoSrc : `${mediaBaseUrl}${videoSrc}`);
-      }
-    }
+    };
+  }, [productData, allSubcategories, isDuplicateMode]);
 
-    hasInitialized.current = true;
-  }, [productData, isLoadingCats, isLoadingSubs, isLoadingBrands, isLoadingGrids, allSubcategories, reset, isDuplicateMode]);
+  // O React Hook Form vai ser inicializado SOMENTE UMA VEZ com os dados perfeitamente formatados
+  const methods = useForm<any>({
+    mode: 'onChange',
+    values: mappedValues || {
+      variacoes: [],
+      composicao_atacado: [],
+      habilita_atacado_geral: false,
+      habilita_atacado_grade: false,
+      preco_custo: 0,
+      preco_varejo: 0,
+      preco_atacado_geral: 0,
+      preco_atacado_grade: 0,
+      categoria_id: '',
+      subcategoria_id: '',
+      marca_id: '',
+      grade_id: '',
+      grade_atacado_id: ''
+    }
+  });
+
+  const { watch, setValue, handleSubmit, getValues, formState: { isSubmitting, errors } } = methods;
 
   const selectedSubcategoryId = watch('subcategoria_id');
 
-  // Autopreenchimento Inteligente (Dispara quando o usuário altera a subcategoria)
+  // Autopreenchimento Inteligente (Dispara quando o usuário altera a subcategoria manualmente)
   useEffect(() => {
     if (selectedSubcategoryId && allSubcategories) {
       const selectedSub = allSubcategories.find(sub => String(sub.id) === String(selectedSubcategoryId));
       if (selectedSub) {
         setValue('categoria_id', String(selectedSub.categoria_id));
         
-        // Evita reescrever a Grade na primeira abertura do Edição
-        const isManualChange = hasInitialized.current && String(selectedSubcategoryId) !== String(productData?.subcategoria_id);
+        // Evita reescrever a Grade ou Fiscal na hora de abrir a tela de edição
+        const isManualChange = productData ? String(selectedSubcategoryId) !== String(productData.subcategoria_id) : true;
         
         if (!isEditMode && !isDuplicateMode || isManualChange) {
            const currentGrid = getValues('grade_id');
@@ -206,8 +206,7 @@ export function NewProductPage() {
   
   const isSaving = isCreating || isUpdating;
 
-  // Trava a tela enquanto o banco estiver processando as categorias
-  const isPageLoading = isLoadingCats || isLoadingBrands || isLoadingGrids || isLoadingSubs || ((isEditMode || isDuplicateMode) && isLoadingData);
+  // Renderiza apenas o loader até todos os requests do backend terem respondido.
   if (isPageLoading) return <div className="flex h-[80vh] items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-emerald-500" /></div>;
 
   const hasValidationErrors = Object.keys(errors).length > 0;

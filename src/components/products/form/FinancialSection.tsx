@@ -119,7 +119,7 @@ export function FinancialSection({ grids, globalAtacadoMin, isEditMode, isDuplic
                       control={control}
                       name="grade_atacado_id"
                       render={({ field }) => (
-                        <Select onValueChange={field.onChange} value={field.value !== undefined && field.value !== null && field.value !== '' ? String(field.value) : undefined}>
+                        <Select onValueChange={field.onChange} value={field.value ? String(field.value) : undefined}>
                           <SelectTrigger className="bg-black/40 border-white/10 h-12">
                             <SelectValue placeholder="Selecione a grade..." />
                           </SelectTrigger>

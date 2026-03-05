@@ -57,7 +57,7 @@ export function IdentificationSection({ categories, allSubcategories, brands, gr
               name="subcategoria_id"
               rules={{ required: true }}
               render={({ field }) => (
-                <Select onValueChange={field.onChange} value={field.value !== undefined && field.value !== null && field.value !== '' ? String(field.value) : undefined}>
+                <Select onValueChange={field.onChange} value={field.value ? String(field.value) : undefined}>
                   <SelectTrigger className={`bg-black/40 h-14 text-base ${errors.subcategoria_id ? 'border-red-500' : 'border-white/10'}`}>
                     <SelectValue placeholder="Selecione..." />
                   </SelectTrigger>
@@ -77,7 +77,7 @@ export function IdentificationSection({ categories, allSubcategories, brands, gr
               name="marca_id"
               rules={{ required: true }}
               render={({ field }) => (
-                <Select onValueChange={field.onChange} value={field.value !== undefined && field.value !== null && field.value !== '' ? String(field.value) : undefined}>
+                <Select onValueChange={field.onChange} value={field.value ? String(field.value) : undefined}>
                   <SelectTrigger className={`bg-black/40 h-14 text-base ${errors.marca_id ? 'border-red-500' : 'border-white/10'}`}>
                     <SelectValue placeholder="Selecione..." />
                   </SelectTrigger>
@@ -97,7 +97,7 @@ export function IdentificationSection({ categories, allSubcategories, brands, gr
               name="grade_id"
               rules={{ required: true }}
               render={({ field }) => (
-                <Select onValueChange={field.onChange} value={field.value !== undefined && field.value !== null && field.value !== '' ? String(field.value) : undefined}>
+                <Select onValueChange={field.onChange} value={field.value ? String(field.value) : undefined}>
                   <SelectTrigger className={`bg-black/40 h-14 text-base ${errors.grade_id ? 'border-red-500' : 'border-white/10'}`}>
                     <SelectValue placeholder="Escolha uma grade..." />
                   </SelectTrigger>

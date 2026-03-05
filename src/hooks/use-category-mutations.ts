@@ -129,3 +129,23 @@ export function useUpdateSubcategory() {
     },
   });
 }
+
+async function deleteSubcategory(id: number): Promise<void> {
+  await api.delete(`/subcategorias/${id}`);
+}
+
+export function useDeleteSubcategory() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: deleteSubcategory,
+    onSuccess: () => {
+      toast.success('Subcategoria excluída com sucesso!');
+      queryClient.invalidateQueries({ queryKey: ['subcategories'] });
+      queryClient.invalidateQueries({ queryKey: ['all-subcategories'] });
+    },
+    onError: (error: any) => {
+      const msg = error.response?.data?.message || 'Não é possível excluir subcategorias em uso.';
+      toast.error('Falha ao excluir subcategoria.', { description: msg });
+    },
+  });
+}

@@ -4,12 +4,13 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, Tag, FolderTree, ArrowRight, Pencil, Grid as GridIcon, Loader2, Copy } from 'lucide-react';
+import { PlusCircle, Tag, FolderTree, ArrowRight, Pencil, Grid as GridIcon, Loader2, Copy, Trash2 } from 'lucide-react';
 import { useCategories, useSubcategories } from '@/hooks/use-categories';
-import { useCreateCategory, useCreateSubcategory, useUpdateSubcategory } from '@/hooks/use-category-mutations';
+import { useCreateCategory, useUpdateCategory, useDeleteCategory, useCreateSubcategory, useUpdateSubcategory, useDeleteSubcategory } from '@/hooks/use-category-mutations';
 import { useGrids } from '@/hooks/use-grids';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Category, Subcategory } from '@/types';
@@ -27,23 +28,52 @@ export function CategoryPage() {
   const { data: subcategories, isLoading: isLoadingSubs } = useSubcategories(selectedCategory?.id || null);
 
   const { mutate: createCategory, isPending: isCreatingCat } = useCreateCategory();
+  const { mutate: updateCategory, isPending: isUpdatingCat } = useUpdateCategory();
+  const { mutate: deleteCategory } = useDeleteCategory();
+  
   const { mutate: createSubcategory, isPending: isCreatingSub } = useCreateSubcategory();
   const { mutate: updateSubcategory, isPending: isUpdatingSub } = useUpdateSubcategory();
+  const { mutate: deleteSubcategory } = useDeleteSubcategory();
 
   const [isCatDialogOpen, setIsCatDialogOpen] = useState(false);
+  const [editingCat, setEditingCat] = useState<Category | null>(null);
+  const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
+
   const [isSubDialogOpen, setIsSubDialogOpen] = useState(false);
   const [editingSub, setEditingSub] = useState<Subcategory | null>(null);
+  const [subcategoryToDelete, setSubcategoryToDelete] = useState<Subcategory | null>(null);
 
   const { register: registerCat, handleSubmit: handleCatSubmit, reset: resetCat } = useForm<{ nome: string }>();
   const { register: registerSub, handleSubmit: handleSubSubmit, reset: resetSub, control: controlSub } = useForm<any>();
 
+  const handleOpenCatDialog = (cat: Category | null = null) => {
+    if (cat) {
+      setEditingCat(cat);
+      resetCat({ nome: cat.nome });
+    } else {
+      setEditingCat(null);
+      resetCat({ nome: '' });
+    }
+    setIsCatDialogOpen(true);
+  };
+
   const onCatSubmit = (data: { nome: string }) => {
-    createCategory(data, {
-      onSuccess: () => {
-        setIsCatDialogOpen(false);
-        resetCat();
-      }
-    });
+    if (editingCat) {
+      updateCategory({ id: editingCat.id, ...data }, {
+        onSuccess: () => {
+          setIsCatDialogOpen(false);
+          resetCat();
+          setEditingCat(null);
+        }
+      });
+    } else {
+      createCategory(data, {
+        onSuccess: () => {
+          setIsCatDialogOpen(false);
+          resetCat();
+        }
+      });
+    }
   };
 
   const handleOpenSubDialog = (sub: Subcategory | null = null) => {
@@ -124,6 +154,7 @@ export function CategoryPage() {
     }
   };
 
+  const isSavingCat = isCreatingCat || isUpdatingCat;
   const isSavingSub = isCreatingSub || isUpdatingSub;
 
   return (
@@ -143,7 +174,7 @@ export function CategoryPage() {
             <CardTitle className="text-lg flex items-center gap-2 text-white">
               <Tag className="h-5 w-5 text-emerald-500" /> Categorias
             </CardTitle>
-            <Button size="sm" variant="ghost" className="h-8 w-8 p-0 hover:bg-white/10 text-emerald-400" onClick={() => setIsCatDialogOpen(true)}>
+            <Button size="sm" variant="ghost" className="h-8 w-8 p-0 hover:bg-white/10 text-emerald-400" onClick={() => handleOpenCatDialog()}>
               <PlusCircle className="h-5 w-5" />
             </Button>
           </CardHeader>
@@ -162,14 +193,39 @@ export function CategoryPage() {
                     <div 
                       key={cat.id}
                       onClick={() => setSelectedCategory(cat)}
-                      className={`flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all border ${
+                      className={`group flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all border ${
                         selectedCategory?.id === cat.id 
                           ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 font-bold shadow-sm' 
                           : 'bg-white/5 border-transparent hover:border-white/10 text-white'
                       }`}
                     >
-                      <span className="truncate">{cat.nome}</span>
-                      {selectedCategory?.id === cat.id && <ArrowRight className="h-4 w-4" />}
+                      <span className="truncate flex-1">{cat.nome}</span>
+                      
+                      <div className="flex items-center gap-2">
+                        <div className="hidden group-hover:flex items-center gap-1">
+                          <Button 
+                            size="icon" 
+                            variant="ghost" 
+                            className="h-6 w-6 text-emerald-400 hover:bg-emerald-500/20" 
+                            onClick={(e) => { e.stopPropagation(); handleOpenCatDialog(cat); }}
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                          <Button 
+                            size="icon" 
+                            variant="ghost" 
+                            className="h-6 w-6 text-red-400 hover:bg-red-500/20" 
+                            onClick={(e) => { 
+                              e.stopPropagation(); 
+                              setCategoryToDelete(cat); 
+                              if (selectedCategory?.id === cat.id) setSelectedCategory(null);
+                            }}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                        {selectedCategory?.id === cat.id && <ArrowRight className="h-4 w-4" />}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -239,9 +295,19 @@ export function CategoryPage() {
                          >
                             <Pencil className="h-4 w-4 text-emerald-400" />
                          </Button>
+                         <Button 
+                            type="button"
+                            size="icon" 
+                            variant="ghost" 
+                            title="Excluir Subcategoria"
+                            className="h-8 w-8 bg-black/40 hover:bg-red-500/20 rounded-lg"
+                            onClick={(e) => { e.stopPropagation(); setSubcategoryToDelete(sub); }}
+                         >
+                            <Trash2 className="h-4 w-4 text-red-400" />
+                         </Button>
                       </div>
 
-                      <div className="flex items-start justify-between mb-4 pr-16">
+                      <div className="flex items-start justify-between mb-4 pr-24">
                         <div>
                             <h3 className="font-bold text-lg text-white">{sub.nome}</h3>
                             {sub.grade_id && (
@@ -268,9 +334,10 @@ export function CategoryPage() {
         </Card>
       </div>
 
+      {/* DIALOG CATEGORIA */}
       <Dialog open={isCatDialogOpen} onOpenChange={setIsCatDialogOpen}>
         <DialogContent className="bg-zinc-950 border-white/10">
-          <DialogHeader><DialogTitle>Nova Categoria Principal</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{editingCat ? 'Editar Categoria' : 'Nova Categoria Principal'}</DialogTitle></DialogHeader>
           <form onSubmit={handleCatSubmit(onCatSubmit)} className="space-y-6 pt-4">
             <div className="space-y-2">
               <Label>Nome</Label>
@@ -278,12 +345,15 @@ export function CategoryPage() {
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" className="bg-transparent border-white/10 hover:bg-white/5" onClick={() => setIsCatDialogOpen(false)}>Cancelar</Button>
-              <Button type="submit" disabled={isCreatingCat} className="bg-emerald-500 hover:bg-emerald-600 text-white">Salvar</Button>
+              <Button type="submit" disabled={isSavingCat} className="bg-emerald-500 hover:bg-emerald-600 text-white">
+                {isSavingCat ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Salvar'}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
 
+      {/* DIALOG SUBCATEGORIA */}
       <Dialog open={isSubDialogOpen} onOpenChange={setIsSubDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col bg-zinc-950 border-white/10 p-6">
           <DialogHeader className="shrink-0 pb-2">
@@ -420,6 +490,34 @@ export function CategoryPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* ALERTAS DE EXCLUSÃO */}
+      <AlertDialog open={!!categoryToDelete} onOpenChange={() => setCategoryToDelete(null)}>
+        <AlertDialogContent className="bg-zinc-950 border-white/10">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Categoria?</AlertDialogTitle>
+            <AlertDialogDescription>Essa ação não pode ser desfeita. Excluirá a categoria permanentemente.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-transparent border-white/10 hover:bg-white/5">Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => categoryToDelete && deleteCategory(categoryToDelete.id)} className="bg-red-600 hover:bg-red-700 text-white">Excluir</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!subcategoryToDelete} onOpenChange={() => setSubcategoryToDelete(null)}>
+        <AlertDialogContent className="bg-zinc-950 border-white/10">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Subcategoria?</AlertDialogTitle>
+            <AlertDialogDescription>Essa ação não pode ser desfeita. Excluirá a subcategoria permanentemente.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-transparent border-white/10 hover:bg-white/5">Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => subcategoryToDelete && deleteSubcategory(subcategoryToDelete.id)} className="bg-red-600 hover:bg-red-700 text-white">Excluir</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
     </div>
   );
 }

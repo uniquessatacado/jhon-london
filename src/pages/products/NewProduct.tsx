@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useRef } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -56,6 +56,7 @@ export function NewProductPage() {
       .catch(() => console.error("Failed to fetch global wholesale minimum quantity."));
   }, []);
 
+  // Inicializa imagens/vídeo
   useEffect(() => {
     if (productData && !isDuplicateMode) {
       if (productData.imagem_principal) setMainImagePreview(productData.imagem_principal.startsWith('http') ? productData.imagem_principal : `${mediaBaseUrl}${productData.imagem_principal}`);
@@ -71,7 +72,24 @@ export function NewProductPage() {
     }
   }, [productData, isDuplicateMode]);
 
+  // Bloqueador de Renderização
   const isPageLoading = isLoadingCats || isLoadingBrands || isLoadingGrids || isLoadingSubs || ((isEditMode || isDuplicateMode) && isLoadingData);
+
+  const defaultValues = {
+    variacoes: [],
+    composicao_atacado: [],
+    habilita_atacado_geral: false,
+    habilita_atacado_grade: false,
+    preco_custo: 0,
+    preco_varejo: 0,
+    preco_atacado_geral: 0,
+    preco_atacado_grade: 0,
+    categoria_id: '',
+    subcategoria_id: '',
+    marca_id: '',
+    grade_id: '',
+    grade_atacado_id: ''
+  };
 
   const formValues = useMemo(() => {
     if (productData && !isPageLoading) {
@@ -125,40 +143,52 @@ export function NewProductPage() {
           : (productData.composicao_atacado_grade || [])
       };
     }
-    return {
-      variacoes: [],
-      composicao_atacado: [],
-      habilita_atacado_geral: false,
-      habilita_atacado_grade: false,
-      preco_custo: 0,
-      preco_varejo: 0,
-      preco_atacado_geral: 0,
-      preco_atacado_grade: 0,
-      categoria_id: '',
-      subcategoria_id: '',
-      marca_id: '',
-      grade_id: '',
-      grade_atacado_id: ''
-    };
+    return defaultValues;
   }, [productData, isPageLoading, isDuplicateMode, allSubcategories]);
 
   const methods = useForm<any>({
-    mode: 'onSubmit', // Evita revalidações loucas durante a digitação
+    mode: 'onChange',
+    defaultValues,
+    values: !isPageLoading ? formValues : defaultValues 
   });
 
-  const { handleSubmit, reset, formState: { errors } } = methods;
+  const { watch, setValue, handleSubmit, getValues, reset, formState: { isSubmitting, errors } } = methods;
 
-  // Lógica FIRME E INSISTENTE: Reseta o form UMA ÚNICA VEZ quando a tela terminar de carregar os dados
-  const hasInitialized = useRef(false);
+  const selectedSubcategoryId = watch('subcategoria_id');
+
+  // Autopreenchimento Inteligente (Dispara quando o usuário altera a subcategoria manualmente)
   useEffect(() => {
-    if (!isPageLoading && !hasInitialized.current) {
-      hasInitialized.current = true;
-      reset(formValues);
+    if (selectedSubcategoryId && allSubcategories) {
+      const selectedSub = allSubcategories.find(sub => String(sub.id) === String(selectedSubcategoryId));
+      if (selectedSub) {
+        setValue('categoria_id', String(selectedSub.categoria_id));
+        
+        // Evita reescrever a Grade ou Fiscal na hora de abrir a tela de edição
+        const isManualChange = productData ? String(selectedSubcategoryId) !== String(productData.subcategoria_id) : true;
+        
+        if (!isEditMode && !isDuplicateMode || isManualChange) {
+           const currentGrid = getValues('grade_id');
+           if (selectedSub.grade_id && String(currentGrid) !== String(selectedSub.grade_id)) {
+               setValue('grade_id', String(selectedSub.grade_id), { shouldValidate: true });
+           }
+           
+           api.get(`/subcategorias/${selectedSubcategoryId}/fiscal`).then(response => {
+             const fiscalData = response.data;
+             if (fiscalData) {
+               setValue('ncm', fiscalData.ncm);
+               setValue('cfop_padrao', fiscalData.cfop_padrao);
+               setValue('cst_icms', fiscalData.cst_icms);
+               setValue('origem', fiscalData.origem);
+               setValue('unidade_medida', fiscalData.unidade_medida);
+             }
+           }).catch(() => null);
+        }
+      }
     }
-  }, [isPageLoading, formValues, reset]);
+  }, [selectedSubcategoryId, allSubcategories, setValue, isEditMode, isDuplicateMode, getValues, productData]);
 
   const onSubmit = (data: any) => {
-    // Validações rigorosas antes de salvar
+    // 1. Validações Básicas
     if (!data.nome || !data.grade_id || !data.subcategoria_id || !data.marca_id) {
         return toast.error('Preencha todos os campos obrigatórios da Identificação.');
     }
@@ -166,23 +196,27 @@ export function NewProductPage() {
         return toast.error('Adicione pelo menos uma variação na grade.');
     }
 
+    // 2. Validação Flexível de SKU (Só exige se tiver estoque)
     const variacoesInvalidas = data.variacoes.filter((v: any) => Number(v.estoque) > 0 && !v.sku?.trim() && !v.codigo_barras?.trim());
     if (variacoesInvalidas.length > 0) {
         return toast.error('Tamanho com estoque MAIOR QUE ZERO exige que o SKU ou Cód. Barras seja preenchido.');
     }
 
+    // 3. Validação de SKU repetido local (mesma grade)
     const skus = data.variacoes.map((v: any) => v.sku?.trim().toUpperCase()).filter(Boolean);
     if (new Set(skus).size !== skus.length) {
         return toast.error('Existem SKUs repetidos na grade do produto. Verifique os avisos em vermelho.');
     }
 
+    // 4. Validação do Atacado Geral
     if (data.habilita_atacado_geral && Number(data.preco_atacado_geral) <= 0) {
-        return toast.error('O Atacado Geral está ativo, o Preço do Atacado Geral deve ser maior que zero.');
+        return toast.error('O Atacado Geral está ativo, portanto o Preço do Atacado Geral deve ser maior que zero.');
     }
 
+    // 5. Validações do Atacado Grade
     if (data.habilita_atacado_grade) {
         if (Number(data.preco_atacado_grade) <= 0) {
-            return toast.error('O Atacado Grade está ativo, o Preço do Pacote Fechado deve ser maior que zero.');
+            return toast.error('O Atacado Grade está ativo, portanto o Preço do Pacote Fechado deve ser maior que zero.');
         }
         const hasQty = data.composicao_atacado?.some((c: any) => Number(c.quantidade) > 0);
         if (!hasQty) {
@@ -203,8 +237,8 @@ export function NewProductPage() {
   
   const onInvalid = (errors: any) => {
     if (errors.variacoes) {
-        toast.error("Existem SKUs inválidos ou duplicados nas variações.", {
-            description: "Verifique as caixas destacadas em vermelho."
+        toast.error("O produto não foi salvo. Existe um erro de SKU duplicado nas variações.", {
+            description: "Verifique as caixas destacadas em vermelho na aba de Variações."
         });
     } else {
         toast.error("Preencha todos os campos obrigatórios.");
@@ -213,7 +247,10 @@ export function NewProductPage() {
 
   const isSaving = isCreating || isUpdating;
 
+  // Renderiza apenas o loader até todos os requests do backend terem respondido.
   if (isPageLoading) return <div className="flex h-[80vh] items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-emerald-500" /></div>;
+
+  const hasValidationErrors = Object.keys(errors).length > 0;
 
   return (
     <FormProvider {...methods}>
@@ -232,8 +269,8 @@ export function NewProductPage() {
           <Button 
             size={isMobile ? 'default' : 'lg'} 
             type="submit" 
-            disabled={isSaving} 
-            className="bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20"
+            disabled={isSaving || isSubmitting || hasValidationErrors} 
+            className="bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />} {isEditMode ? 'Salvar Alterações' : 'Salvar Produto'}
           </Button>
@@ -264,6 +301,8 @@ export function NewProductPage() {
           <FinancialSection 
             grids={grids} 
             globalAtacadoMin={globalAtacadoMin} 
+            isEditMode={isEditMode}
+            isDuplicateMode={isDuplicateMode}
           />
 
           <MediaSection 
@@ -280,6 +319,9 @@ export function NewProductPage() {
           />
 
           <FiscalSection />
+          
+          <input type="hidden" {...methods.register('ncm')} />
+          <input type="hidden" {...methods.register('cfop_padrao')} />
         </div>
       </form>
     </FormProvider>

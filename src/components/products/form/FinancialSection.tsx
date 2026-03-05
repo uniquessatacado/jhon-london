@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useEffect, useRef } from 'react';
 import { useFormContext, useFieldArray, Controller } from 'react-hook-form';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -13,9 +13,11 @@ import { Grid } from '@/types';
 interface FinancialSectionProps {
   grids?: Grid[];
   globalAtacadoMin: string;
+  isEditMode: boolean;
+  isDuplicateMode: boolean;
 }
 
-export function FinancialSection({ grids, globalAtacadoMin }: FinancialSectionProps) {
+export function FinancialSection({ grids, globalAtacadoMin, isEditMode, isDuplicateMode }: FinancialSectionProps) {
   const { register, control, watch, setValue } = useFormContext<any>();
   const { fields: composicaoFields, replace } = useFieldArray({ control, name: "composicao_atacado" });
 
@@ -26,18 +28,31 @@ export function FinancialSection({ grids, globalAtacadoMin }: FinancialSectionPr
   const composicaoAtacadoValues = watch('composicao_atacado') || [];
 
   const gradeAtacadoObj = useMemo(() => grids?.find(g => String(g.id) === String(selectedGradeAtacadoId)), [grids, selectedGradeAtacadoId]);
+  const initialGradeAtacadoIdRef = useRef<string | null>(null);
 
-  // Modificação manual: Apenas preenche de novo se o usuário trocar a grade propositalmente
-  const handleGradeAtacadoChange = (gridId: string, onChange: (val: string) => void) => {
-    onChange(gridId);
-    const selectedGrid = grids?.find(g => String(g.id) === gridId);
-    if (selectedGrid) {
-       replace(selectedGrid.tamanhos.map(t => ({
-           tamanho: t.tamanho,
-           quantidade: 1
-       })));
+  useEffect(() => {
+    if ((isEditMode || isDuplicateMode) && selectedGradeAtacadoId && !initialGradeAtacadoIdRef.current) {
+        initialGradeAtacadoIdRef.current = String(selectedGradeAtacadoId);
     }
-  };
+  }, [selectedGradeAtacadoId, isEditMode, isDuplicateMode]);
+
+  useEffect(() => {
+    if (!gradeAtacadoObj) return;
+
+    const currentSizes = composicaoFields.map((v:any) => v.tamanho);
+    const newSizes = gradeAtacadoObj.tamanhos.map(t => t.tamanho);
+
+    if ((isEditMode || isDuplicateMode) && String(gradeAtacadoObj.id) === initialGradeAtacadoIdRef.current) {
+        if (currentSizes.length === 0) {
+            replace(gradeAtacadoObj.tamanhos.map(t => ({ tamanho: t.tamanho, quantidade: 0 })));
+        }
+        return; 
+    }
+    
+    if (JSON.stringify(currentSizes) !== JSON.stringify(newSizes)) {
+        replace(gradeAtacadoObj.tamanhos.map(t => ({ tamanho: t.tamanho, quantidade: 1 })));
+    }
+  }, [gradeAtacadoObj, isEditMode, isDuplicateMode, replace, composicaoFields]);
 
   const totalPecasPacote = composicaoAtacadoValues?.reduce((acc: number, curr: any) => acc + (Number(curr?.quantidade) || 0), 0) || 0;
   const valorTotalPacote = Number(precoAtacadoGrade) * totalPecasPacote;
@@ -104,7 +119,7 @@ export function FinancialSection({ grids, globalAtacadoMin }: FinancialSectionPr
                       control={control}
                       name="grade_atacado_id"
                       render={({ field }) => (
-                        <Select onValueChange={(val) => handleGradeAtacadoChange(val, field.onChange)} value={field.value && String(field.value) !== 'null' ? String(field.value) : undefined}>
+                        <Select onValueChange={field.onChange} value={field.value && String(field.value) !== 'null' ? String(field.value) : undefined}>
                           <SelectTrigger className="bg-black/40 border-white/10 h-12">
                             <SelectValue placeholder="Selecione a grade..." />
                           </SelectTrigger>

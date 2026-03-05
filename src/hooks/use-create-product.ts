@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom';
 export type ProductFormDTO = {
   id?: number; 
   nome: string;
+  categoria_id?: string;
   grade_id: string;
   subcategoria_id: string;
   marca_id: string;
@@ -54,6 +55,11 @@ const buildProductFormData = (formData: ProductFormDTO) => {
   const payload = new FormData();
 
   payload.append('nome', formData.nome);
+  
+  if (formData.categoria_id) {
+      payload.append('categoria_id', String(formData.categoria_id));
+  }
+  
   payload.append('grade_id', String(formData.grade_id));
   payload.append('subcategoria_id', String(formData.subcategoria_id));
   payload.append('marca_id', String(formData.marca_id));

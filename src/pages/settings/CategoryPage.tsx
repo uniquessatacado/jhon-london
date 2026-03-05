@@ -35,7 +35,6 @@ export function CategoryPage() {
   const [editingSub, setEditingSub] = useState<Subcategory | null>(null);
 
   const { register: registerCat, handleSubmit: handleCatSubmit, reset: resetCat } = useForm<{ nome: string }>();
-  // Usamos control agora para poder envolver os selects
   const { register: registerSub, handleSubmit: handleSubSubmit, reset: resetSub, control: controlSub } = useForm<any>();
 
   const onCatSubmit = (data: { nome: string }) => {
@@ -50,7 +49,7 @@ export function CategoryPage() {
   const handleOpenSubDialog = (sub: Subcategory | null = null) => {
     if (sub) {
         setEditingSub(sub);
-        // Preenche a memória perfeitamente
+        // Garante que se o Kimi mandar null, a gente força a string "null" pro Select entender
         resetSub({
             nome: sub.nome,
             ncm: sub.ncm,
@@ -58,7 +57,7 @@ export function CategoryPage() {
             cst_icms: sub.cst_icms,
             origem: String(sub.origem),
             unidade_medida: sub.unidade_medida,
-            grade_id: sub.grade_id ? String(sub.grade_id) : "null"
+            grade_id: (sub.grade_id && sub.grade_id !== null) ? String(sub.grade_id) : "null"
         });
     } else {
         setEditingSub(null);
@@ -94,7 +93,8 @@ export function CategoryPage() {
         ...data, 
         ncm: ncmClean, 
         categoria_id: selectedCategory.id,
-        grade_id: data.grade_id && data.grade_id !== "null" ? Number(data.grade_id) : null
+        // Traduz a string "null" para o null de verdade que o banco de dados gosta
+        grade_id: (data.grade_id === "null" || !data.grade_id) ? null : Number(data.grade_id)
     };
 
     const handleSuccess = () => {
@@ -277,7 +277,10 @@ export function CategoryPage() {
                         control={controlSub}
                         name="grade_id"
                         render={({ field }) => (
-                          <Select onValueChange={(v) => field.onChange(v === "null" ? null : v)} value={field.value ? String(field.value) : "null"}>
+                          <Select 
+                            onValueChange={field.onChange} 
+                            value={field.value == null ? "null" : String(field.value)}
+                          >
                             <SelectTrigger className="bg-black/40 border-white/10 h-12"><SelectValue placeholder="Nenhuma" /></SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="null">Deixar sem grade</SelectItem>

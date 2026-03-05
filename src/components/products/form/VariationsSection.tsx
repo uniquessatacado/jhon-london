@@ -11,8 +11,6 @@ import { Badge } from '@/components/ui/badge';
 import { Grid as GridIcon, Ruler, AlertCircle } from 'lucide-react';
 import { useMediaQuery } from '@/hooks/use-media-query';
 import { Grid } from '@/types';
-import { api } from '@/lib/api';
-import { useDebounce } from '@/hooks/use-debounce';
 
 interface VariationsSectionProps {
   isEditMode: boolean;
@@ -22,60 +20,11 @@ interface VariationsSectionProps {
 
 // COMPONENTE ISOLADO PARA CADA LINHA DA TABELA
 const VariationRow = ({ field, index, isEditMode, isDuplicateMode, variacoesValues, onEditDimensions, isMobile }: any) => {
-  const { register, watch, setError, clearErrors, formState: { errors } } = useFormContext();
+  const { register, formState: { errors } } = useFormContext();
   const currentVariation = variacoesValues[index];
-  const currentSku = watch(`variacoes.${index}.sku`);
-  
-  // Debounce de 600ms: Só chama a API quando o usuário parar de digitar por 0.6 segundos
-  const debouncedSku = useDebounce(currentSku, 600);
 
-  useEffect(() => {
-    const validateSku = async () => {
-      const skuVal = debouncedSku?.trim().toUpperCase();
-      
-      if (!skuVal) {
-        clearErrors(`variacoes.${index}.sku`);
-        return;
-      }
-
-      // 1. Validação Local (Evita SKUs iguais dentro da mesma grade antes mesmo de ir pro backend)
-      const allSkus = variacoesValues.map((v: any) => v.sku?.trim().toUpperCase()).filter(Boolean);
-      const isLocalDuplicate = allSkus.filter((s: string) => s === skuVal).length > 1;
-
-      if (isLocalDuplicate) {
-        setError(`variacoes.${index}.sku`, { type: 'manual', message: 'SKU duplicado nesta mesma grade' });
-        return;
-      }
-
-      // 2. Validação no Backend
-      try {
-        const varId = (!isEditMode || isDuplicateMode) ? undefined : currentVariation?.id;
-        
-        // Chamada adaptada EXATAMENTE com a string do backend (Template Literals)
-        const url = varId 
-            ? `/produtos/verificar-sku?sku=${skuVal}&variacao_id=${varId}`
-            : `/produtos/verificar-sku?sku=${skuVal}`;
-
-        const { data } = await api.get(url);
-
-        if (data.existe) {
-          // Se o backend enviar o nome do produto, usamos ele para um aviso mais claro
-          const msg = data.produto_nome 
-            ? `Em uso pelo produto: ${data.produto_nome}` 
-            : data.mensagem;
-          
-          setError(`variacoes.${index}.sku`, { type: 'manual', message: msg });
-        } else {
-          clearErrors(`variacoes.${index}.sku`);
-        }
-      } catch (error) {
-        console.error('Erro ao validar SKU:', error);
-      }
-    };
-
-    validateSku();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedSku]); // Dependência apenas no debouncedSku garante que só roda quando a digitação pausa
+  // REMOVIDO A CHAMADA DE API (validateSku) PARA EVITAR O ERRO 404.
+  // O backend já faz a validação principal no momento do clique em "Salvar".
 
   const skuErrorMsg = errors.variacoes?.[index]?.sku?.message;
   const hasDimensions = currentVariation?.peso_kg > 0 || currentVariation?.altura_cm > 0;
@@ -97,7 +46,6 @@ const VariationRow = ({ field, index, isEditMode, isDuplicateMode, variacoesValu
             className={`uppercase h-12 transition-all ${skuErrorMsg ? 'border-red-500 bg-red-500/10 text-white font-bold ring-2 ring-red-500' : 'bg-black/40 border-white/10'}`} 
             placeholder="Opcional se estoque 0" 
           />
-          {/* Balão Vermelho Mobile */}
           {skuErrorMsg && (
             <div className="bg-red-500 text-white text-xs font-bold p-2.5 rounded-lg shadow-lg border border-red-600 flex items-start gap-1.5 mt-1 animate-in fade-in zoom-in-95">
               <AlertCircle className="w-4 h-4 shrink-0" />
@@ -126,12 +74,10 @@ const VariationRow = ({ field, index, isEditMode, isDuplicateMode, variacoesValu
           {...register(`variacoes.${index}.sku`)}
           className={`uppercase h-9 transition-all ${skuErrorMsg ? 'border-red-500 bg-red-500/10 text-white font-bold ring-2 ring-red-500' : 'bg-black/40 border-white/10 focus-visible:ring-emerald-500'}`} 
         />
-        {/* Balão Vermelho Desktop */}
         {skuErrorMsg && (
           <div className="absolute z-20 top-full left-4 mt-2 bg-red-500 text-white text-xs font-bold p-2.5 rounded-lg shadow-xl border border-red-600 flex items-start gap-1.5 min-w-[200px] animate-in fade-in slide-in-from-top-1">
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span className="leading-tight">{skuErrorMsg as string}</span>
-            {/* Setinha apontando pra cima */}
             <div className="absolute -top-1.5 left-4 w-3 h-3 bg-red-500 rotate-45 border-l border-t border-red-600" />
           </div>
         )}

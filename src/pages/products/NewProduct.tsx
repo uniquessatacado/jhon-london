@@ -98,14 +98,14 @@ export function NewProductPage() {
     }
   });
 
-  const { watch, setValue, handleSubmit, getValues, reset, formState: { isSubmitting, errors, dirtyFields } } = methods;
+  const { handleSubmit, reset, formState: { isSubmitting, errors } } = methods;
 
   // =======================================================================
-  // 1. CARREGAMENTO DOS DADOS (BLINDADO CONTRA RACE CONDITIONS)
+  // 1. CARREGAMENTO DOS DADOS - SEGURO E ÚNICO
   // =======================================================================
   useEffect(() => {
     if (productData && !isPageLoading && !hasLoadedDataRef.current) {
-      hasLoadedDataRef.current = true; // Trava o gatilho para executar só uma vez
+      hasLoadedDataRef.current = true; // Trava para rodar só uma vez
 
       let categoryId = productData.categoria_id ? String(productData.categoria_id) : '';
       const subcategoryId = productData.subcategoria_id ? String(productData.subcategoria_id) : '';
@@ -160,13 +160,9 @@ export function NewProductPage() {
         composicao_atacado: composicaoParsed
       };
 
-      console.log('--- RESET DEFINITIVO DO FORMULÁRIO ---', dadosMapeados);
       reset(dadosMapeados);
     }
   }, [productData, isPageLoading, isDuplicateMode, allSubcategories, reset]);
-
-  // O useEffect do autopreenchimento foi COMPLETAMENTE REMOVIDO DAQUI
-  // Agora a lógica vive dentro do onChange do Select na IdentificationSection!
 
   const onSubmit = (data: any) => {
     if (!data.nome || !data.grade_id || !data.subcategoria_id || !data.marca_id) {

@@ -67,8 +67,15 @@ export function useDeleteCategory() {
 // --- Subcategories ---
 
 async function createSubcategory(newSub: Omit<Subcategory, 'id'>): Promise<Subcategory> {
+  // BLINDAGEM: Envia apenas os campos mapeados, ignora campos lixo
   const payload = {
-    ...newSub,
+    nome: newSub.nome,
+    ncm: newSub.ncm,
+    cfop_padrao: newSub.cfop_padrao,
+    cst_icms: newSub.cst_icms,
+    origem: newSub.origem,
+    unidade_medida: newSub.unidade_medida,
+    categoria_id: newSub.categoria_id,
     grade_id: newSub.grade_id && String(newSub.grade_id) !== "null" ? Number(newSub.grade_id) : null
   };
   const { data } = await api.post('/subcategorias', payload);
@@ -92,8 +99,15 @@ export function useCreateSubcategory() {
 }
 
 async function updateSubcategory({ id, ...updatedSub }: Partial<Subcategory> & { id: number }): Promise<Subcategory> {
+  // BLINDAGEM: Envia apenas os campos mapeados, ignora campos lixo do DB como 'descricao'
   const payload = {
-    ...updatedSub,
+    nome: updatedSub.nome,
+    ncm: updatedSub.ncm,
+    cfop_padrao: updatedSub.cfop_padrao,
+    cst_icms: updatedSub.cst_icms,
+    origem: updatedSub.origem,
+    unidade_medida: updatedSub.unidade_medida,
+    categoria_id: updatedSub.categoria_id,
     grade_id: updatedSub.grade_id && String(updatedSub.grade_id) !== "null" ? Number(updatedSub.grade_id) : null
   };
   const { data } = await api.put(`/subcategorias/${id}`, payload);

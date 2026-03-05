@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -35,7 +35,8 @@ export function CategoryPage() {
   const [editingSub, setEditingSub] = useState<Subcategory | null>(null);
 
   const { register: registerCat, handleSubmit: handleCatSubmit, reset: resetCat } = useForm<{ nome: string }>();
-  const { register: registerSub, handleSubmit: handleSubSubmit, reset: resetSub, setValue: setSubValue, watch: watchSub } = useForm<any>();
+  // Usamos control agora para poder envolver os selects
+  const { register: registerSub, handleSubmit: handleSubSubmit, reset: resetSub, control: controlSub } = useForm<any>();
 
   const onCatSubmit = (data: { nome: string }) => {
     createCategory(data, {
@@ -49,13 +50,13 @@ export function CategoryPage() {
   const handleOpenSubDialog = (sub: Subcategory | null = null) => {
     if (sub) {
         setEditingSub(sub);
-        // Usa o reset para preencher TODO o formulário de uma vez, garantindo que os Selects reajam
+        // Preenche a memória perfeitamente
         resetSub({
             nome: sub.nome,
             ncm: sub.ncm,
             cfop_padrao: sub.cfop_padrao,
             cst_icms: sub.cst_icms,
-            origem: String(sub.origem), // Força string para o Select
+            origem: String(sub.origem),
             unidade_medida: sub.unidade_medida,
             grade_id: sub.grade_id ? String(sub.grade_id) : "null"
         });
@@ -272,15 +273,21 @@ export function CategoryPage() {
                       <Label className="flex items-center gap-2">
                           <GridIcon className="h-3 w-3" /> Grade Padrão (Opcional)
                       </Label>
-                      <Select onValueChange={(v) => setSubValue('grade_id', v)} value={watchSub('grade_id') || "null"}>
-                          <SelectTrigger className="bg-black/40 border-white/10 h-12"><SelectValue placeholder="Nenhuma" /></SelectTrigger>
-                          <SelectContent>
-                              <SelectItem value="null">Deixar sem grade</SelectItem>
-                              {grids?.map(g => (
-                                  <SelectItem key={g.id} value={String(g.id)}>{g.nome}</SelectItem>
-                              ))}
-                          </SelectContent>
-                      </Select>
+                      <Controller
+                        control={controlSub}
+                        name="grade_id"
+                        render={({ field }) => (
+                          <Select onValueChange={(v) => field.onChange(v === "null" ? null : v)} value={field.value ? String(field.value) : "null"}>
+                            <SelectTrigger className="bg-black/40 border-white/10 h-12"><SelectValue placeholder="Nenhuma" /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="null">Deixar sem grade</SelectItem>
+                                {grids?.map(g => (
+                                    <SelectItem key={g.id} value={String(g.id)}>{g.nome}</SelectItem>
+                                ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      />
                   </div>
                 </div>
                 
@@ -293,55 +300,79 @@ export function CategoryPage() {
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="cfop">CFOP Padrão</Label>
-                        <Select onValueChange={(v) => setSubValue('cfop_padrao', v)} value={watchSub('cfop_padrao') || undefined}>
-                          <SelectTrigger className="bg-black/40 border-white/10"><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="5102">5102 - Venda Mercadoria</SelectItem>
-                            <SelectItem value="5405">5405 - Venda ST</SelectItem>
-                            <SelectItem value="6102">6102 - Venda Interestadual</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <Controller
+                          control={controlSub}
+                          name="cfop_padrao"
+                          render={({ field }) => (
+                            <Select onValueChange={field.onChange} value={field.value || undefined}>
+                              <SelectTrigger className="bg-black/40 border-white/10"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="5102">5102 - Venda Mercadoria</SelectItem>
+                                <SelectItem value="5405">5405 - Venda ST</SelectItem>
+                                <SelectItem value="6102">6102 - Venda Interestadual</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          )}
+                        />
                       </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label>CST / CSOSN</Label>
-                        <Select onValueChange={(v) => setSubValue('cst_icms', v)} value={watchSub('cst_icms') || undefined}>
-                          <SelectTrigger className="bg-black/40 border-white/10"><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="102">102 - Tributada SN</SelectItem>
-                            <SelectItem value="300">300 - Imune</SelectItem>
-                            <SelectItem value="400">400 - Não Tributada</SelectItem>
-                            <SelectItem value="00">00 - Tributada Integralmente</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <Controller
+                          control={controlSub}
+                          name="cst_icms"
+                          render={({ field }) => (
+                            <Select onValueChange={field.onChange} value={field.value || undefined}>
+                              <SelectTrigger className="bg-black/40 border-white/10"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="102">102 - Tributada SN</SelectItem>
+                                <SelectItem value="300">300 - Imune</SelectItem>
+                                <SelectItem value="400">400 - Não Tributada</SelectItem>
+                                <SelectItem value="00">00 - Tributada Integralmente</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          )}
+                        />
                       </div>
                       <div className="space-y-2">
                         <Label>Origem da Mercadoria</Label>
-                        <Select onValueChange={(v) => setSubValue('origem', v)} value={watchSub('origem') || undefined}>
-                          <SelectTrigger className="bg-black/40 border-white/10"><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="0">0 - Nacional</SelectItem>
-                            <SelectItem value="1">1 - Estrangeira (Importação direta)</SelectItem>
-                            <SelectItem value="2">2 - Estrangeira (Adq. no mercado interno)</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <Controller
+                          control={controlSub}
+                          name="origem"
+                          render={({ field }) => (
+                            <Select onValueChange={field.onChange} value={field.value ? String(field.value) : undefined}>
+                              <SelectTrigger className="bg-black/40 border-white/10"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="0">0 - Nacional</SelectItem>
+                                <SelectItem value="1">1 - Estrangeira (Importação direta)</SelectItem>
+                                <SelectItem value="2">2 - Estrangeira (Adq. no mercado interno)</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          )}
+                        />
                       </div>
                     </div>
 
                     <div className="grid gap-2">
                         <Label>Unidade de Medida Comercial</Label>
-                        <Select onValueChange={(v) => setSubValue('unidade_medida', v)} value={watchSub('unidade_medida') || undefined}>
-                          <SelectTrigger className="bg-black/40 border-white/10"><SelectValue placeholder="Ex: UN, KG, PC" /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="UN">UN - Unidade</SelectItem>
-                            <SelectItem value="KG">KG - Quilograma</SelectItem>
-                            <SelectItem value="MT">MT - Metro</SelectItem>
-                            <SelectItem value="CX">CX - Caixa</SelectItem>
-                            <SelectItem value="PC">PC - Peça</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <Controller
+                          control={controlSub}
+                          name="unidade_medida"
+                          render={({ field }) => (
+                            <Select onValueChange={field.onChange} value={field.value || undefined}>
+                              <SelectTrigger className="bg-black/40 border-white/10"><SelectValue placeholder="Ex: UN, KG, PC" /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="UN">UN - Unidade</SelectItem>
+                                <SelectItem value="KG">KG - Quilograma</SelectItem>
+                                <SelectItem value="MT">MT - Metro</SelectItem>
+                                <SelectItem value="CX">CX - Caixa</SelectItem>
+                                <SelectItem value="PC">PC - Peça</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          )}
+                        />
                     </div>
                 </div>
               </div>

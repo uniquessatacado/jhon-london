@@ -13,7 +13,11 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
-import { User, MapPin, Settings2, Loader2 } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { CalendarIcon, User, MapPin, Settings2, Loader2 } from 'lucide-react';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { Customer } from '@/types';
 import { useCreateCustomer, useUpdateCustomer } from '@/hooks/use-customers';
@@ -120,6 +124,9 @@ export function CustomerFormDialog({ open, onOpenChange, customer }: CustomerFor
 
   useEffect(() => {
     if (customer) {
+      // Forçamos a conversão de 1/0 para true/false
+      const isAtivo = customer.ativo !== undefined ? Boolean(Number(customer.ativo)) : true;
+
       form.reset({
         nome: customer.nome || '',
         tipo_pessoa: customer.tipo_pessoa || 'F',
@@ -137,7 +144,7 @@ export function CustomerFormDialog({ open, onOpenChange, customer }: CustomerFor
         estado: customer.estado || '',
         tipo_cliente: customer.tipo_cliente || 'varejo',
         observacoes: customer.observacoes || '',
-        ativo: customer.ativo ?? true,
+        ativo: isAtivo,
       });
     } else {
       form.reset({
@@ -200,7 +207,6 @@ export function CustomerFormDialog({ open, onOpenChange, customer }: CustomerFor
 
   const onInvalid = (errors: any) => {
     console.error('Erros de validação:', errors);
-    // Pega todas as mensagens de erro e junta para mostrar no toast
     const errorMessages = Object.keys(errors)
       .map(key => errors[key].message)
       .filter(Boolean)
@@ -235,7 +241,6 @@ export function CustomerFormDialog({ open, onOpenChange, customer }: CustomerFor
                 <div className="grid gap-2">
                   <Label htmlFor="nome">Nome Completo *</Label>
                   <Input id="nome" className={inputClasses} {...form.register('nome')} />
-                  {form.formState.errors.nome && <p className="text-red-500 text-xs">{form.formState.errors.nome.message}</p>}
                 </div>
                 <Controller
                   control={form.control}
@@ -264,7 +269,6 @@ export function CustomerFormDialog({ open, onOpenChange, customer }: CustomerFor
                         />
                       )}
                     />
-                    {form.formState.errors.cpf_cnpj && <p className="text-red-500 text-xs">{form.formState.errors.cpf_cnpj.message}</p>}
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="rg_ie">{tipoPessoa === 'F' ? 'RG' : 'Inscrição Estadual'}</Label>
@@ -308,12 +312,10 @@ export function CustomerFormDialog({ open, onOpenChange, customer }: CustomerFor
                         />
                       )}
                     />
-                    {form.formState.errors.whatsapp && <p className="text-red-500 text-xs">{form.formState.errors.whatsapp.message}</p>}
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="email">Email</Label>
                     <Input id="email" type="email" className={inputClasses} {...form.register('email')} />
-                    {form.formState.errors.email && <p className="text-red-500 text-xs">{form.formState.errors.email.message}</p>}
                   </div>
                 </div>
               </TabsContent>

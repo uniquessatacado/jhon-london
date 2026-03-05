@@ -267,7 +267,7 @@ export function ProductListPage() {
       </div>
 
       <div className="rounded-3xl md:border md:border-white/10 md:bg-black/40 md:backdrop-blur-xl md:shadow-2xl overflow-hidden md:ring-1 md:ring-white/5">
-        <div className={`p-4 md:p-6 border-b border-white/10 flex flex-col md:flex-row gap-4 bg-white/[0.02] ${isMobile ? 'sticky top-16 z-10 bg-background/80 backdrop-blur-md' : ''}`}>
+        <div className="p-4 md:p-6 border-b border-white/10 flex flex-col md:flex-row gap-4 bg-white/[0.02]">
            <div className="relative flex-1 group">
                 <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground group-focus-within:text-emerald-500 transition-colors" />
                 <Input 

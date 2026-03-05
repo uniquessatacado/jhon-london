@@ -1,3 +1,5 @@
+"use client";
+
 import { useEffect, useMemo, useState, useRef } from 'react';
 import { useFormContext, useFieldArray } from 'react-hook-form';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,7 +21,7 @@ interface VariationsSectionProps {
   grids?: Grid[];
 }
 
-// COMPONENTE ISOLADO PARA CADA LINHA DA TABELA (Garante o funcionamento do useDebounce individualmente)
+// COMPONENTE ISOLADO PARA CADA LINHA DA TABELA
 const VariationRow = ({ field, index, isEditMode, variacoesValues, onEditDimensions, isMobile }: any) => {
   const { register, watch, setError, clearErrors, formState: { errors } } = useFormContext();
   const currentVariation = variacoesValues[index];
@@ -36,7 +38,6 @@ const VariationRow = ({ field, index, isEditMode, variacoesValues, onEditDimensi
         return;
       }
 
-      // 1. Validação Local (Impede SKUs iguais na mesma tela antes de enviar)
       const allSkus = variacoesValues.map((v: any) => v.sku?.trim().toUpperCase()).filter(Boolean);
       const isLocalDuplicate = allSkus.filter((s: string) => s === skuVal).length > 1;
 
@@ -45,7 +46,6 @@ const VariationRow = ({ field, index, isEditMode, variacoesValues, onEditDimensi
         return;
       }
 
-      // 2. Validação na API (Verifica no banco inteiro ignorando a própria variação)
       try {
         const { data } = await api.get('/produtos/verificar-sku', {
           params: { sku: skuVal, variacao_id: currentVariation?.id }
@@ -64,7 +64,6 @@ const VariationRow = ({ field, index, isEditMode, variacoesValues, onEditDimensi
     validateSku();
   }, [debouncedSku, index, currentVariation?.id, setError, clearErrors, variacoesValues]);
 
-  // Recupera as mensagens de erro injetadas pelo setError
   const skuErrorMsg = errors.variacoes?.[index]?.sku?.message;
   const hasDimensions = currentVariation?.peso_kg > 0 || currentVariation?.altura_cm > 0;
 
@@ -103,7 +102,6 @@ const VariationRow = ({ field, index, isEditMode, variacoesValues, onEditDimensi
     );
   }
 
-  // DESKTOP VIEW
   return (
     <TableRow className="border-white/10 hover:bg-white/5">
       <TableCell><Badge variant="outline" className="text-emerald-400 border-emerald-500/30 bg-emerald-500/10 px-3 py-1">{field.tamanho}</Badge></TableCell>
@@ -150,15 +148,12 @@ export function VariationsSection({ isEditMode, isDuplicateMode, grids }: Variat
 
   const initialGridLoaded = useRef(false);
 
-  // Aplicação de Grade quando selecionada nos dados básicos
   useEffect(() => {
     if (!selectedGridObj) return;
 
     const currentSizes = variacaoFields.map((v:any) => v.tamanho);
     const newSizes = selectedGridObj.tamanhos.map(t => t.tamanho);
 
-    // Evita resetar estoques já preenchidos SOMENTE no carregamento inicial da página de edição.
-    // Se o usuário trocar a grade manualmente depois de carregado, a nova grade deve ser aplicada com as medidas corretas.
     if ((isEditMode || isDuplicateMode) && !initialGridLoaded.current) {
       initialGridLoaded.current = true;
       if (currentSizes.length > 0) return;
@@ -206,7 +201,7 @@ export function VariationsSection({ isEditMode, isDuplicateMode, grids }: Variat
 
           {isMobile ? (
             <div className="space-y-4">
-              {variacaoFields.map((field: any, index) => (
+              {variacaoFields.map((field: any, index: number) => (
                 <VariationRow 
                   key={field.id} 
                   field={field} 
@@ -234,7 +229,7 @@ export function VariationsSection({ isEditMode, isDuplicateMode, grids }: Variat
                   </TableRow>
                 </TableHeader>
                 <TableBody className="bg-black/20">
-                  {variacaoFields.map((field: any, index) => (
+                  {variacaoFields.map((field: any, index: number) => (
                     <VariationRow 
                       key={field.id} 
                       field={field} 
@@ -250,8 +245,6 @@ export function VariationsSection({ isEditMode, isDuplicateMode, grids }: Variat
           )}
         </div>
       </CardContent>
-
-      {/* MODAL DE EDIÇÃO DE DIMENSÕES MOBILE (OMITIDO PARA BREVIDADE, MAS MANTIDO NA LÓGICA) */}
     </Card>
   );
 }

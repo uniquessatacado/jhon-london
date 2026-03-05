@@ -3,9 +3,18 @@ import { api } from '@/lib/api';
 import { Grid, GridSize } from '@/types';
 import { toast } from 'sonner';
 
+type GridSizeInput = {
+  id?: number;
+  tamanho: string;
+  peso_kg: number | string;
+  altura_cm: number | string;
+  largura_cm: number | string;
+  comprimento_cm: number | string;
+};
+
 type CreateGridDTO = {
   nome: string;
-  tamanhos: Omit<GridSize, 'id'>[];
+  tamanhos: GridSizeInput[];
 };
 
 type UpdateGridDTO = CreateGridDTO & { id: number };

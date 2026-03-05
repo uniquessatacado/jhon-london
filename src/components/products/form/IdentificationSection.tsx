@@ -1,4 +1,4 @@
-import { useFormContext } from 'react-hook-form';
+import { useFormContext, Controller } from 'react-hook-form';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -14,13 +14,10 @@ interface IdentificationSectionProps {
 }
 
 export function IdentificationSection({ categories, allSubcategories, brands, grids }: IdentificationSectionProps) {
-  const { register, watch, setValue, formState: { errors } } = useFormContext<any>();
+  const { register, control, watch, formState: { errors } } = useFormContext<any>();
 
-  // Estados locais vindos direto do form
+  // Categoria é apenas "visual" neste select, derivado da subcategoria
   const categoriaId = watch('categoria_id');
-  const subcategoriaId = watch('subcategoria_id');
-  const marcaId = watch('marca_id');
-  const gradeId = watch('grade_id');
 
   return (
     <Card className="bg-black/20 border-white/10 shadow-lg">
@@ -42,7 +39,7 @@ export function IdentificationSection({ categories, allSubcategories, brands, gr
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="grid gap-2">
             <Label>Categoria *</Label>
-            <Select value={categoriaId ? String(categoriaId) : undefined} disabled>
+            <Select value={categoriaId !== undefined && categoriaId !== null && categoriaId !== '' ? String(categoriaId) : undefined} disabled>
               <SelectTrigger className="bg-black/40 h-14 text-base border-white/10 disabled:opacity-70 disabled:cursor-not-allowed">
                 <SelectValue placeholder="Automático pela subcategoria..." />
               </SelectTrigger>
@@ -55,42 +52,63 @@ export function IdentificationSection({ categories, allSubcategories, brands, gr
           </div>
           <div className="grid gap-2">
             <Label>Subcategoria *</Label>
-            <Select onValueChange={(v) => setValue('subcategoria_id', v, { shouldValidate: true })} value={subcategoriaId ? String(subcategoriaId) : undefined}>
-              <SelectTrigger className={`bg-black/40 h-14 text-base ${errors.subcategoria_id ? 'border-red-500' : 'border-white/10'}`}>
-                <SelectValue placeholder="Selecione..." />
-              </SelectTrigger>
-              <SelectContent>
-                {allSubcategories?.map(sub => (
-                  <SelectItem key={sub.id} value={String(sub.id)}>{sub.nome}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Controller
+              control={control}
+              name="subcategoria_id"
+              rules={{ required: true }}
+              render={({ field }) => (
+                <Select onValueChange={field.onChange} value={field.value !== undefined && field.value !== null && field.value !== '' ? String(field.value) : undefined}>
+                  <SelectTrigger className={`bg-black/40 h-14 text-base ${errors.subcategoria_id ? 'border-red-500' : 'border-white/10'}`}>
+                    <SelectValue placeholder="Selecione..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {allSubcategories?.map(sub => (
+                      <SelectItem key={sub.id} value={String(sub.id)}>{sub.nome}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
           </div>
           <div className="grid gap-2">
             <Label>Marca *</Label>
-            <Select onValueChange={(v) => setValue('marca_id', v, { shouldValidate: true })} value={marcaId ? String(marcaId) : undefined}>
-              <SelectTrigger className={`bg-black/40 h-14 text-base ${errors.marca_id ? 'border-red-500' : 'border-white/10'}`}>
-                <SelectValue placeholder="Selecione..." />
-              </SelectTrigger>
-              <SelectContent>
-                {brands?.map(brand => (
-                  <SelectItem key={brand.id} value={String(brand.id)}>{brand.nome}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Controller
+              control={control}
+              name="marca_id"
+              rules={{ required: true }}
+              render={({ field }) => (
+                <Select onValueChange={field.onChange} value={field.value !== undefined && field.value !== null && field.value !== '' ? String(field.value) : undefined}>
+                  <SelectTrigger className={`bg-black/40 h-14 text-base ${errors.marca_id ? 'border-red-500' : 'border-white/10'}`}>
+                    <SelectValue placeholder="Selecione..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {brands?.map(brand => (
+                      <SelectItem key={brand.id} value={String(brand.id)}>{brand.nome}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
           </div>
           <div className="grid gap-2">
             <Label>Grade do Produto *</Label>
-            <Select onValueChange={(v) => setValue('grade_id', v, { shouldValidate: true })} value={gradeId ? String(gradeId) : undefined}>
-              <SelectTrigger className={`bg-black/40 h-14 text-base ${errors.grade_id ? 'border-red-500' : 'border-white/10'}`}>
-                <SelectValue placeholder="Escolha uma grade..." />
-              </SelectTrigger>
-              <SelectContent>
-                {grids?.map(g => (
-                  <SelectItem key={g.id} value={String(g.id)}>{g.nome}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Controller
+              control={control}
+              name="grade_id"
+              rules={{ required: true }}
+              render={({ field }) => (
+                <Select onValueChange={field.onChange} value={field.value !== undefined && field.value !== null && field.value !== '' ? String(field.value) : undefined}>
+                  <SelectTrigger className={`bg-black/40 h-14 text-base ${errors.grade_id ? 'border-red-500' : 'border-white/10'}`}>
+                    <SelectValue placeholder="Escolha uma grade..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {grids?.map(g => (
+                      <SelectItem key={g.id} value={String(g.id)}>{g.nome}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
           </div>
         </div>
       </CardContent>

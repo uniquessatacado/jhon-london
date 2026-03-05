@@ -78,19 +78,10 @@ export function NewProductPage() {
       .catch(() => console.error("Failed to fetch global wholesale minimum quantity."));
   }, []);
 
-  // --- CORREÇÃO SOLICITADA PELO KIM ---
-  // Força o preenchimento IMEDIATO de Marca e Grade nos estados do form assim que a API responde
-  useEffect(() => {
-    if (productData) {
-      setValue('marca_id', productData.marca_id?.toString() || '', { shouldValidate: true });
-      setValue('grade_id', productData.grade_id?.toString() || '', { shouldValidate: true });
-    }
-  }, [productData, setValue]);
-
   // CARREGAMENTO SEGURO DA EDIÇÃO: Aguarda TODAS as dependências
   useEffect(() => {
     if (!productData || isLoadingCats || isLoadingSubs || isLoadingBrands || isLoadingGrids || hasInitialized.current) {
-      return; 
+      return;
     }
 
     let categoryId = productData.categoria_id?.toString() || '';
@@ -119,18 +110,7 @@ export function NewProductPage() {
       };
     }) || [];
 
-    // 1. Setar IMEDIATAMENTE nos estados locais do React Hook Form
-    setValue('categoria_id', categoryId);
-    setValue('marca_id', brandId);
-    setValue('grade_id', gridId);
-    setValue('grade_atacado_id', gradeAtacadoId);
-
-    // Para subcategoria: como já carregamos "allSubcategories", um pequeno delay garante o render da árvore
-    setTimeout(() => {
-      setValue('subcategoria_id', subcategoryId);
-    }, 50);
-
-    // 2. Preencher os dados normais
+    // Preencher os dados de uma única vez com reset
     reset({
       nome: isDuplicateMode ? `${productData.nome} - Cópia` : productData.nome,
       categoria_id: categoryId,
@@ -145,19 +125,15 @@ export function NewProductPage() {
       unidade_medida: productData.unidade_medida,
       preco_custo: Number(productData.preco_custo) || 0,
       preco_varejo: Number(productData.preco_varejo) || 0,
-      habilita_atacado_geral: !!productData.habilita_atacado_geral, 
+      habilita_atacado_geral: !!productData.habilita_atacado_geral,
       preco_atacado_geral: Number(productData.preco_atacado_geral) || 0,
-      habilita_atacado_grade: !!productData.habilita_atacado_grade, 
+      habilita_atacado_grade: !!productData.habilita_atacado_grade,
       preco_atacado_grade: Number(productData.preco_atacado_grade) || 0,
       variacoes: variacoesComDimensoes,
-      composicao_atacado: typeof productData.composicao_atacado_grade === 'string' 
-        ? JSON.parse(productData.composicao_atacado_grade || "[]") 
+      composicao_atacado: typeof productData.composicao_atacado_grade === 'string'
+        ? JSON.parse(productData.composicao_atacado_grade || "[]")
         : (productData.composicao_atacado_grade || [])
     });
-
-    // 3. Forçar set de Marca e Grade novamente APÓS o reset para garantir que os selects controlem perfeitamente
-    setValue('marca_id', brandId, { shouldValidate: true });
-    setValue('grade_id', gridId, { shouldValidate: true });
     
     // Imagens / Vídeo
     if (!isDuplicateMode) {
@@ -174,7 +150,7 @@ export function NewProductPage() {
     }
 
     hasInitialized.current = true;
-  }, [productData, isLoadingCats, isLoadingSubs, isLoadingBrands, isLoadingGrids, allSubcategories, reset, isDuplicateMode, setValue]);
+  }, [productData, isLoadingCats, isLoadingSubs, isLoadingBrands, isLoadingGrids, allSubcategories, reset, isDuplicateMode]);
 
   const selectedSubcategoryId = watch('subcategoria_id');
 

@@ -1,5 +1,5 @@
 import { useMemo, useEffect, useRef } from 'react';
-import { useFormContext, useFieldArray } from 'react-hook-form';
+import { useFormContext, useFieldArray, Controller } from 'react-hook-form';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -115,10 +115,22 @@ export function FinancialSection({ grids, globalAtacadoMin, isEditMode, isDuplic
                   
                   <div className="grid gap-2">
                     <Label>Selecione a Grade do Pacote</Label>
-                    <Select onValueChange={(v) => setValue('grade_atacado_id', v)} value={selectedGradeAtacadoId ? String(selectedGradeAtacadoId) : undefined}>
-                      <SelectTrigger className="bg-black/40 border-white/10 h-12"><SelectValue placeholder="Selecione a grade..." /></SelectTrigger>
-                      <SelectContent>{grids?.map(g => <SelectItem key={g.id} value={String(g.id)}>{g.nome}</SelectItem>)}</SelectContent>
-                    </Select>
+                    <Controller
+                      control={control}
+                      name="grade_atacado_id"
+                      render={({ field }) => (
+                        <Select onValueChange={field.onChange} value={field.value !== undefined && field.value !== null && field.value !== '' ? String(field.value) : undefined}>
+                          <SelectTrigger className="bg-black/40 border-white/10 h-12">
+                            <SelectValue placeholder="Selecione a grade..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {grids?.map(g => (
+                              <SelectItem key={g.id} value={String(g.id)}>{g.nome}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
                   </div>
 
                   <div className="grid gap-2">

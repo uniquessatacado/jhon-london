@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import { useFormContext, useFieldArray, Controller } from 'react-hook-form';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -29,12 +29,33 @@ export function FinancialSection({ grids, globalAtacadoMin }: FinancialSectionPr
 
   const gradeAtacadoObj = useMemo(() => grids?.find(g => String(g.id) === String(selectedGradeAtacadoId)), [grids, selectedGradeAtacadoId]);
 
-  // A MÁGICA LIMPA: Só reescreve a tabela se o usuário TROCAR a grade ativamente.
-  // Os dados do banco de dados (Edição) carregam sozinhos sem precisar dessa função.
+  // EFEITO CORRIGIDO: Garante que a tabela seja montada ao carregar ou ao trocar a grade.
+  useEffect(() => {
+    if (gradeAtacadoObj) {
+      const gradeTamanhos = gradeAtacadoObj.tamanhos.map(t => t.tamanho);
+      const composicaoTamanhos = composicaoFields.map((f: any) => f.tamanho);
+
+      // Se os tamanhos da grade selecionada forem diferentes dos que estão na tabela, reconstrua a tabela.
+      if (JSON.stringify(gradeTamanhos) !== JSON.stringify(composicaoTamanhos)) {
+        const newComposicao = gradeAtacadoObj.tamanhos.map(t => {
+          // Tenta encontrar um valor já existente para não perder dados ao recarregar
+          const existing = composicaoFields.find((f: any) => f.tamanho === t.tamanho);
+          return {
+            tamanho: t.tamanho,
+            quantidade: existing ? (existing as any).quantidade : 0
+          };
+        });
+        replace(newComposicao);
+      }
+    } else {
+      // Se nenhuma grade estiver selecionada, limpa a tabela.
+      replace([]);
+    }
+  }, [gradeAtacadoObj, replace, composicaoFields]); // Roda sempre que a grade selecionada mudar.
+
   const handleGradeAtacadoChange = (val: string) => {
     const grade = grids?.find(g => String(g.id) === val);
     if (grade) {
-      // Monta a nova tabela com os tamanhos da grade e quantidade zerada (pro usuário preencher)
       replace(grade.tamanhos.map(t => ({ tamanho: t.tamanho, quantidade: 0 })));
     } else {
       replace([]);
@@ -108,8 +129,7 @@ export function FinancialSection({ grids, globalAtacadoMin }: FinancialSectionPr
                       render={({ field }) => (
                         <Select 
                           onValueChange={(val) => {
-                            field.onChange(val); // RHF State Update
-                            handleGradeAtacadoChange(val); // Reconstrói a tabela
+                            field.onChange(val);
                           }}
                           value={field.value && String(field.value) !== 'null' ? String(field.value) : undefined}
                         >

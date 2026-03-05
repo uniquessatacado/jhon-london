@@ -1,4 +1,4 @@
-import { useMemo, useEffect, useRef } from 'react';
+import { useMemo } from 'react';
 import { useFormContext, useFieldArray, Controller } from 'react-hook-form';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -17,7 +17,7 @@ interface FinancialSectionProps {
   isDuplicateMode: boolean;
 }
 
-export function FinancialSection({ grids, globalAtacadoMin, isEditMode, isDuplicateMode }: FinancialSectionProps) {
+export function FinancialSection({ grids, globalAtacadoMin }: FinancialSectionProps) {
   const { register, control, watch, setValue } = useFormContext<any>();
   const { fields: composicaoFields, replace } = useFieldArray({ control, name: "composicao_atacado" });
 
@@ -28,24 +28,18 @@ export function FinancialSection({ grids, globalAtacadoMin, isEditMode, isDuplic
   const composicaoAtacadoValues = watch('composicao_atacado') || [];
 
   const gradeAtacadoObj = useMemo(() => grids?.find(g => String(g.id) === String(selectedGradeAtacadoId)), [grids, selectedGradeAtacadoId]);
-  const initialGradeAtacadoLoaded = useRef(false);
 
-  useEffect(() => {
-    if (!gradeAtacadoObj) return;
-
-    const currentSizes = composicaoFields.map((v:any) => v.tamanho);
-    const newSizes = gradeAtacadoObj.tamanhos.map(t => t.tamanho);
-
-    // Evita o clear dos dados carregados do banco no primeiro render
-    if ((isEditMode || isDuplicateMode) && !initialGradeAtacadoLoaded.current) {
-        initialGradeAtacadoLoaded.current = true;
-        return; 
+  // A MÁGICA LIMPA: Só reescreve a tabela se o usuário TROCAR a grade ativamente.
+  // Os dados do banco de dados (Edição) carregam sozinhos sem precisar dessa função.
+  const handleGradeAtacadoChange = (val: string) => {
+    const grade = grids?.find(g => String(g.id) === val);
+    if (grade) {
+      // Monta a nova tabela com os tamanhos da grade e quantidade zerada (pro usuário preencher)
+      replace(grade.tamanhos.map(t => ({ tamanho: t.tamanho, quantidade: 0 })));
+    } else {
+      replace([]);
     }
-    
-    if (JSON.stringify(currentSizes) !== JSON.stringify(newSizes)) {
-        replace(gradeAtacadoObj.tamanhos.map(t => ({ tamanho: t.tamanho, quantidade: 1 })));
-    }
-  }, [gradeAtacadoObj, isEditMode, isDuplicateMode, replace, composicaoFields]);
+  };
 
   const totalPecasPacote = composicaoAtacadoValues?.reduce((acc: number, curr: any) => acc + (Number(curr?.quantidade) || 0), 0) || 0;
   const valorTotalPacote = Number(precoAtacadoGrade) * totalPecasPacote;
@@ -113,7 +107,10 @@ export function FinancialSection({ grids, globalAtacadoMin, isEditMode, isDuplic
                       name="grade_atacado_id"
                       render={({ field }) => (
                         <Select 
-                          onValueChange={field.onChange}
+                          onValueChange={(val) => {
+                            field.onChange(val); // RHF State Update
+                            handleGradeAtacadoChange(val); // Reconstrói a tabela
+                          }}
                           value={field.value && String(field.value) !== 'null' ? String(field.value) : undefined}
                         >
                           <SelectTrigger className="bg-black/40 border-white/10 h-12">

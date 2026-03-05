@@ -112,10 +112,10 @@ export function NewProductPage() {
           estoque: isDuplicateMode ? 0 : v.estoque,
           sku: isDuplicateMode ? '' : v.sku,
           codigo_barras: isDuplicateMode ? '' : v.codigo_barras,
-          peso_kg: dim?.peso_kg || 0,
-          altura_cm: dim?.altura_cm || 0,
-          largura_cm: dim?.largura_cm || 0,
-          comprimento_cm: dim?.comprimento_cm || 0,
+          peso_kg: v.peso_kg || dim?.peso_kg || 0,
+          altura_cm: v.altura_cm || dim?.altura_cm || 0,
+          largura_cm: v.largura_cm || dim?.largura_cm || 0,
+          comprimento_cm: v.comprimento_cm || dim?.comprimento_cm || 0,
         };
       }) || [];
 
@@ -148,11 +148,16 @@ export function NewProductPage() {
 
   const methods = useForm<any>({
     mode: 'onChange',
-    defaultValues,
-    values: productData ? formValues : undefined
+    defaultValues
   });
 
-  const { watch, setValue, handleSubmit, getValues, formState: { isSubmitting, errors } } = methods;
+  const { watch, setValue, handleSubmit, getValues, reset, formState: { isSubmitting, errors } } = methods;
+
+  useEffect(() => {
+    if (productData && !isPageLoading) {
+      reset(formValues);
+    }
+  }, [productData, isPageLoading, formValues, reset]);
 
   const selectedSubcategoryId = watch('subcategoria_id');
 

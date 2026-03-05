@@ -148,6 +148,8 @@ export function VariationsSection({ isEditMode, isDuplicateMode, grids }: Variat
   const selectedGridId = watch('grade_id');
   const selectedGridObj = useMemo(() => grids?.find(g => String(g.id) === String(selectedGridId)), [grids, selectedGridId]);
 
+  const initialGridLoaded = useRef(false);
+
   // Aplicação de Grade quando selecionada nos dados básicos
   useEffect(() => {
     if (!selectedGridObj) return;
@@ -155,24 +157,26 @@ export function VariationsSection({ isEditMode, isDuplicateMode, grids }: Variat
     const currentSizes = variacaoFields.map((v:any) => v.tamanho);
     const newSizes = selectedGridObj.tamanhos.map(t => t.tamanho);
 
-    // Evita resetar estoques já preenchidos ao carregar a página de edição
-    if (isEditMode || isDuplicateMode) {
-      if (currentSizes.length > 0) return; 
+    // Evita resetar estoques já preenchidos SOMENTE no carregamento inicial da página de edição.
+    // Se o usuário trocar a grade manualmente depois de carregado, a nova grade deve ser aplicada com as medidas corretas.
+    if ((isEditMode || isDuplicateMode) && !initialGridLoaded.current) {
+      initialGridLoaded.current = true;
+      if (currentSizes.length > 0) return;
     }
 
     if (JSON.stringify(currentSizes) !== JSON.stringify(newSizes)) {
         replace(selectedGridObj.tamanhos.map(t => ({
-            tamanho: t.tamanho, 
-            estoque: 0, 
-            sku: '', 
-            codigo_barras: '', 
-            peso_kg: t.peso_kg || 0, 
-            altura_cm: t.altura_cm || 0, 
-            largura_cm: t.largura_cm || 0, 
+            tamanho: t.tamanho,
+            estoque: 0,
+            sku: '',
+            codigo_barras: '',
+            peso_kg: t.peso_kg || 0,
+            altura_cm: t.altura_cm || 0,
+            largura_cm: t.largura_cm || 0,
             comprimento_cm: t.comprimento_cm || 0,
         })));
     }
-  }, [selectedGridObj, isEditMode, isDuplicateMode, replace, variacaoFields]);
+  }, [selectedGridObj, isEditMode, isDuplicateMode, replace]);
 
   const handleApplyBulkStock = () => {
     const qty = Number(bulkStockQty);

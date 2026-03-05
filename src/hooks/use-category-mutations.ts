@@ -19,14 +19,16 @@ export function useCreateCategory() {
       queryClient.invalidateQueries({ queryKey: ['categories'] });
     },
     onError: (error: any) => {
-      const msg = error.response?.data?.message || 'Erro desconhecido ao criar categoria.';
+      const msg = error.response?.data?.error || error.response?.data?.message || 'Erro desconhecido ao criar categoria.';
       toast.error('Falha ao criar categoria.', { description: msg });
     },
   });
 }
 
 async function updateCategory({ id, ...updatedCategory }: Partial<Category>): Promise<Category> {
-  const { data } = await api.put(`/categorias/${id}`, updatedCategory);
+  // Blindagem para garantir que enviamos apenas o campo nome para o Kimi
+  const payload = { nome: updatedCategory.nome };
+  const { data } = await api.put(`/categorias/${id}`, payload);
   return data;
 }
 
@@ -39,7 +41,9 @@ export function useUpdateCategory() {
       queryClient.invalidateQueries({ queryKey: ['categories'] });
     },
     onError: (error: any) => {
-      const msg = error.response?.data?.message || 'Erro desconhecido ao atualizar categoria.';
+      console.error("Erro ao atualizar categoria:", error.response?.data || error.message);
+      // Pega "error" ou "message" para cobrir as duas formas que o Kimi costuma usar
+      const msg = error.response?.data?.error || error.response?.data?.message || error.message || 'Erro interno no servidor do Kimi.';
       toast.error('Falha ao atualizar categoria.', { description: msg });
     },
   });
@@ -58,7 +62,7 @@ export function useDeleteCategory() {
       queryClient.invalidateQueries({ queryKey: ['categories'] });
     },
     onError: (error: any) => {
-      const msg = error.response?.data?.message || 'Não é possível excluir categorias em uso.';
+      const msg = error.response?.data?.error || error.response?.data?.message || 'Não é possível excluir categorias em uso.';
       toast.error('Falha ao excluir categoria.', { description: msg });
     },
   });
@@ -67,7 +71,6 @@ export function useDeleteCategory() {
 // --- Subcategories ---
 
 async function createSubcategory(newSub: Omit<Subcategory, 'id'>): Promise<Subcategory> {
-  // BLINDAGEM: Envia apenas os campos mapeados, ignora campos lixo
   const payload = {
     nome: newSub.nome,
     ncm: newSub.ncm,
@@ -92,14 +95,13 @@ export function useCreateSubcategory() {
       queryClient.invalidateQueries({ queryKey: ['all-subcategories'] });
     },
     onError: (error: any) => {
-      const msg = error.response?.data?.message || error.response?.data?.error || 'Erro desconhecido ao criar.';
+      const msg = error.response?.data?.error || error.response?.data?.message || 'Erro desconhecido ao criar.';
       toast.error('Falha ao criar subcategoria.', { description: msg });
     },
   });
 }
 
 async function updateSubcategory({ id, ...updatedSub }: Partial<Subcategory> & { id: number }): Promise<Subcategory> {
-  // BLINDAGEM: Envia apenas os campos mapeados, ignora campos lixo do DB como 'descricao'
   const payload = {
     nome: updatedSub.nome,
     ncm: updatedSub.ncm,
@@ -124,7 +126,7 @@ export function useUpdateSubcategory() {
       queryClient.invalidateQueries({ queryKey: ['all-subcategories'] });
     },
     onError: (error: any) => {
-      const msg = error.response?.data?.message || error.response?.data?.error || 'Erro desconhecido ao atualizar.';
+      const msg = error.response?.data?.error || error.response?.data?.message || 'Erro desconhecido ao atualizar.';
       toast.error('Falha ao atualizar subcategoria.', { description: msg });
     },
   });
@@ -144,7 +146,7 @@ export function useDeleteSubcategory() {
       queryClient.invalidateQueries({ queryKey: ['all-subcategories'] });
     },
     onError: (error: any) => {
-      const msg = error.response?.data?.message || 'Não é possível excluir subcategorias em uso.';
+      const msg = error.response?.data?.error || error.response?.data?.message || 'Não é possível excluir subcategorias em uso.';
       toast.error('Falha ao excluir subcategoria.', { description: msg });
     },
   });

@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tag } from 'lucide-react';
 import { Category, Subcategory, Brand, Grid } from '@/types';
+import { api } from '@/lib/api';
 
 interface IdentificationSectionProps {
   categories?: Category[];
@@ -14,10 +15,57 @@ interface IdentificationSectionProps {
 }
 
 export function IdentificationSection({ categories, allSubcategories, brands, grids }: IdentificationSectionProps) {
-  const { register, control, watch, formState: { errors } } = useFormContext<any>();
+  const { register, control, watch, setValue, formState: { errors } } = useFormContext<any>();
 
-  // Categoria é apenas "visual" neste select, derivado da subcategoria
   const categoriaId = watch('categoria_id');
+
+  // Controla manualmente o que acontece quando o usuário troca a subcategoria
+  const handleSubcategoryChange = async (subId: string, onChange: (val: string) => void) => {
+    onChange(subId); // Atualiza o formulário
+    const sub = allSubcategories?.find(s => String(s.id) === subId);
+    if (sub) {
+      setValue('categoria_id', String(sub.categoria_id));
+      
+      // Auto-preenche a grade caso o produto não tenha nenhuma grade escolhida ainda
+      const currentGrid = watch('grade_id');
+      if (!currentGrid && sub.grade_id) {
+         handleGridChange(String(sub.grade_id), (val) => setValue('grade_id', val));
+      }
+
+      // Puxa os dados fiscais da subcategoria
+      try {
+        const res = await api.get(`/subcategorias/${subId}/fiscal`);
+        if (res.data) {
+          setValue('ncm', res.data.ncm);
+          setValue('cfop_padrao', res.data.cfop_padrao);
+          setValue('cst_icms', res.data.cst_icms);
+          setValue('origem', res.data.origem);
+          setValue('unidade_medida', res.data.unidade_medida);
+        }
+      } catch(e) {
+        console.error("Falha ao buscar dados fiscais", e);
+      }
+    }
+  };
+
+  // Controla manualmente o que acontece quando a Grade Principal é alterada
+  const handleGridChange = (gridId: string, onChange: (val: string) => void) => {
+    onChange(gridId); // Atualiza o select
+    const selectedGrid = grids?.find(g => String(g.id) === gridId);
+    if (selectedGrid) {
+      // Recria as variações baseadas na nova grade
+      setValue('variacoes', selectedGrid.tamanhos.map(t => ({
+          tamanho: t.tamanho,
+          estoque: 0,
+          sku: '',
+          codigo_barras: '',
+          peso_kg: t.peso_kg || 0,
+          altura_cm: t.altura_cm || 0,
+          largura_cm: t.largura_cm || 0,
+          comprimento_cm: t.comprimento_cm || 0,
+      })));
+    }
+  };
 
   return (
     <Card className="bg-black/20 border-white/10 shadow-lg">
@@ -57,7 +105,7 @@ export function IdentificationSection({ categories, allSubcategories, brands, gr
               name="subcategoria_id"
               rules={{ required: true }}
               render={({ field }) => (
-                <Select onValueChange={field.onChange} value={field.value && String(field.value) !== 'null' ? String(field.value) : undefined}>
+                <Select onValueChange={(val) => handleSubcategoryChange(val, field.onChange)} value={field.value && String(field.value) !== 'null' ? String(field.value) : undefined}>
                   <SelectTrigger className={`bg-black/40 h-14 text-base ${errors.subcategoria_id ? 'border-red-500' : 'border-white/10'}`}>
                     <SelectValue placeholder="Selecione..." />
                   </SelectTrigger>
@@ -97,7 +145,7 @@ export function IdentificationSection({ categories, allSubcategories, brands, gr
               name="grade_id"
               rules={{ required: true }}
               render={({ field }) => (
-                <Select onValueChange={field.onChange} value={field.value && String(field.value) !== 'null' ? String(field.value) : undefined}>
+                <Select onValueChange={(val) => handleGridChange(val, field.onChange)} value={field.value && String(field.value) !== 'null' ? String(field.value) : undefined}>
                   <SelectTrigger className={`bg-black/40 h-14 text-base ${errors.grade_id ? 'border-red-500' : 'border-white/10'}`}>
                     <SelectValue placeholder="Escolha uma grade..." />
                   </SelectTrigger>

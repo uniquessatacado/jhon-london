@@ -58,9 +58,9 @@ export function BrandPage() {
         </Button>
       </div>
       
-      <Card className="bg-black/20 border-white/10 overflow-hidden">
+      <Card className="bg-black/20 border-white/10 overflow-hidden overflow-x-auto">
         <CardContent className="p-0">
-          <Table>
+          <Table className="min-w-[400px]">
             <TableHeader className="bg-white/5">
               <TableRow className="border-white/5 hover:bg-transparent">
                 <TableHead className="pl-6">Nome da Marca</TableHead>

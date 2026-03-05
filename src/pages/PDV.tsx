@@ -89,7 +89,7 @@ export function PDVPage() {
   return (
     <div className="flex flex-col lg:grid lg:grid-cols-3 gap-6 lg:h-[calc(100vh-120px)]">
       {/* Coluna Esquerda: Busca e Produtos */}
-      <div className="lg:col-span-2 flex flex-col gap-6 h-[60vh] lg:h-auto">
+      <div className="lg:col-span-2 flex flex-col gap-6 h-[50vh] lg:h-auto">
         <Card className="bg-black/20 border-white/10 shrink-0">
           <CardContent className="p-4">
             <div className="relative">

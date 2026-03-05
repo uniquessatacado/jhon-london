@@ -115,10 +115,10 @@ export function CategoryPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 h-full min-h-0">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 h-full min-h-0 md:min-h-[500px]">
         
         {/* COLUNA ESQUERDA: CATEGORIAS */}
-        <Card className="bg-black/20 border-white/10 flex flex-col h-full shadow-lg">
+        <Card className="bg-black/20 border-white/10 flex flex-col h-[300px] md:h-full shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between pb-4 border-b border-white/5">
             <CardTitle className="text-lg flex items-center gap-2 text-white">
               <Tag className="h-5 w-5 text-emerald-500" /> Categorias
@@ -159,7 +159,7 @@ export function CategoryPage() {
         </Card>
 
         {/* COLUNA DIREITA: SUBCATEGORIAS */}
-        <Card className="col-span-1 md:col-span-2 bg-black/20 border-white/10 flex flex-col h-full shadow-lg">
+        <Card className="col-span-1 md:col-span-2 bg-black/20 border-white/10 flex flex-col h-[500px] md:h-full shadow-lg">
           <CardHeader className="flex flex-row items-center justify-between pb-4 border-b border-white/5">
             <div>
               <CardTitle className="text-lg flex items-center gap-2 text-white">

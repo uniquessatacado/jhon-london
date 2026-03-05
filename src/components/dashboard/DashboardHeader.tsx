@@ -40,14 +40,14 @@ export function DashboardHeader({ filters, onFilterChange, onRefresh }: Dashboar
       <div className="flex flex-wrap items-center gap-3">
         
         {/* Type Selector */}
-        <div className="bg-white/5 p-1 rounded-xl flex border border-white/5">
+        <div className="w-full md:w-auto bg-white/5 p-1 rounded-xl flex border border-white/5">
             {(['tudo', 'varejo', 'atacado'] as const).map((t) => (
                 <button
                     key={t}
                     onClick={() => setLocalType(t)}
-                    className={`px-4 py-1.5 text-sm font-medium rounded-lg transition-all ${
-                        localType === t 
-                        ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' 
+                    className={`flex-1 md:flex-none px-4 py-1.5 text-sm font-medium rounded-lg transition-all ${
+                        localType === t
+                        ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
                         : 'text-muted-foreground hover:text-white hover:bg-white/5'
                     }`}
                 >
@@ -59,9 +59,9 @@ export function DashboardHeader({ filters, onFilterChange, onRefresh }: Dashboar
         <div className="h-8 w-px bg-white/10 hidden md:block" />
 
         {/* Period Selector */}
-        <div className="flex items-center gap-2">
+        <div className="w-full md:w-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
             <Select value={localPeriod} onValueChange={(v) => setLocalPeriod(v as PeriodOption)}>
-                <SelectTrigger className="w-[180px] bg-white/5 border-white/10 h-10 rounded-xl focus:ring-emerald-500/20">
+                <SelectTrigger className="w-full sm:w-[180px] bg-white/5 border-white/10 h-10 rounded-xl focus:ring-emerald-500/20">
                     <Calendar className="mr-2 h-4 w-4 text-emerald-500" />
                     <SelectValue placeholder="Período" />
                 </SelectTrigger>
@@ -77,39 +77,41 @@ export function DashboardHeader({ filters, onFilterChange, onRefresh }: Dashboar
             </Select>
 
             {localPeriod === 'customizado' && (
-                <div className="flex items-center gap-2 animate-in fade-in slide-in-from-left-2">
-                    <Input 
-                        type="date" 
-                        value={dateStart} 
+                <div className="flex items-center gap-2 animate-in fade-in slide-in-from-top-2 sm:slide-in-from-left-2">
+                    <Input
+                        type="date"
+                        value={dateStart}
                         onChange={(e) => setDateStart(e.target.value)}
-                        className="w-36 bg-white/5 border-white/10 h-10 rounded-xl"
+                        className="flex-1 sm:w-36 bg-white/5 border-white/10 h-10 rounded-xl"
                     />
                     <span className="text-muted-foreground">-</span>
-                    <Input 
-                        type="date" 
-                        value={dateEnd} 
+                    <Input
+                        type="date"
+                        value={dateEnd}
                         onChange={(e) => setDateEnd(e.target.value)}
-                        className="w-36 bg-white/5 border-white/10 h-10 rounded-xl"
+                        className="flex-1 sm:w-36 bg-white/5 border-white/10 h-10 rounded-xl"
                     />
                 </div>
             )}
         </div>
 
-        <Button 
-            onClick={handleApply} 
-            className="h-10 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-medium shadow-[0_0_15px_rgba(16,185,129,0.2)]"
-        >
-            <Filter className="mr-2 h-4 w-4" /> Filtrar
-        </Button>
+        <div className="flex items-center gap-2 w-full md:w-auto">
+          <Button
+              onClick={handleApply}
+              className="flex-1 md:flex-none h-10 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-medium shadow-[0_0_15px_rgba(16,185,129,0.2)]"
+          >
+              <Filter className="mr-2 h-4 w-4" /> Filtrar
+          </Button>
 
-        <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={onRefresh} 
-            className="h-10 w-10 rounded-xl hover:bg-white/10 hover:text-emerald-400 text-muted-foreground"
-        >
-            <RefreshCcw className="h-4 w-4" />
-        </Button>
+          <Button
+              variant="ghost"
+              size="icon"
+              onClick={onRefresh}
+              className="h-10 w-10 shrink-0 rounded-xl hover:bg-white/10 hover:text-emerald-400 text-muted-foreground bg-white/5 md:bg-transparent"
+          >
+              <RefreshCcw className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
     </div>
   );

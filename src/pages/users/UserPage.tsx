@@ -193,8 +193,8 @@ export function UserPage() {
         </Button>
       </div>
 
-      <div className="rounded-xl border border-white/10 bg-black/20 overflow-hidden">
-        <Table>
+      <div className="rounded-xl border border-white/10 bg-black/20 overflow-hidden overflow-x-auto">
+        <Table className="min-w-[700px]">
           <TableHeader className="bg-white/5">
             <TableRow className="border-white/5 hover:bg-transparent">
               <TableHead>Nome</TableHead>

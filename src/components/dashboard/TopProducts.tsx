@@ -29,7 +29,7 @@ export function TopProducts({ products, isLoading }: TopProductsProps) {
              <p>Sem dados de produtos para o período.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             {products.map((product, index) => (
               <div key={product.id} className="group relative bg-black/40 border border-white/10 rounded-2xl overflow-hidden hover:border-emerald-500/50 hover:shadow-[0_0_20px_rgba(16,185,129,0.1)] transition-all duration-300">
                 {/* Ranking Badge */}

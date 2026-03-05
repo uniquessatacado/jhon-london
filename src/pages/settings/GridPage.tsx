@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { PlusCircle, Trash2, Pencil } from 'lucide-react';
+import { PlusCircle, Trash2, Pencil, Copy } from 'lucide-react';
 import { useGrids } from '@/hooks/use-grids';
 import { useCreateGrid, useUpdateGrid, useDeleteGrid } from '@/hooks/use-grid-mutations';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -69,6 +69,22 @@ export function GridPage() {
     setIsDialogOpen(true);
   };
 
+  const handleCloneGrid = (gridToClone: Grid) => {
+    setEditingId(null); // NULL significa que vamos CRIAR uma nova
+    reset({
+      nome: `${gridToClone.nome} - Cópia`,
+      tamanhos: gridToClone.tamanhos.map(t => ({
+          tamanho: t.tamanho,
+          peso_kg: t.peso_kg || 0,
+          altura_cm: t.altura_cm || 0,
+          largura_cm: t.largura_cm || 0,
+          comprimento_cm: t.comprimento_cm || 0
+          // Tiramos o ID para garantir que o banco crie tamanhos novos
+      }))
+    });
+    setIsDialogOpen(true);
+  };
+
   const onSubmit = (data: GridForm) => {
     if (editingId) {
       updateGrid({ id: editingId, ...data }, { onSuccess: () => setIsDialogOpen(false) });
@@ -107,15 +123,25 @@ export function GridPage() {
                   <Button 
                     size="icon" 
                     variant="ghost" 
-                    className="h-8 w-8 text-muted-foreground hover:text-white hover:bg-white/10 rounded-lg"
+                    className="h-8 w-8 text-muted-foreground hover:text-blue-400 hover:bg-blue-500/10 rounded-lg"
+                    onClick={() => handleCloneGrid(grid)}
+                    title="Clonar Grade"
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                  <Button 
+                    size="icon" 
+                    variant="ghost" 
+                    className="h-8 w-8 text-muted-foreground hover:text-emerald-400 hover:bg-emerald-500/10 rounded-lg"
                     onClick={() => handleOpenDialog(grid)}
+                    title="Editar Grade"
                   >
                     <Pencil className="h-4 w-4" />
                   </Button>
                   
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:text-red-400 hover:bg-red-500/10 rounded-lg"><Trash2 className="h-4 w-4" /></Button>
+                      <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:text-red-400 hover:bg-red-500/10 rounded-lg" title="Excluir Grade"><Trash2 className="h-4 w-4" /></Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent className="bg-zinc-950 border-white/10">
                       <AlertDialogHeader>

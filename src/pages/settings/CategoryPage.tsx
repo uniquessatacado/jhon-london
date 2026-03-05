@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, Tag, FolderTree, ArrowRight, Pencil, Grid as GridIcon, Loader2 } from 'lucide-react';
+import { PlusCircle, Tag, FolderTree, ArrowRight, Pencil, Grid as GridIcon, Loader2, Copy } from 'lucide-react';
 import { useCategories, useSubcategories } from '@/hooks/use-categories';
 import { useCreateCategory, useCreateSubcategory, useUpdateSubcategory } from '@/hooks/use-category-mutations';
 import { useGrids } from '@/hooks/use-grids';
@@ -71,6 +71,20 @@ export function CategoryPage() {
             grade_id: "null"
         });
     }
+    setIsSubDialogOpen(true);
+  };
+
+  const handleCloneSub = (subToClone: Subcategory) => {
+    setEditingSub(null); // NULL = Criar Nova
+    resetSub({
+        nome: `${subToClone.nome} - Cópia`,
+        ncm: subToClone.ncm,
+        cfop_padrao: subToClone.cfop_padrao,
+        cst_icms: subToClone.cst_icms,
+        origem: String(subToClone.origem),
+        unidade_medida: subToClone.unidade_medida,
+        grade_id: (subToClone.grade_id && subToClone.grade_id !== null) ? String(subToClone.grade_id) : "null"
+    });
     setIsSubDialogOpen(true);
   };
 
@@ -203,16 +217,31 @@ export function CategoryPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 p-4">
                   {subcategories?.map(sub => (
                     <div key={sub.id} className="bg-white/5 border border-white/10 rounded-2xl p-5 hover:border-emerald-500/30 transition-all group relative">
-                      <Button 
-                         type="button"
-                         size="icon" 
-                         variant="ghost" 
-                         className="absolute top-3 right-3 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 hover:bg-white/10 rounded-lg"
-                         onClick={() => handleOpenSubDialog(sub)}
-                      >
-                         <Pencil className="h-4 w-4 text-emerald-400" />
-                      </Button>
-                      <div className="flex items-start justify-between mb-4 pr-10">
+                      
+                      <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                         <Button 
+                            type="button"
+                            size="icon" 
+                            variant="ghost" 
+                            title="Clonar Subcategoria"
+                            className="h-8 w-8 bg-black/40 hover:bg-white/10 rounded-lg"
+                            onClick={(e) => { e.stopPropagation(); handleCloneSub(sub); }}
+                         >
+                            <Copy className="h-4 w-4 text-blue-400" />
+                         </Button>
+                         <Button 
+                            type="button"
+                            size="icon" 
+                            variant="ghost" 
+                            title="Editar Subcategoria"
+                            className="h-8 w-8 bg-black/40 hover:bg-white/10 rounded-lg"
+                            onClick={(e) => { e.stopPropagation(); handleOpenSubDialog(sub); }}
+                         >
+                            <Pencil className="h-4 w-4 text-emerald-400" />
+                         </Button>
+                      </div>
+
+                      <div className="flex items-start justify-between mb-4 pr-16">
                         <div>
                             <h3 className="font-bold text-lg text-white">{sub.nome}</h3>
                             {sub.grade_id && (

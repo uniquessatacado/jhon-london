@@ -147,25 +147,39 @@ export function UserPage() {
   const onSubmit = async (data: any) => {
     setIsSaving(true);
     try {
-      const payload = {
-        ...data,
-        permissoes: data.role === 'admin' ? defaultPermissions : permissions,
+      const permissoesObj = data.role === 'admin' ? defaultPermissions : permissions;
+      
+      const payload: any = {
+        nome: data.nome,
+        email: data.email,
+        whatsapp: data.whatsapp || '',
+        role: data.role,
+        // Stringify explicitly to avoid [object Object] in raw SQL backend inserts
+        permissoes: JSON.stringify(permissoesObj), 
       };
 
+      if (data.senha) {
+          payload.senha = data.senha;
+      }
+
       if (editingUser) {
-        if (!data.senha) delete payload.senha;
         await api.put(`/usuarios/${editingUser.id}`, payload);
         toast.success('Usuário atualizado!');
       } else {
-        if (!data.senha) return toast.error('Senha é obrigatória para novos usuários');
+        if (!data.senha) {
+            toast.error('Senha é obrigatória para novos usuários');
+            setIsSaving(false);
+            return;
+        }
         await api.post('/usuarios', payload);
         toast.success('Usuário criado!');
       }
       setIsDialogOpen(false);
       fetchUsers();
     } catch (error: any) {
-        console.error(error);
-        toast.error('Erro ao salvar usuário', { description: error.response?.data?.message });
+        console.error("Erro completo:", error.response?.data);
+        const msg = error.response?.data?.error || error.response?.data?.message || 'Erro interno no servidor.';
+        toast.error('Erro ao salvar usuário', { description: msg });
     } finally {
       setIsSaving(false);
     }

@@ -142,7 +142,9 @@ export function VariationsSection({ isEditMode, isDuplicateMode, grids }: Variat
     setBulkStockQty('');
   };
 
-  if (variacaoFields.length === 0) return null;
+  if (!selectedGridId) {
+    return null;
+  }
 
   return (
     <Card className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl border-white/10 shadow-2xl overflow-visible">

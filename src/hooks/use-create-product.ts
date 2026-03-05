@@ -14,13 +14,13 @@ export type ProductFormDTO = {
   
   variacoes: {
     tamanho: string;
-    estoque: number;
+    estoque: number | string;
     sku: string;
     codigo_barras: string;
-    peso_kg?: number;
-    altura_cm?: number;
-    largura_cm?: number;
-    comprimento_cm?: number;
+    peso_kg?: number | string;
+    altura_cm?: number | string;
+    largura_cm?: number | string;
+    comprimento_cm?: number | string;
   }[];
 
   ncm: string;
@@ -29,26 +29,34 @@ export type ProductFormDTO = {
   origem: string;
   unidade_medida: string;
 
-  preco_custo: number;
-  preco_varejo: number;
+  preco_custo: number | string;
+  preco_varejo: number | string;
   
   habilita_atacado_geral: boolean;
-  preco_atacado_geral: number;
+  preco_atacado_geral: number | string;
   
   habilita_atacado_grade: boolean;
   grade_atacado_id: string;
-  preco_atacado_grade: number;
-  qtd_minima_atacado_grade: number;
+  preco_atacado_grade: number | string;
+  qtd_minima_atacado_grade: number | string;
   
   composicao_atacado: {
     tamanho: string;
-    quantidade: number;
+    quantidade: number | string;
   }[];
 
   imagem_principal_file?: File | null;
   imagens_galeria_files?: File[];
   video_file?: File | null;
   keep_images?: boolean; 
+};
+
+// Blindagem: Transforma vírgula em ponto e previne NaN
+const parseToNumber = (value: any): number => {
+  if (typeof value === 'number') return value;
+  if (!value) return 0;
+  const parsed = parseFloat(String(value).replace(',', '.'));
+  return isNaN(parsed) ? 0 : parsed;
 };
 
 const buildProductFormData = (formData: ProductFormDTO) => {
@@ -70,15 +78,15 @@ const buildProductFormData = (formData: ProductFormDTO) => {
   payload.append('origem', formData.origem);
   payload.append('unidade_medida', formData.unidade_medida);
 
-  payload.append('preco_custo', String(Number(formData.preco_custo) || 0));
-  payload.append('preco_varejo', String(Number(formData.preco_varejo) || 0));
+  payload.append('preco_custo', String(parseToNumber(formData.preco_custo)));
+  payload.append('preco_varejo', String(parseToNumber(formData.preco_varejo)));
   
   payload.append('habilita_atacado_geral', String(formData.habilita_atacado_geral));
-  payload.append('preco_atacado_geral', String(Number(formData.preco_atacado_geral) || 0));
+  payload.append('preco_atacado_geral', String(parseToNumber(formData.preco_atacado_geral)));
   
   payload.append('habilita_atacado_grade', String(formData.habilita_atacado_grade));
-  payload.append('preco_atacado_grade', String(Number(formData.preco_atacado_grade) || 0));
-  payload.append('qtd_minima_atacado_grade', String(Number(formData.qtd_minima_atacado_grade) || 0));
+  payload.append('preco_atacado_grade', String(parseToNumber(formData.preco_atacado_grade)));
+  payload.append('qtd_minima_atacado_grade', String(parseToNumber(formData.qtd_minima_atacado_grade)));
   
   if (formData.grade_atacado_id && formData.grade_atacado_id !== "null") {
     payload.append('grade_atacado_id', String(formData.grade_atacado_id));
@@ -100,23 +108,33 @@ const buildProductFormData = (formData: ProductFormDTO) => {
 
   const variacoesJson = JSON.stringify(formData.variacoes?.map(v => ({
     tamanho: v.tamanho,
-    estoque: Number(v.estoque) || 0,
+    estoque: parseToNumber(v.estoque),
     sku: v.sku || '',
     codigo_barras: v.codigo_barras || '',
-    peso_kg: Number(v.peso_kg) || 0,
-    altura_cm: Number(v.altura_cm) || 0,
-    largura_cm: Number(v.largura_cm) || 0,
-    comprimento_cm: Number(v.comprimento_cm) || 0,
+    peso_kg: parseToNumber(v.peso_kg),
+    altura_cm: parseToNumber(v.altura_cm),
+    largura_cm: parseToNumber(v.largura_cm),
+    comprimento_cm: parseToNumber(v.comprimento_cm),
   })) || []);
   payload.append('variacoes', variacoesJson);
+
+  // Enviamos dimensoes_grade separadamente para garantir a compatibilidade com a API
+  const dimensoesJson = JSON.stringify(formData.variacoes?.map(v => ({
+    tamanho: v.tamanho,
+    peso_kg: parseToNumber(v.peso_kg),
+    altura_cm: parseToNumber(v.altura_cm),
+    largura_cm: parseToNumber(v.largura_cm),
+    comprimento_cm: parseToNumber(v.comprimento_cm),
+  })) || []);
+  payload.append('dimensoes_grade', dimensoesJson);
 
   let composicaoJson = "[]";
   if (formData.habilita_atacado_grade && formData.grade_atacado_id && formData.composicao_atacado) {
       const composicaoValida = formData.composicao_atacado
-          .filter(c => c && c.tamanho && Number(c.quantidade) > 0)
+          .filter(c => c && c.tamanho && parseToNumber(c.quantidade) > 0)
           .map(c => ({
               tamanho: c.tamanho,
-              quantidade: Number(c.quantidade)
+              quantidade: parseToNumber(c.quantidade)
           }));
       if (composicaoValida.length > 0) {
           composicaoJson = JSON.stringify(composicaoValida);
@@ -201,7 +219,6 @@ export function useUpdateProduct() {
   return useMutation({
     mutationFn: updateProduct,
     onSuccess: (_, variables) => {
-      // 👈 KIMI FIX: Invalida o cache geral e o específico do produto salvo!
       queryClient.invalidateQueries({ queryKey: ['products'] });
       if (variables.id) {
          queryClient.invalidateQueries({ queryKey: ['product', String(variables.id)] });

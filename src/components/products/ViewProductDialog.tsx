@@ -17,7 +17,12 @@ interface ViewProductDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const formatDim = (val: any) => (val && Number(val) > 0) ? val : '-';
+// FORMATADOR BLINDADO
+const formatDim = (val: any) => {
+  if (val === undefined || val === null || val === '') return '-';
+  const num = typeof val === 'string' ? parseFloat(val.replace(',', '.')) : Number(val);
+  return (!isNaN(num) && num > 0) ? num.toString().replace('.', ',') : '-';
+};
 
 const ViewProductDialogContent = ({ product }: { product: Product }) => {
   const { data: categories } = useCategories();

@@ -13,11 +13,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { CalendarIcon, User, MapPin, Settings2, Loader2 } from 'lucide-react';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { User, MapPin, Settings2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Customer } from '@/types';
 import { useCreateCustomer, useUpdateCustomer } from '@/hooks/use-customers';
@@ -30,29 +26,29 @@ interface CustomerFormDialogProps {
 }
 
 const formSchema = z.object({
-  nome: z.string().min(3, 'Nome é obrigatório'),
+  nome: z.string().min(3, 'Nome deve ter pelo menos 3 letras'),
   tipo_pessoa: z.enum(['F', 'J']),
   cpf_cnpj: z.string().optional().or(z.literal('')),
-  whatsapp: z.string().min(14, 'WhatsApp inválido').optional().or(z.literal('')),
+  whatsapp: z.string().min(14, 'WhatsApp é obrigatório'),
   email: z.string().email('Email inválido').optional().or(z.literal('')),
-  rg_ie: z.string().optional(),
-  data_nascimento: z.date().optional().nullable(),
+  rg_ie: z.string().optional().or(z.literal('')),
+  data_nascimento: z.string().optional().or(z.literal('')),
   cep: z.string().optional().or(z.literal('')),
   logradouro: z.string().optional().or(z.literal('')),
   numero: z.string().optional().or(z.literal('')),
-  complemento: z.string().optional(),
+  complemento: z.string().optional().or(z.literal('')),
   bairro: z.string().optional().or(z.literal('')),
   cidade: z.string().optional().or(z.literal('')),
   estado: z.string().optional().or(z.literal('')),
   tipo_cliente: z.enum(['varejo', 'atacado', 'ambos']),
-  observacoes: z.string().optional(),
+  observacoes: z.string().optional().or(z.literal('')),
   ativo: z.boolean(),
 }).superRefine((data, ctx) => {
   if (data.tipo_pessoa === 'J') {
     if (!data.cpf_cnpj || !validateCNPJ(data.cpf_cnpj.replace(/\D/g, ''))) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "CNPJ válido é obrigatório para Pessoa Jurídica.",
+        message: "CNPJ inválido ou vazio.",
         path: ["cpf_cnpj"],
       });
     }
@@ -66,6 +62,30 @@ const formSchema = z.object({
     }
   }
 });
+
+// Converte YYYY-MM-DD para DD/MM/YYYY
+const parseDateFromBackend = (dateString?: string | null) => {
+  if (!dateString) return '';
+  try {
+    const [year, month, day] = dateString.split('T')[0].split('-');
+    if (year && month && day) return `${day}/${month}/${year}`;
+    return '';
+  } catch (e) {
+    return '';
+  }
+};
+
+// Converte DD/MM/YYYY para YYYY-MM-DD
+const formatDateForBackend = (dateString?: string) => {
+  if (!dateString || dateString.length !== 10) return null;
+  try {
+    const [day, month, year] = dateString.split('/');
+    if (year && month && day) return `${year}-${month}-${day}`;
+    return null;
+  } catch (e) {
+    return null;
+  }
+};
 
 export function CustomerFormDialog({ open, onOpenChange, customer }: CustomerFormDialogProps) {
   const { mutate: createCustomer, isPending: isCreating } = useCreateCustomer();
@@ -82,7 +102,7 @@ export function CustomerFormDialog({ open, onOpenChange, customer }: CustomerFor
       whatsapp: '',
       email: '',
       rg_ie: '',
-      data_nascimento: null,
+      data_nascimento: '',
       cep: '',
       logradouro: '',
       numero: '',
@@ -100,7 +120,6 @@ export function CustomerFormDialog({ open, onOpenChange, customer }: CustomerFor
 
   useEffect(() => {
     if (customer) {
-      // Usamos || '' para evitar que valores null vindos do backend quebrem o formulário
       form.reset({
         nome: customer.nome || '',
         tipo_pessoa: customer.tipo_pessoa || 'F',
@@ -108,6 +127,7 @@ export function CustomerFormDialog({ open, onOpenChange, customer }: CustomerFor
         whatsapp: customer.whatsapp || '',
         email: customer.email || '',
         rg_ie: customer.rg_ie || '',
+        data_nascimento: parseDateFromBackend(customer.data_nascimento),
         cep: customer.cep || '',
         logradouro: customer.logradouro || '',
         numero: customer.numero || '',
@@ -118,7 +138,6 @@ export function CustomerFormDialog({ open, onOpenChange, customer }: CustomerFor
         tipo_cliente: customer.tipo_cliente || 'varejo',
         observacoes: customer.observacoes || '',
         ativo: customer.ativo ?? true,
-        data_nascimento: customer.data_nascimento ? new Date(customer.data_nascimento) : null,
       });
     } else {
       form.reset({
@@ -128,7 +147,7 @@ export function CustomerFormDialog({ open, onOpenChange, customer }: CustomerFor
         whatsapp: '',
         email: '',
         rg_ie: '',
-        data_nascimento: null,
+        data_nascimento: '',
         cep: '',
         logradouro: '',
         numero: '',
@@ -169,7 +188,7 @@ export function CustomerFormDialog({ open, onOpenChange, customer }: CustomerFor
   const onSubmit = (data: z.infer<typeof formSchema>) => {
     const payload = {
       ...data,
-      data_nascimento: data.data_nascimento ? format(data.data_nascimento, 'yyyy-MM-dd') : null,
+      data_nascimento: formatDateForBackend(data.data_nascimento),
     };
 
     if (customer) {
@@ -181,8 +200,14 @@ export function CustomerFormDialog({ open, onOpenChange, customer }: CustomerFor
 
   const onInvalid = (errors: any) => {
     console.error('Erros de validação:', errors);
-    toast.error('Campos inválidos', {
-      description: 'Verifique as abas de Pessoais e Endereço para corrigir os erros.',
+    // Pega todas as mensagens de erro e junta para mostrar no toast
+    const errorMessages = Object.keys(errors)
+      .map(key => errors[key].message)
+      .filter(Boolean)
+      .join(' | ');
+
+    toast.error('Não foi possível salvar', {
+      description: errorMessages || 'Verifique se todos os campos obrigatórios estão preenchidos.',
     });
   };
 
@@ -248,22 +273,20 @@ export function CustomerFormDialog({ open, onOpenChange, customer }: CustomerFor
                 </div>
                 {tipoPessoa === 'F' && (
                   <div className="grid gap-2">
-                    <Label>Data de Nascimento</Label>
+                    <Label htmlFor="data_nascimento">Data de Nascimento</Label>
                     <Controller
                       name="data_nascimento"
                       control={form.control}
                       render={({ field }) => (
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button variant="outline" className={`w-full justify-start text-left font-normal ${inputClasses}`}>
-                              <CalendarIcon className="mr-2 h-4 w-4" />
-                              {field.value ? format(field.value, 'PPP', { locale: ptBR }) : <span className="text-muted-foreground">Selecione uma data</span>}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0 bg-zinc-950 border-white/10">
-                            <Calendar mode="single" selected={field.value || undefined} onSelect={field.onChange} initialFocus />
-                          </PopoverContent>
-                        </Popover>
+                        <IMaskInput
+                          mask="00/00/0000"
+                          value={field.value || ''}
+                          onAccept={(value) => field.onChange(value)}
+                          as={Input as any}
+                          id="data_nascimento"
+                          placeholder="DD/MM/AAAA"
+                          className={inputClasses}
+                        />
                       )}
                     />
                   </div>
@@ -317,19 +340,16 @@ export function CustomerFormDialog({ open, onOpenChange, customer }: CustomerFor
                       />
                       {isCepLoading && <Loader2 className="absolute right-2 top-2 h-5 w-5 animate-spin text-muted-foreground" />}
                     </div>
-                    {form.formState.errors.cep && <p className="text-red-500 text-xs">{form.formState.errors.cep.message}</p>}
                   </div>
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="logradouro">Logradouro</Label>
                   <Input id="logradouro" className={inputClasses} {...form.register('logradouro')} />
-                  {form.formState.errors.logradouro && <p className="text-red-500 text-xs">{form.formState.errors.logradouro.message}</p>}
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="grid gap-2">
                     <Label htmlFor="numero">Número</Label>
                     <Input id="numero" className={inputClasses} {...form.register('numero')} />
-                    {form.formState.errors.numero && <p className="text-red-500 text-xs">{form.formState.errors.numero.message}</p>}
                   </div>
                   <div className="grid gap-2 md:col-span-2">
                     <Label htmlFor="complemento">Complemento</Label>
@@ -340,17 +360,14 @@ export function CustomerFormDialog({ open, onOpenChange, customer }: CustomerFor
                   <div className="grid gap-2">
                     <Label htmlFor="bairro">Bairro</Label>
                     <Input id="bairro" className={inputClasses} {...form.register('bairro')} />
-                    {form.formState.errors.bairro && <p className="text-red-500 text-xs">{form.formState.errors.bairro.message}</p>}
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="cidade">Cidade</Label>
                     <Input id="cidade" className={inputClasses} {...form.register('cidade')} />
-                    {form.formState.errors.cidade && <p className="text-red-500 text-xs">{form.formState.errors.cidade.message}</p>}
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="estado">Estado</Label>
                     <Input id="estado" className={inputClasses} {...form.register('estado')} />
-                    {form.formState.errors.estado && <p className="text-red-500 text-xs">{form.formState.errors.estado.message}</p>}
                   </div>
                 </div>
               </TabsContent>

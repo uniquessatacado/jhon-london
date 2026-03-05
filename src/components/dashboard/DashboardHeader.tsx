@@ -31,7 +31,7 @@ export function DashboardHeader({ filters, onFilterChange, onRefresh }: Dashboar
       <div className="flex flex-col">
         <h1 className="text-2xl font-bold text-white flex items-center gap-2">
             <span className="bg-gradient-to-r from-emerald-400 to-teal-200 bg-clip-text text-transparent">
-                Dashboard
+                Dashboard.
             </span>
         </h1>
         <p className="text-xs text-muted-foreground">Visão geral de performance</p>

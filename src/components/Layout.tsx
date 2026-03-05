@@ -17,7 +17,7 @@ import { UserProfileDialog } from '@/components/users/UserProfileDialog';
 import { UserPermissions } from '@/types/auth';
 
 const navItems = [
-  { to: '/', icon: Home, label: 'Dashboard', permissionKey: 'dashboard' as keyof UserPermissions },
+  { to: '/', icon: Home, label: 'Dashboard.', permissionKey: 'dashboard' as keyof UserPermissions },
   { to: '/produtos', icon: Package, label: 'Produtos', permissionKey: 'produtos' as keyof UserPermissions, featureKey: 'produtos_liberado' },
   { to: '/clientes', icon: Users, label: 'Clientes', permissionKey: 'clientes' as keyof UserPermissions, featureKey: 'clientes_liberado' },
   { to: '/pdv', icon: ShoppingCart, label: 'PDV', permissionKey: 'financeiro' as keyof UserPermissions, featureKey: 'pdv_liberado' },

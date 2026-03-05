@@ -266,146 +266,148 @@ export function UserPage() {
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
-          <DialogHeader>
+        <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col bg-zinc-950 border-white/10 p-6">
+          <DialogHeader className="shrink-0 pb-2">
             <DialogTitle>{editingUser ? 'Editar Usuário' : 'Novo Usuário'}</DialogTitle>
             <DialogDescription>Defina as credenciais e nível de acesso.</DialogDescription>
           </DialogHeader>
           
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 overflow-y-auto pr-2 pb-2">
-            <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                    <Label htmlFor="nome">Nome Completo</Label>
-                    <Input id="nome" {...register('nome', { required: true })} />
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="whatsapp">WhatsApp (Opcional)</Label>
-                    <Input id="whatsapp" {...register('whatsapp')} placeholder="(00) 00000-0000" />
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="email">E-mail de Acesso</Label>
-                    <Input id="email" type="email" {...register('email', { required: true })} />
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="senha">{editingUser ? 'Nova Senha (deixe em branco para manter)' : 'Senha'}</Label>
-                    <Input id="senha" type="password" {...register('senha', { required: !editingUser })} />
-                </div>
+          <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col flex-1 overflow-hidden mt-2">
+            <div className="flex-1 overflow-y-auto pr-2 pb-2 space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                      <Label htmlFor="nome">Nome Completo</Label>
+                      <Input id="nome" {...register('nome', { required: true })} />
+                  </div>
+                  <div className="space-y-2">
+                      <Label htmlFor="whatsapp">WhatsApp (Opcional)</Label>
+                      <Input id="whatsapp" {...register('whatsapp')} placeholder="(00) 00000-0000" />
+                  </div>
+                  <div className="space-y-2">
+                      <Label htmlFor="email">E-mail de Acesso</Label>
+                      <Input id="email" type="email" {...register('email', { required: true })} />
+                  </div>
+                  <div className="space-y-2">
+                      <Label htmlFor="senha">{editingUser ? 'Nova Senha (deixe em branco para manter)' : 'Senha'}</Label>
+                      <Input id="senha" type="password" {...register('senha', { required: !editingUser })} />
+                  </div>
+              </div>
+
+              <div className="space-y-2">
+                  <Label>Nível de Acesso</Label>
+                  <Select onValueChange={(v) => setValue('role', v)} value={watchRole}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                          <SelectItem value="colaborador">Colaborador (Acesso Restrito)</SelectItem>
+                          <SelectItem value="admin">Administrador (Acesso Total)</SelectItem>
+                      </SelectContent>
+                  </Select>
+              </div>
+
+              {watchRole === 'colaborador' && (
+                  <div className="space-y-3 pt-4 border-t border-white/10">
+                      <Label className="flex items-center gap-2"><Shield className="h-4 w-4 text-emerald-500" /> Permissões de Acesso</Label>
+                      
+                      <div className="grid grid-cols-1 gap-2">
+                          {/* DASHBOARD COM EXPANSÃO */}
+                          <div className="border border-white/10 rounded-lg bg-white/5 overflow-hidden">
+                              <div className="p-3 flex items-center justify-between hover:bg-white/5 transition-colors">
+                                  <div className="flex items-center space-x-2">
+                                      <Checkbox id="perm_dash" checked={!!permissions.dashboard} onCheckedChange={(c) => toggleAllDashboard(c as boolean)} />
+                                      <label htmlFor="perm_dash" className="text-sm font-bold cursor-pointer">Dashboard (Visualizar Tela)</label>
+                                  </div>
+                              </div>
+                              
+                              {permissions.dashboard && (
+                                  <div className="bg-black/20 p-3 border-t border-white/10 grid grid-cols-2 md:grid-cols-3 gap-3 animate-in slide-in-from-top-2">
+                                      <p className="col-span-full text-xs text-muted-foreground mb-1 uppercase tracking-wider font-semibold">Métricas Visíveis:</p>
+                                      
+                                      <div className="flex items-center space-x-2">
+                                          <Checkbox id="d_fat" checked={!!permissions.dash_faturamento} onCheckedChange={(c) => handlePermissionChange('dash_faturamento', c as boolean)} />
+                                          <label htmlFor="d_fat" className="text-xs cursor-pointer">Faturamento</label>
+                                      </div>
+                                      <div className="flex items-center space-x-2">
+                                          <Checkbox id="d_luc" checked={!!permissions.dash_lucro} onCheckedChange={(c) => handlePermissionChange('dash_lucro', c as boolean)} />
+                                          <label htmlFor="d_luc" className="text-xs cursor-pointer">Lucro Bruto</label>
+                                      </div>
+                                      <div className="flex items-center space-x-2">
+                                          <Checkbox id="d_cus" checked={!!permissions.dash_custo} onCheckedChange={(c) => handlePermissionChange('dash_custo', c as boolean)} />
+                                          <label htmlFor="d_cus" className="text-xs cursor-pointer">Custo Total</label>
+                                      </div>
+                                      <div className="flex items-center space-x-2">
+                                          <Checkbox id="d_tkt" checked={!!permissions.dash_ticket} onCheckedChange={(c) => handlePermissionChange('dash_ticket', c as boolean)} />
+                                          <label htmlFor="d_tkt" className="text-xs cursor-pointer">Ticket Médio</label>
+                                      </div>
+                                      <div className="flex items-center space-x-2">
+                                          <Checkbox id="d_ped" checked={!!permissions.dash_pedidos} onCheckedChange={(c) => handlePermissionChange('dash_pedidos', c as boolean)} />
+                                          <label htmlFor="d_ped" className="text-xs cursor-pointer">Total Pedidos</label>
+                                      </div>
+                                      <div className="flex items-center space-x-2">
+                                          <Checkbox id="d_med" checked={!!permissions.dash_media_items} onCheckedChange={(c) => handlePermissionChange('dash_media_items', c as boolean)} />
+                                          <label htmlFor="d_med" className="text-xs cursor-pointer">Média Prod/Ped</label>
+                                      </div>
+                                      <div className="flex items-center space-x-2">
+                                          <Checkbox id="d_vis" checked={!!permissions.dash_visitas} onCheckedChange={(c) => handlePermissionChange('dash_visitas', c as boolean)} />
+                                          <label htmlFor="d_vis" className="text-xs cursor-pointer">Visitas</label>
+                                      </div>
+                                      
+                                      <p className="col-span-full text-xs text-muted-foreground mt-2 mb-1 uppercase tracking-wider font-semibold">Listagens:</p>
+
+                                      <div className="flex items-center space-x-2">
+                                          <Checkbox id="d_ven" checked={!!permissions.dash_vendas_recentes} onCheckedChange={(c) => handlePermissionChange('dash_vendas_recentes', c as boolean)} />
+                                          <label htmlFor="d_ven" className="text-xs cursor-pointer">Últimas Vendas</label>
+                                      </div>
+                                      <div className="flex items-center space-x-2">
+                                          <Checkbox id="d_mai" checked={!!permissions.dash_maiores_pedidos} onCheckedChange={(c) => handlePermissionChange('dash_maiores_pedidos', c as boolean)} />
+                                          <label htmlFor="d_mai" className="text-xs cursor-pointer">Maiores Pedidos</label>
+                                      </div>
+                                      <div className="flex items-center space-x-2">
+                                          <Checkbox id="d_nov" checked={!!permissions.dash_novos_clientes} onCheckedChange={(c) => handlePermissionChange('dash_novos_clientes', c as boolean)} />
+                                          <label htmlFor="d_nov" className="text-xs cursor-pointer">Novos Clientes</label>
+                                      </div>
+                                      <div className="flex items-center space-x-2">
+                                          <Checkbox id="d_eli" checked={!!permissions.dash_clientes_elite} onCheckedChange={(c) => handlePermissionChange('dash_clientes_elite', c as boolean)} />
+                                          <label htmlFor="d_eli" className="text-xs cursor-pointer">Clientes Elite</label>
+                                      </div>
+                                      <div className="flex items-center space-x-2">
+                                          <Checkbox id="d_top" checked={!!permissions.dash_top_produtos} onCheckedChange={(c) => handlePermissionChange('dash_top_produtos', c as boolean)} />
+                                          <label htmlFor="d_top" className="text-xs cursor-pointer">Top Produtos</label>
+                                      </div>
+                                  </div>
+                              )}
+                          </div>
+
+                          {/* OUTRAS PERMISSÕES */}
+                          <div className="grid grid-cols-2 gap-4 mt-2">
+                              <div className="flex items-center space-x-2 border border-white/10 p-3 rounded-lg bg-white/5">
+                                  <Checkbox id="perm_prod" checked={!!permissions.produtos} onCheckedChange={(c) => handlePermissionChange('produtos', c as boolean)} />
+                                  <label htmlFor="perm_prod" className="text-sm font-medium leading-none cursor-pointer">Produtos & Estoque</label>
+                              </div>
+                              <div className="flex items-center space-x-2 border border-white/10 p-3 rounded-lg bg-white/5">
+                                  <Checkbox id="perm_cli" checked={!!permissions.clientes} onCheckedChange={(c) => handlePermissionChange('clientes', c as boolean)} />
+                                  <label htmlFor="perm_cli" className="text-sm font-medium leading-none cursor-pointer">Clientes</label>
+                              </div>
+                              <div className="flex items-center space-x-2 border border-white/10 p-3 rounded-lg bg-white/5">
+                                  <Checkbox id="perm_fin" checked={!!permissions.financeiro} onCheckedChange={(c) => handlePermissionChange('financeiro', c as boolean)} />
+                                  <label htmlFor="perm_fin" className="text-sm font-medium leading-none cursor-pointer">Vendas / PDV</label>
+                              </div>
+                              <div className="flex items-center space-x-2 border border-white/10 p-3 rounded-lg bg-white/5">
+                                  <Checkbox id="perm_cad" checked={!!permissions.cadastros} onCheckedChange={(c) => handlePermissionChange('cadastros', c as boolean)} />
+                                  <label htmlFor="perm_cad" className="text-sm font-medium leading-none cursor-pointer">Cadastros (Cats/Marcas)</label>
+                              </div>
+                              <div className="flex items-center space-x-2 border border-white/10 p-3 rounded-lg bg-white/5">
+                                  <Checkbox id="perm_user" checked={!!permissions.usuarios} onCheckedChange={(c) => handlePermissionChange('usuarios', c as boolean)} />
+                                  <label htmlFor="perm_user" className="text-sm font-medium leading-none cursor-pointer">Gestão de Usuários</label>
+                              </div>
+                          </div>
+                      </div>
+                  </div>
+              )}
             </div>
 
-            <div className="space-y-2">
-                <Label>Nível de Acesso</Label>
-                <Select onValueChange={(v) => setValue('role', v)} value={watchRole}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="colaborador">Colaborador (Acesso Restrito)</SelectItem>
-                        <SelectItem value="admin">Administrador (Acesso Total)</SelectItem>
-                    </SelectContent>
-                </Select>
-            </div>
-
-            {watchRole === 'colaborador' && (
-                <div className="space-y-3 pt-2 border-t border-white/10">
-                    <Label className="flex items-center gap-2"><Shield className="h-4 w-4 text-emerald-500" /> Permissões de Acesso</Label>
-                    
-                    <div className="grid grid-cols-1 gap-2">
-                        {/* DASHBOARD COM EXPANSÃO */}
-                        <div className="border border-white/10 rounded-lg bg-white/5 overflow-hidden">
-                            <div className="p-3 flex items-center justify-between hover:bg-white/5 transition-colors">
-                                <div className="flex items-center space-x-2">
-                                    <Checkbox id="perm_dash" checked={!!permissions.dashboard} onCheckedChange={(c) => toggleAllDashboard(c as boolean)} />
-                                    <label htmlFor="perm_dash" className="text-sm font-bold cursor-pointer">Dashboard (Visualizar Tela)</label>
-                                </div>
-                            </div>
-                            
-                            {permissions.dashboard && (
-                                <div className="bg-black/20 p-3 border-t border-white/10 grid grid-cols-2 md:grid-cols-3 gap-3 animate-in slide-in-from-top-2">
-                                    <p className="col-span-full text-xs text-muted-foreground mb-1 uppercase tracking-wider font-semibold">Métricas Visíveis:</p>
-                                    
-                                    <div className="flex items-center space-x-2">
-                                        <Checkbox id="d_fat" checked={!!permissions.dash_faturamento} onCheckedChange={(c) => handlePermissionChange('dash_faturamento', c as boolean)} />
-                                        <label htmlFor="d_fat" className="text-xs cursor-pointer">Faturamento</label>
-                                    </div>
-                                    <div className="flex items-center space-x-2">
-                                        <Checkbox id="d_luc" checked={!!permissions.dash_lucro} onCheckedChange={(c) => handlePermissionChange('dash_lucro', c as boolean)} />
-                                        <label htmlFor="d_luc" className="text-xs cursor-pointer">Lucro Bruto</label>
-                                    </div>
-                                    <div className="flex items-center space-x-2">
-                                        <Checkbox id="d_cus" checked={!!permissions.dash_custo} onCheckedChange={(c) => handlePermissionChange('dash_custo', c as boolean)} />
-                                        <label htmlFor="d_cus" className="text-xs cursor-pointer">Custo Total</label>
-                                    </div>
-                                    <div className="flex items-center space-x-2">
-                                        <Checkbox id="d_tkt" checked={!!permissions.dash_ticket} onCheckedChange={(c) => handlePermissionChange('dash_ticket', c as boolean)} />
-                                        <label htmlFor="d_tkt" className="text-xs cursor-pointer">Ticket Médio</label>
-                                    </div>
-                                    <div className="flex items-center space-x-2">
-                                        <Checkbox id="d_ped" checked={!!permissions.dash_pedidos} onCheckedChange={(c) => handlePermissionChange('dash_pedidos', c as boolean)} />
-                                        <label htmlFor="d_ped" className="text-xs cursor-pointer">Total Pedidos</label>
-                                    </div>
-                                    <div className="flex items-center space-x-2">
-                                        <Checkbox id="d_med" checked={!!permissions.dash_media_items} onCheckedChange={(c) => handlePermissionChange('dash_media_items', c as boolean)} />
-                                        <label htmlFor="d_med" className="text-xs cursor-pointer">Média Prod/Ped</label>
-                                    </div>
-                                    <div className="flex items-center space-x-2">
-                                        <Checkbox id="d_vis" checked={!!permissions.dash_visitas} onCheckedChange={(c) => handlePermissionChange('dash_visitas', c as boolean)} />
-                                        <label htmlFor="d_vis" className="text-xs cursor-pointer">Visitas</label>
-                                    </div>
-                                    
-                                    <p className="col-span-full text-xs text-muted-foreground mt-2 mb-1 uppercase tracking-wider font-semibold">Listagens:</p>
-
-                                    <div className="flex items-center space-x-2">
-                                        <Checkbox id="d_ven" checked={!!permissions.dash_vendas_recentes} onCheckedChange={(c) => handlePermissionChange('dash_vendas_recentes', c as boolean)} />
-                                        <label htmlFor="d_ven" className="text-xs cursor-pointer">Últimas Vendas</label>
-                                    </div>
-                                    <div className="flex items-center space-x-2">
-                                        <Checkbox id="d_mai" checked={!!permissions.dash_maiores_pedidos} onCheckedChange={(c) => handlePermissionChange('dash_maiores_pedidos', c as boolean)} />
-                                        <label htmlFor="d_mai" className="text-xs cursor-pointer">Maiores Pedidos</label>
-                                    </div>
-                                    <div className="flex items-center space-x-2">
-                                        <Checkbox id="d_nov" checked={!!permissions.dash_novos_clientes} onCheckedChange={(c) => handlePermissionChange('dash_novos_clientes', c as boolean)} />
-                                        <label htmlFor="d_nov" className="text-xs cursor-pointer">Novos Clientes</label>
-                                    </div>
-                                    <div className="flex items-center space-x-2">
-                                        <Checkbox id="d_eli" checked={!!permissions.dash_clientes_elite} onCheckedChange={(c) => handlePermissionChange('dash_clientes_elite', c as boolean)} />
-                                        <label htmlFor="d_eli" className="text-xs cursor-pointer">Clientes Elite</label>
-                                    </div>
-                                    <div className="flex items-center space-x-2">
-                                        <Checkbox id="d_top" checked={!!permissions.dash_top_produtos} onCheckedChange={(c) => handlePermissionChange('dash_top_produtos', c as boolean)} />
-                                        <label htmlFor="d_top" className="text-xs cursor-pointer">Top Produtos</label>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* OUTRAS PERMISSÕES */}
-                        <div className="grid grid-cols-2 gap-4 mt-2">
-                            <div className="flex items-center space-x-2 border border-white/10 p-3 rounded-lg bg-white/5">
-                                <Checkbox id="perm_prod" checked={!!permissions.produtos} onCheckedChange={(c) => handlePermissionChange('produtos', c as boolean)} />
-                                <label htmlFor="perm_prod" className="text-sm font-medium leading-none cursor-pointer">Produtos & Estoque</label>
-                            </div>
-                            <div className="flex items-center space-x-2 border border-white/10 p-3 rounded-lg bg-white/5">
-                                <Checkbox id="perm_cli" checked={!!permissions.clientes} onCheckedChange={(c) => handlePermissionChange('clientes', c as boolean)} />
-                                <label htmlFor="perm_cli" className="text-sm font-medium leading-none cursor-pointer">Clientes</label>
-                            </div>
-                            <div className="flex items-center space-x-2 border border-white/10 p-3 rounded-lg bg-white/5">
-                                <Checkbox id="perm_fin" checked={!!permissions.financeiro} onCheckedChange={(c) => handlePermissionChange('financeiro', c as boolean)} />
-                                <label htmlFor="perm_fin" className="text-sm font-medium leading-none cursor-pointer">Vendas / PDV</label>
-                            </div>
-                            <div className="flex items-center space-x-2 border border-white/10 p-3 rounded-lg bg-white/5">
-                                <Checkbox id="perm_cad" checked={!!permissions.cadastros} onCheckedChange={(c) => handlePermissionChange('cadastros', c as boolean)} />
-                                <label htmlFor="perm_cad" className="text-sm font-medium leading-none cursor-pointer">Cadastros (Cats/Marcas)</label>
-                            </div>
-                            <div className="flex items-center space-x-2 border border-white/10 p-3 rounded-lg bg-white/5">
-                                <Checkbox id="perm_user" checked={!!permissions.usuarios} onCheckedChange={(c) => handlePermissionChange('usuarios', c as boolean)} />
-                                <label htmlFor="perm_user" className="text-sm font-medium leading-none cursor-pointer">Gestão de Usuários</label>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
-                <Button type="submit" disabled={isSaving}>{isSaving ? <Loader2 className="animate-spin" /> : 'Salvar Usuário'}</Button>
+            <DialogFooter className="shrink-0 pt-4 mt-4 border-t border-white/10">
+                <Button type="button" variant="outline" className="bg-transparent border-white/10 hover:bg-white/5" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
+                <Button type="submit" className="bg-emerald-500 hover:bg-emerald-600 text-white" disabled={isSaving}>{isSaving ? <Loader2 className="animate-spin" /> : 'Salvar Usuário'}</Button>
             </DialogFooter>
           </form>
         </DialogContent>

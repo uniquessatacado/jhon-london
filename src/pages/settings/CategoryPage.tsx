@@ -249,97 +249,99 @@ export function CategoryPage() {
       </Dialog>
 
       <Dialog open={isSubDialogOpen} onOpenChange={setIsSubDialogOpen}>
-        <DialogContent className="max-w-2xl bg-zinc-950 border-white/10">
-          <DialogHeader>
+        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col bg-zinc-950 border-white/10 p-6">
+          <DialogHeader className="shrink-0 pb-2">
             <DialogTitle>{editingSub ? 'Editar Subcategoria' : 'Nova Subcategoria'}</DialogTitle>
             <DialogDescription>Define a classificação fiscal e grade padrão. Produtos cadastrados aqui herdarão essas regras.</DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleSubSubmit(onSubSubmit)} className="space-y-6 pt-4">
-            <div className="grid gap-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                    <Label htmlFor="nome">Nome da Subcategoria</Label>
-                    <Input id="nome" {...registerSub('nome', { required: true })} placeholder="Ex: Camisetas" className="bg-black/40 border-white/10 h-12" />
+          <form onSubmit={handleSubSubmit(onSubSubmit)} className="flex flex-col flex-1 overflow-hidden mt-2">
+            <div className="flex-1 overflow-y-auto pr-2 pb-2">
+              <div className="grid gap-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                      <Label htmlFor="nome">Nome da Subcategoria</Label>
+                      <Input id="nome" {...registerSub('nome', { required: true })} placeholder="Ex: Camisetas" className="bg-black/40 border-white/10 h-12" />
+                  </div>
+                  <div className="space-y-2">
+                      <Label className="flex items-center gap-2">
+                          <GridIcon className="h-3 w-3" /> Grade Padrão (Opcional)
+                      </Label>
+                      <Select onValueChange={(v) => setSubValue('grade_id', v === "null" ? null : Number(v))} value={watchedSubGradeId ? String(watchedSubGradeId) : "null"}>
+                          <SelectTrigger className="bg-black/40 border-white/10 h-12"><SelectValue placeholder="Nenhuma" /></SelectTrigger>
+                          <SelectContent>
+                              <SelectItem value="null">Deixar sem grade</SelectItem>
+                              {grids?.map(g => (
+                                  <SelectItem key={g.id} value={String(g.id)}>{g.nome}</SelectItem>
+                              ))}
+                          </SelectContent>
+                      </Select>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                    <Label className="flex items-center gap-2">
-                        <GridIcon className="h-3 w-3" /> Grade Padrão (Opcional)
-                    </Label>
-                    <Select onValueChange={(v) => setSubValue('grade_id', v === "null" ? null : Number(v))} value={watchedSubGradeId ? String(watchedSubGradeId) : "null"}>
-                        <SelectTrigger className="bg-black/40 border-white/10 h-12"><SelectValue placeholder="Nenhuma" /></SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="null">Deixar sem grade</SelectItem>
-                            {grids?.map(g => (
-                                <SelectItem key={g.id} value={String(g.id)}>{g.nome}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
+                
+                <div className="p-4 rounded-xl border border-white/10 bg-white/5 space-y-4">
+                    <h4 className="font-semibold text-emerald-400 text-sm mb-2 uppercase tracking-wider">Regras Fiscais Padrão</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="ncm">NCM (8 dígitos)</Label>
+                        <Input id="ncm" {...registerSub('ncm', { required: true })} placeholder="00000000" className="bg-black/40 border-white/10 font-mono" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="cfop">CFOP Padrão</Label>
+                        <Select onValueChange={(v) => setSubValue('cfop_padrao', v)} defaultValue={editingSub?.cfop_padrao}>
+                          <SelectTrigger className="bg-black/40 border-white/10"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="5102">5102 - Venda Mercadoria</SelectItem>
+                            <SelectItem value="5405">5405 - Venda ST</SelectItem>
+                            <SelectItem value="6102">6102 - Venda Interestadual</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>CST / CSOSN</Label>
+                        <Select onValueChange={(v) => setSubValue('cst_icms', v)} defaultValue={editingSub?.cst_icms}>
+                          <SelectTrigger className="bg-black/40 border-white/10"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="102">102 - Tributada SN</SelectItem>
+                            <SelectItem value="300">300 - Imune</SelectItem>
+                            <SelectItem value="400">400 - Não Tributada</SelectItem>
+                            <SelectItem value="00">00 - Tributada Integralmente</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Origem da Mercadoria</Label>
+                        <Select onValueChange={(v) => setSubValue('origem', v)} defaultValue={editingSub?.origem}>
+                          <SelectTrigger className="bg-black/40 border-white/10"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="0">0 - Nacional</SelectItem>
+                            <SelectItem value="1">1 - Estrangeira (Importação direta)</SelectItem>
+                            <SelectItem value="2">2 - Estrangeira (Adq. no mercado interno)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="grid gap-2">
+                        <Label>Unidade de Medida Comercial</Label>
+                        <Select onValueChange={(v) => setSubValue('unidade_medida', v)} defaultValue={editingSub?.unidade_medida}>
+                          <SelectTrigger className="bg-black/40 border-white/10"><SelectValue placeholder="Ex: UN, KG, PC" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="UN">UN - Unidade</SelectItem>
+                            <SelectItem value="KG">KG - Quilograma</SelectItem>
+                            <SelectItem value="MT">MT - Metro</SelectItem>
+                            <SelectItem value="CX">CX - Caixa</SelectItem>
+                            <SelectItem value="PC">PC - Peça</SelectItem>
+                          </SelectContent>
+                        </Select>
+                    </div>
                 </div>
-              </div>
-              
-              <div className="p-4 rounded-xl border border-white/10 bg-white/5 space-y-4">
-                  <h4 className="font-semibold text-emerald-400 text-sm mb-2 uppercase tracking-wider">Regras Fiscais Padrão</h4>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="ncm">NCM (8 dígitos)</Label>
-                      <Input id="ncm" {...registerSub('ncm', { required: true })} placeholder="00000000" className="bg-black/40 border-white/10 font-mono" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="cfop">CFOP Padrão</Label>
-                      <Select onValueChange={(v) => setSubValue('cfop_padrao', v)} defaultValue={editingSub?.cfop_padrao}>
-                        <SelectTrigger className="bg-black/40 border-white/10"><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="5102">5102 - Venda Mercadoria</SelectItem>
-                          <SelectItem value="5405">5405 - Venda ST</SelectItem>
-                          <SelectItem value="6102">6102 - Venda Interestadual</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>CST / CSOSN</Label>
-                      <Select onValueChange={(v) => setSubValue('cst_icms', v)} defaultValue={editingSub?.cst_icms}>
-                        <SelectTrigger className="bg-black/40 border-white/10"><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="102">102 - Tributada SN</SelectItem>
-                          <SelectItem value="300">300 - Imune</SelectItem>
-                          <SelectItem value="400">400 - Não Tributada</SelectItem>
-                          <SelectItem value="00">00 - Tributada Integralmente</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Origem da Mercadoria</Label>
-                      <Select onValueChange={(v) => setSubValue('origem', v)} defaultValue={editingSub?.origem}>
-                        <SelectTrigger className="bg-black/40 border-white/10"><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="0">0 - Nacional</SelectItem>
-                          <SelectItem value="1">1 - Estrangeira (Importação direta)</SelectItem>
-                          <SelectItem value="2">2 - Estrangeira (Adq. no mercado interno)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <div className="grid gap-2">
-                      <Label>Unidade de Medida Comercial</Label>
-                      <Select onValueChange={(v) => setSubValue('unidade_medida', v)} defaultValue={editingSub?.unidade_medida}>
-                        <SelectTrigger className="bg-black/40 border-white/10"><SelectValue placeholder="Ex: UN, KG, PC" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="UN">UN - Unidade</SelectItem>
-                          <SelectItem value="KG">KG - Quilograma</SelectItem>
-                          <SelectItem value="MT">MT - Metro</SelectItem>
-                          <SelectItem value="CX">CX - Caixa</SelectItem>
-                          <SelectItem value="PC">PC - Peça</SelectItem>
-                        </SelectContent>
-                      </Select>
-                  </div>
               </div>
             </div>
 
-            <DialogFooter>
+            <DialogFooter className="shrink-0 pt-4 mt-4 border-t border-white/10">
               <Button type="button" variant="outline" className="bg-transparent border-white/10 hover:bg-white/5" onClick={() => setIsSubDialogOpen(false)}>Cancelar</Button>
               <Button type="submit" disabled={isCreatingSub || isUpdatingSub} className="bg-emerald-500 hover:bg-emerald-600 text-white">
                   {editingSub ? 'Salvar Alterações' : 'Criar Subcategoria'}

@@ -10,7 +10,6 @@ import { PlusCircle, Trash2, Pencil } from 'lucide-react';
 import { useGrids } from '@/hooks/use-grids';
 import { useCreateGrid, useUpdateGrid, useDeleteGrid } from '@/hooks/use-grid-mutations';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Grid } from '@/types';
 
 type GridForm = {
@@ -155,64 +154,69 @@ export function GridPage() {
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col bg-zinc-950 border-white/10">
-          <DialogHeader>
+        <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col bg-zinc-950 border-white/10 p-6">
+          <DialogHeader className="shrink-0 pb-2">
             <DialogTitle>{editingId ? 'Editar Grade' : 'Nova Grade de Tamanhos'}</DialogTitle>
             <DialogDescription>Defina os tamanhos e as dimensões de embalagem para cada um (usado no cálculo de frete).</DialogDescription>
           </DialogHeader>
           
-          <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col flex-1 overflow-hidden mt-4">
-            <div className="mb-6 space-y-2">
-              <Label htmlFor="nome">Nome da Grade</Label>
-              <Input id="nome" {...register('nome', { required: true })} className="bg-black/40 border-white/10 h-12" placeholder="Ex: Roupas Adulto (P ao GG)" />
-              {errors.nome && <p className="text-red-500 text-xs">Obrigatório</p>}
+          <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col flex-1 overflow-hidden mt-2">
+            {/* CORPO DO FORM COM SCROLL */}
+            <div className="flex-1 overflow-y-auto pr-2 space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="nome">Nome da Grade</Label>
+                <Input id="nome" {...register('nome', { required: true })} className="bg-black/40 border-white/10 h-12" placeholder="Ex: Roupas Adulto (P ao GG)" />
+                {errors.nome && <p className="text-red-500 text-xs">Obrigatório</p>}
+              </div>
+
+              <div className="border border-white/10 rounded-xl bg-black/20 flex flex-col">
+                  {/* CABEÇALHO DA TABELA FIXO */}
+                  <div className="p-3 border-b border-white/10 bg-white/5 grid grid-cols-12 gap-2 font-medium text-xs text-muted-foreground uppercase tracking-wider">
+                      <div className="col-span-2">Tamanho</div>
+                      <div className="col-span-2">Peso (kg)</div>
+                      <div className="col-span-2">Altura (cm)</div>
+                      <div className="col-span-2">Largura (cm)</div>
+                      <div className="col-span-3">Comp. (cm)</div>
+                      <div className="col-span-1"></div>
+                  </div>
+                  
+                  {/* CONTEÚDO DA TABELA ROLÁVEL */}
+                  <div className="p-2 space-y-2">
+                      {fields.map((field, index) => (
+                          <div key={field.id} className="grid grid-cols-12 gap-2 items-center px-2">
+                              <div className="col-span-2">
+                                  <Input {...register(`tamanhos.${index}.tamanho`, { required: true })} placeholder="Ex: P" className="h-10 bg-black/40 border-white/10 font-bold text-emerald-400 uppercase" />
+                              </div>
+                              <div className="col-span-2">
+                                  <Input type="text" {...register(`tamanhos.${index}.peso_kg`, { required: true })} placeholder="0.000" className="h-10 bg-black/40 border-white/10" />
+                              </div>
+                              <div className="col-span-2">
+                                  <Input type="text" {...register(`tamanhos.${index}.altura_cm`, { required: true })} placeholder="0" className="h-10 bg-black/40 border-white/10" />
+                              </div>
+                              <div className="col-span-2">
+                                  <Input type="text" {...register(`tamanhos.${index}.largura_cm`, { required: true })} placeholder="0" className="h-10 bg-black/40 border-white/10" />
+                              </div>
+                              <div className="col-span-3">
+                                  <Input type="text" {...register(`tamanhos.${index}.comprimento_cm`, { required: true })} placeholder="0" className="h-10 bg-black/40 border-white/10" />
+                              </div>
+                              <div className="col-span-1 flex justify-center">
+                                  <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} className="h-8 w-8 text-red-500 hover:bg-red-500/10 rounded-lg">
+                                      <Trash2 className="h-4 w-4" />
+                                  </Button>
+                              </div>
+                          </div>
+                      ))}
+                  </div>
+                  <div className="p-3 border-t border-white/10 bg-black/40">
+                      <Button type="button" variant="outline" onClick={() => append({ tamanho: '', peso_kg: 0, altura_cm: 0, largura_cm: 0, comprimento_cm: 0 })} className="w-full border-dashed border-white/20 hover:border-emerald-500 hover:text-emerald-500 bg-transparent h-10">
+                          <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Linha de Tamanho
+                      </Button>
+                  </div>
+              </div>
             </div>
 
-            <div className="flex-1 overflow-hidden border border-white/10 rounded-xl bg-black/20 flex flex-col">
-                <div className="p-3 border-b border-white/10 bg-white/5 grid grid-cols-12 gap-2 font-medium text-xs text-muted-foreground uppercase tracking-wider">
-                    <div className="col-span-2">Tamanho</div>
-                    <div className="col-span-2">Peso (kg)</div>
-                    <div className="col-span-2">Altura (cm)</div>
-                    <div className="col-span-2">Largura (cm)</div>
-                    <div className="col-span-3">Comp. (cm)</div>
-                    <div className="col-span-1"></div>
-                </div>
-                <ScrollArea className="flex-1 max-h-[40vh]">
-                    <div className="p-2 space-y-2">
-                        {fields.map((field, index) => (
-                            <div key={field.id} className="grid grid-cols-12 gap-2 items-center px-2">
-                                <div className="col-span-2">
-                                    <Input {...register(`tamanhos.${index}.tamanho`, { required: true })} placeholder="Ex: P" className="h-10 bg-black/40 border-white/10 font-bold text-emerald-400 uppercase" />
-                                </div>
-                                <div className="col-span-2">
-                                    <Input type="text" {...register(`tamanhos.${index}.peso_kg`, { required: true })} placeholder="0.000" className="h-10 bg-black/40 border-white/10" />
-                                </div>
-                                <div className="col-span-2">
-                                    <Input type="text" {...register(`tamanhos.${index}.altura_cm`, { required: true })} placeholder="0" className="h-10 bg-black/40 border-white/10" />
-                                </div>
-                                <div className="col-span-2">
-                                    <Input type="text" {...register(`tamanhos.${index}.largura_cm`, { required: true })} placeholder="0" className="h-10 bg-black/40 border-white/10" />
-                                </div>
-                                <div className="col-span-3">
-                                    <Input type="text" {...register(`tamanhos.${index}.comprimento_cm`, { required: true })} placeholder="0" className="h-10 bg-black/40 border-white/10" />
-                                </div>
-                                <div className="col-span-1 flex justify-center">
-                                    <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} className="h-8 w-8 text-red-500 hover:bg-red-500/10 rounded-lg">
-                                        <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </ScrollArea>
-                <div className="p-3 border-t border-white/10 bg-black/40">
-                    <Button type="button" variant="outline" onClick={() => append({ tamanho: '', peso_kg: 0, altura_cm: 0, largura_cm: 0, comprimento_cm: 0 })} className="w-full border-dashed border-white/20 hover:border-emerald-500 hover:text-emerald-500 bg-transparent h-10">
-                        <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Linha de Tamanho
-                    </Button>
-                </div>
-            </div>
-
-            <DialogFooter className="mt-6">
+            {/* RODAPÉ DO FORM FIXO */}
+            <DialogFooter className="mt-6 pt-4 shrink-0 border-t border-white/10">
               <Button type="button" variant="outline" className="bg-transparent border-white/10 hover:bg-white/5" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
               <Button type="submit" disabled={isSaving} className="bg-emerald-500 hover:bg-emerald-600 text-white">
                   {isSaving ? 'Salvando...' : 'Salvar Grade Completa'}

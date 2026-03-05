@@ -2,12 +2,30 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { Product } from '@/types';
 
-// Helper para garantir que campos JSON voltem como Array, mesmo se o backend mandar como String
-const safeParse = (value: any, fallback: any = []) => {
+// Higienizador BLINDADO: Garante que o retorno seja SEMPRE um Array
+const safeParseArray = (value: any): any[] => {
+  if (!value) return [];
+  if (Array.isArray(value)) return value;
+  
   if (typeof value === 'string') {
-    try { return JSON.parse(value); } catch { return fallback; }
+    try {
+      const parsed = JSON.parse(value);
+      // Se depois de dar o parse, ainda for uma string (JSON duplo salvo errado no banco)
+      if (typeof parsed === 'string') {
+        try {
+          const doubleParsed = JSON.parse(parsed);
+          return Array.isArray(doubleParsed) ? doubleParsed : [];
+        } catch {
+          return [];
+        }
+      }
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
   }
-  return value || fallback;
+  
+  return [];
 };
 
 async function fetchProducts(): Promise<Product[]> {
@@ -18,10 +36,10 @@ async function fetchProducts(): Promise<Product[]> {
   // Intercepta e higieniza a lista inteira de produtos
   return data.map((p: any) => ({
     ...p,
-    variacoes: safeParse(p.variacoes),
-    dimensoes_grade: safeParse(p.dimensoes_grade),
-    imagens_galeria: safeParse(p.imagens_galeria),
-    composicao_atacado_grade: safeParse(p.composicao_atacado_grade)
+    variacoes: safeParseArray(p.variacoes),
+    dimensoes_grade: safeParseArray(p.dimensoes_grade),
+    imagens_galeria: safeParseArray(p.imagens_galeria),
+    composicao_atacado_grade: safeParseArray(p.composicao_atacado_grade)
   }));
 }
 

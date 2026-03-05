@@ -2,24 +2,42 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { Product } from '@/types';
 
-// Helper para garantir que campos JSON voltem como Array, mesmo se o backend mandar como String
-const safeParse = (value: any, fallback: any = []) => {
+// Higienizador BLINDADO: Garante que o retorno seja SEMPRE um Array
+const safeParseArray = (value: any): any[] => {
+  if (!value) return [];
+  if (Array.isArray(value)) return value;
+  
   if (typeof value === 'string') {
-    try { return JSON.parse(value); } catch { return fallback; }
+    try {
+      const parsed = JSON.parse(value);
+      // Se depois de dar o parse, ainda for uma string (JSON duplo salvo errado no banco)
+      if (typeof parsed === 'string') {
+        try {
+          const doubleParsed = JSON.parse(parsed);
+          return Array.isArray(doubleParsed) ? doubleParsed : [];
+        } catch {
+          return [];
+        }
+      }
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
   }
-  return value || fallback;
+  
+  return [];
 };
 
 async function fetchProduct(id: string): Promise<Product> {
   const { data } = await api.get(`/produtos/${id}`);
   
-  // Intercepta e higieniza os dados antes de entregar para a tela
+  // Intercepta e higieniza os dados antes de entregar para a tela (nunca vai quebrar o .map)
   return {
     ...data,
-    variacoes: safeParse(data.variacoes),
-    dimensoes_grade: safeParse(data.dimensoes_grade),
-    imagens_galeria: safeParse(data.imagens_galeria),
-    composicao_atacado_grade: safeParse(data.composicao_atacado_grade)
+    variacoes: safeParseArray(data.variacoes),
+    dimensoes_grade: safeParseArray(data.dimensoes_grade),
+    imagens_galeria: safeParseArray(data.imagens_galeria),
+    composicao_atacado_grade: safeParseArray(data.composicao_atacado_grade)
   };
 }
 
@@ -27,6 +45,6 @@ export function useProductDetails(id: string | undefined) {
   return useQuery({
     queryKey: ['product', id],
     queryFn: () => fetchProduct(id!),
-    enabled: !!id, // Only run if ID is provided
+    enabled: !!id, // Só roda se tiver ID
   });
 }

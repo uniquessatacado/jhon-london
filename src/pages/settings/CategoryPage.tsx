@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, Tag, FolderTree, ArrowRight, Pencil, Grid as GridIcon } from 'lucide-react';
+import { PlusCircle, Tag, FolderTree, ArrowRight, Pencil, Grid as GridIcon, Loader2 } from 'lucide-react';
 import { useCategories, useSubcategories } from '@/hooks/use-categories';
 import { useCreateCategory, useCreateSubcategory, useUpdateSubcategory } from '@/hooks/use-category-mutations';
 import { useGrids } from '@/hooks/use-grids';
@@ -35,9 +35,7 @@ export function CategoryPage() {
   const [editingSub, setEditingSub] = useState<Subcategory | null>(null);
 
   const { register: registerCat, handleSubmit: handleCatSubmit, reset: resetCat } = useForm<{ nome: string }>();
-  const { register: registerSub, handleSubmit: handleSubSubmit, reset: resetSub, setValue: setSubValue, watch: watchSub } = useForm<Subcategory>();
-
-  const watchedSubGradeId = watchSub('grade_id');
+  const { register: registerSub, handleSubmit: handleSubSubmit, reset: resetSub, setValue: setSubValue, watch: watchSub } = useForm<any>();
 
   const onCatSubmit = (data: { nome: string }) => {
     createCategory(data, {
@@ -51,21 +49,27 @@ export function CategoryPage() {
   const handleOpenSubDialog = (sub: Subcategory | null = null) => {
     if (sub) {
         setEditingSub(sub);
-        setSubValue('nome', sub.nome);
-        setSubValue('ncm', sub.ncm);
-        setSubValue('cfop_padrao', sub.cfop_padrao);
-        setSubValue('cst_icms', sub.cst_icms);
-        setSubValue('origem', sub.origem);
-        setSubValue('unidade_medida', sub.unidade_medida);
-        setSubValue('grade_id', sub.grade_id);
+        // Usa o reset para preencher TODO o formulário de uma vez, garantindo que os Selects reajam
+        resetSub({
+            nome: sub.nome,
+            ncm: sub.ncm,
+            cfop_padrao: sub.cfop_padrao,
+            cst_icms: sub.cst_icms,
+            origem: String(sub.origem), // Força string para o Select
+            unidade_medida: sub.unidade_medida,
+            grade_id: sub.grade_id ? String(sub.grade_id) : "null"
+        });
     } else {
         setEditingSub(null);
-        resetSub();
-        setSubValue('cfop_padrao', '');
-        setSubValue('cst_icms', '');
-        setSubValue('origem', '');
-        setSubValue('unidade_medida', '');
-        setSubValue('grade_id', null);
+        resetSub({
+            nome: '',
+            ncm: '',
+            cfop_padrao: '',
+            cst_icms: '',
+            origem: '',
+            unidade_medida: '',
+            grade_id: "null"
+        });
     }
     setIsSubDialogOpen(true);
   };
@@ -96,7 +100,6 @@ export function CategoryPage() {
         setIsSubDialogOpen(false);
         resetSub();
         setEditingSub(null);
-        queryClient.invalidateQueries({ queryKey: ['subcategories', selectedCategory.id] });
     };
 
     if (editingSub) {
@@ -105,6 +108,8 @@ export function CategoryPage() {
         createSubcategory(payload, { onSuccess: handleSuccess });
     }
   };
+
+  const isSavingSub = isCreatingSub || isUpdatingSub;
 
   return (
     <div className="h-[calc(100vh-140px)] flex flex-col gap-6">
@@ -198,6 +203,7 @@ export function CategoryPage() {
                   {subcategories?.map(sub => (
                     <div key={sub.id} className="bg-white/5 border border-white/10 rounded-2xl p-5 hover:border-emerald-500/30 transition-all group relative">
                       <Button 
+                         type="button"
                          size="icon" 
                          variant="ghost" 
                          className="absolute top-3 right-3 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 hover:bg-white/10 rounded-lg"
@@ -266,7 +272,7 @@ export function CategoryPage() {
                       <Label className="flex items-center gap-2">
                           <GridIcon className="h-3 w-3" /> Grade Padrão (Opcional)
                       </Label>
-                      <Select onValueChange={(v) => setSubValue('grade_id', v === "null" ? null : Number(v))} value={watchedSubGradeId ? String(watchedSubGradeId) : "null"}>
+                      <Select onValueChange={(v) => setSubValue('grade_id', v)} value={watchSub('grade_id') || "null"}>
                           <SelectTrigger className="bg-black/40 border-white/10 h-12"><SelectValue placeholder="Nenhuma" /></SelectTrigger>
                           <SelectContent>
                               <SelectItem value="null">Deixar sem grade</SelectItem>
@@ -287,7 +293,7 @@ export function CategoryPage() {
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="cfop">CFOP Padrão</Label>
-                        <Select onValueChange={(v) => setSubValue('cfop_padrao', v)} defaultValue={editingSub?.cfop_padrao}>
+                        <Select onValueChange={(v) => setSubValue('cfop_padrao', v)} value={watchSub('cfop_padrao') || undefined}>
                           <SelectTrigger className="bg-black/40 border-white/10"><SelectValue placeholder="Selecione..." /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="5102">5102 - Venda Mercadoria</SelectItem>
@@ -301,7 +307,7 @@ export function CategoryPage() {
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label>CST / CSOSN</Label>
-                        <Select onValueChange={(v) => setSubValue('cst_icms', v)} defaultValue={editingSub?.cst_icms}>
+                        <Select onValueChange={(v) => setSubValue('cst_icms', v)} value={watchSub('cst_icms') || undefined}>
                           <SelectTrigger className="bg-black/40 border-white/10"><SelectValue placeholder="Selecione..." /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="102">102 - Tributada SN</SelectItem>
@@ -313,7 +319,7 @@ export function CategoryPage() {
                       </div>
                       <div className="space-y-2">
                         <Label>Origem da Mercadoria</Label>
-                        <Select onValueChange={(v) => setSubValue('origem', v)} defaultValue={editingSub?.origem}>
+                        <Select onValueChange={(v) => setSubValue('origem', v)} value={watchSub('origem') || undefined}>
                           <SelectTrigger className="bg-black/40 border-white/10"><SelectValue placeholder="Selecione..." /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="0">0 - Nacional</SelectItem>
@@ -326,7 +332,7 @@ export function CategoryPage() {
 
                     <div className="grid gap-2">
                         <Label>Unidade de Medida Comercial</Label>
-                        <Select onValueChange={(v) => setSubValue('unidade_medida', v)} defaultValue={editingSub?.unidade_medida}>
+                        <Select onValueChange={(v) => setSubValue('unidade_medida', v)} value={watchSub('unidade_medida') || undefined}>
                           <SelectTrigger className="bg-black/40 border-white/10"><SelectValue placeholder="Ex: UN, KG, PC" /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="UN">UN - Unidade</SelectItem>
@@ -343,7 +349,8 @@ export function CategoryPage() {
 
             <DialogFooter className="shrink-0 pt-4 mt-4 border-t border-white/10">
               <Button type="button" variant="outline" className="bg-transparent border-white/10 hover:bg-white/5" onClick={() => setIsSubDialogOpen(false)}>Cancelar</Button>
-              <Button type="submit" disabled={isCreatingSub || isUpdatingSub} className="bg-emerald-500 hover:bg-emerald-600 text-white">
+              <Button type="submit" disabled={isSavingSub} className="bg-emerald-500 hover:bg-emerald-600 text-white">
+                  {isSavingSub ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : null}
                   {editingSub ? 'Salvar Alterações' : 'Criar Subcategoria'}
               </Button>
             </DialogFooter>

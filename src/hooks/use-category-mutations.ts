@@ -18,7 +18,10 @@ export function useCreateCategory() {
       toast.success('Categoria criada com sucesso!');
       queryClient.invalidateQueries({ queryKey: ['categories'] });
     },
-    onError: () => toast.error('Falha ao criar categoria.'),
+    onError: (error: any) => {
+      const msg = error.response?.data?.message || 'Erro desconhecido ao criar categoria.';
+      toast.error('Falha ao criar categoria.', { description: msg });
+    },
   });
 }
 
@@ -35,7 +38,10 @@ export function useUpdateCategory() {
       toast.success('Categoria atualizada com sucesso!');
       queryClient.invalidateQueries({ queryKey: ['categories'] });
     },
-    onError: () => toast.error('Falha ao atualizar categoria.'),
+    onError: (error: any) => {
+      const msg = error.response?.data?.message || 'Erro desconhecido ao atualizar categoria.';
+      toast.error('Falha ao atualizar categoria.', { description: msg });
+    },
   });
 }
 
@@ -51,17 +57,21 @@ export function useDeleteCategory() {
       toast.success('Categoria excluída com sucesso!');
       queryClient.invalidateQueries({ queryKey: ['categories'] });
     },
-    onError: () => toast.error('Falha ao excluir categoria.'),
+    onError: (error: any) => {
+      const msg = error.response?.data?.message || 'Não é possível excluir categorias em uso.';
+      toast.error('Falha ao excluir categoria.', { description: msg });
+    },
   });
 }
 
 // --- Subcategories ---
 
 async function createSubcategory(newSub: Omit<Subcategory, 'id'>): Promise<Subcategory> {
-  const { data } = await api.post('/subcategorias', {
+  const payload = {
     ...newSub,
-    grade_id: newSub.grade_id ? Number(newSub.grade_id) : null
-  });
+    grade_id: newSub.grade_id && String(newSub.grade_id) !== "null" ? Number(newSub.grade_id) : null
+  };
+  const { data } = await api.post('/subcategorias', payload);
   return data;
 }
 
@@ -71,19 +81,22 @@ export function useCreateSubcategory() {
     mutationFn: createSubcategory,
     onSuccess: () => {
       toast.success('Subcategoria criada com sucesso!');
-      // Invalidação ampla para garantir a atualização
       queryClient.invalidateQueries({ queryKey: ['subcategories'] });
       queryClient.invalidateQueries({ queryKey: ['all-subcategories'] });
     },
-    onError: () => toast.error('Falha ao criar subcategoria.'),
+    onError: (error: any) => {
+      const msg = error.response?.data?.message || error.response?.data?.error || 'Erro desconhecido ao criar.';
+      toast.error('Falha ao criar subcategoria.', { description: msg });
+    },
   });
 }
 
 async function updateSubcategory({ id, ...updatedSub }: Partial<Subcategory> & { id: number }): Promise<Subcategory> {
-  const { data } = await api.put(`/subcategorias/${id}`, {
+  const payload = {
     ...updatedSub,
-    grade_id: updatedSub.grade_id ? Number(updatedSub.grade_id) : null
-  });
+    grade_id: updatedSub.grade_id && String(updatedSub.grade_id) !== "null" ? Number(updatedSub.grade_id) : null
+  };
+  const { data } = await api.put(`/subcategorias/${id}`, payload);
   return data;
 }
 
@@ -93,10 +106,12 @@ export function useUpdateSubcategory() {
     mutationFn: updateSubcategory,
     onSuccess: () => {
       toast.success('Subcategoria atualizada com sucesso!');
-      // Invalidação ampla para garantir a atualização
       queryClient.invalidateQueries({ queryKey: ['subcategories'] });
       queryClient.invalidateQueries({ queryKey: ['all-subcategories'] });
     },
-    onError: () => toast.error('Falha ao atualizar subcategoria.'),
+    onError: (error: any) => {
+      const msg = error.response?.data?.message || error.response?.data?.error || 'Erro desconhecido ao atualizar.';
+      toast.error('Falha ao atualizar subcategoria.', { description: msg });
+    },
   });
 }

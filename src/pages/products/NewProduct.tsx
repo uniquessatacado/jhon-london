@@ -78,6 +78,15 @@ export function NewProductPage() {
       .catch(() => console.error("Failed to fetch global wholesale minimum quantity."));
   }, []);
 
+  // --- CORREÇÃO SOLICITADA PELO KIM ---
+  // Força o preenchimento IMEDIATO de Marca e Grade nos estados do form assim que a API responde
+  useEffect(() => {
+    if (productData) {
+      setValue('marca_id', productData.marca_id?.toString() || '', { shouldValidate: true });
+      setValue('grade_id', productData.grade_id?.toString() || '', { shouldValidate: true });
+    }
+  }, [productData, setValue]);
+
   // CARREGAMENTO SEGURO DA EDIÇÃO: Aguarda TODAS as dependências
   useEffect(() => {
     if (!productData || isLoadingCats || isLoadingSubs || isLoadingBrands || isLoadingGrids || hasInitialized.current) {
@@ -145,6 +154,10 @@ export function NewProductPage() {
         ? JSON.parse(productData.composicao_atacado_grade || "[]") 
         : (productData.composicao_atacado_grade || [])
     });
+
+    // 3. Forçar set de Marca e Grade novamente APÓS o reset para garantir que os selects controlem perfeitamente
+    setValue('marca_id', brandId, { shouldValidate: true });
+    setValue('grade_id', gridId, { shouldValidate: true });
     
     // Imagens / Vídeo
     if (!isDuplicateMode) {

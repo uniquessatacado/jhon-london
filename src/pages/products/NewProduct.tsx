@@ -56,17 +56,9 @@ function ProductFormContent({
   const { mutate: createProduct, isPending: isCreating } = useCreateProduct();
   const { mutate: updateProduct, isPending: isUpdating } = useUpdateProduct();
 
-  // 👈 KIMI FIX: LOGS DE DEBUG
-  console.log('=== ProductFormContent MONTADO ===');
-  console.log('ID:', id || 'NOVO');
-  console.log('ProductData recebido:', productData);
-
-  // Mapeamos os dados UMA ÚNICA VEZ para ser o estado inicial absoluto do form
   const mappedData = useMemo(() => {
     if (!isEditMode && !isDuplicateMode) return defaultFormValues;
     if (!productData) return defaultFormValues;
-    
-    console.log('Calculando mappedData com:', productData?.marca_id, productData?.subcategoria_id); // 👈 KIMI FIX: DEBUG
 
     let categoryId = productData.categoria_id ? String(productData.categoria_id) : '';
     const subcategoryId = productData.subcategoria_id ? String(productData.subcategoria_id) : '';
@@ -120,14 +112,20 @@ function ProductFormContent({
       variacoes: variacoesComDimensoes,
       composicao_atacado: composicaoParsed
     };
-  }, [productData?.id, isEditMode, isDuplicateMode]); // 👈 KIMI FIX: Dependência específica no ID
+  }, [productData, isEditMode, isDuplicateMode, allSubcategories]);
 
   const methods = useForm<any>({
     mode: 'onChange',
-    defaultValues: mappedData,
   });
 
-  const { handleSubmit, formState: { isSubmitting, errors } } = methods;
+  const { handleSubmit, formState: { isSubmitting, errors }, reset } = methods;
+
+  // Garante que o formulário seja preenchido com os dados assíncronos
+  useEffect(() => {
+    if (productData) {
+      reset(mappedData);
+    }
+  }, [productData, mappedData, reset]);
 
   // Estados de Mídia
   const [mainImageFile, setMainImageFile] = useState<File | null>(null);
@@ -168,7 +166,6 @@ function ProductFormContent({
       setVideoPreview(null);
     }
 
-    // 👈 KIMI FIX: Limpeza ao desmontar
     return () => {
         setMainImagePreview(null);
         setGalleryPreviews([]);
@@ -350,7 +347,7 @@ export function NewProductPage() {
 
   return (
     <ProductFormContent 
-      key={fetchId || 'new'} // 👈 KIMI FIX: FORÇA REMONTAGEM COMPLETA AO MUDAR O PRODUTO
+      key={fetchId || 'new'}
       isEditMode={isEditMode}
       isDuplicateMode={isDuplicateMode}
       id={id}

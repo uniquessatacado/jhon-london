@@ -49,13 +49,14 @@ const VariationRow = ({ field, index, isEditMode, isDuplicateMode, variacoesValu
 
       // 2. Validação no Backend
       try {
-        // Se for Duplicação ou Criação, varId vai como undefined (não ignora nada no backend)
-        // Se for Edição, envia o varId para o backend ignorar a si mesmo na busca
         const varId = (!isEditMode || isDuplicateMode) ? undefined : currentVariation?.id;
         
-        const { data } = await api.get('/produtos/verificar-sku', {
-          params: { sku: skuVal, variacao_id: varId }
-        });
+        // Chamada adaptada EXATAMENTE com a string do backend (Template Literals)
+        const url = varId 
+            ? `/produtos/verificar-sku?sku=${skuVal}&variacao_id=${varId}`
+            : `/produtos/verificar-sku?sku=${skuVal}`;
+
+        const { data } = await api.get(url);
 
         if (data.existe) {
           // Se o backend enviar o nome do produto, usamos ele para um aviso mais claro

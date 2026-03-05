@@ -52,6 +52,9 @@ export function NewProductPage() {
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [videoPreview, setVideoPreview] = useState<string | null>(null);
 
+  // Ref para garantir que o reset só aconteça uma única vez
+  const hasLoadedDataRef = useRef(false);
+
   useEffect(() => {
     api.get('/configuracoes/qtd_minima_atacado_geral')
       .then(res => setGlobalAtacadoMin(res.data?.valor || '10'))
@@ -98,18 +101,12 @@ export function NewProductPage() {
   const { watch, setValue, handleSubmit, getValues, reset, formState: { isSubmitting, errors, dirtyFields } } = methods;
 
   // =======================================================================
-  // 1. CARREGAMENTO DOS DADOS (COM LOGS DE DEBUG RIGOROSOS)
+  // 1. CARREGAMENTO DOS DADOS (BLINDADO CONTRA RACE CONDITIONS)
   // =======================================================================
   useEffect(() => {
-    if (productData && !isPageLoading) {
-      
-      console.log('=== DEBUG DYAD : INICIO DO RESET ===');
-      console.log('Dados brutos da API (productData):', productData);
-      console.log('subcategoria_id API:', productData.subcategoria_id, '| Tipo:', typeof productData.subcategoria_id);
-      console.log('marca_id API:', productData.marca_id, '| Tipo:', typeof productData.marca_id);
-      console.log('grade_id API:', productData.grade_id, '| Tipo:', typeof productData.grade_id);
+    if (productData && !isPageLoading && !hasLoadedDataRef.current) {
+      hasLoadedDataRef.current = true; // Trava o gatilho para executar só uma vez
 
-      // CRÍTICO: Garantir que todos os IDs sejam STRINGS
       let categoryId = productData.categoria_id ? String(productData.categoria_id) : '';
       const subcategoryId = productData.subcategoria_id ? String(productData.subcategoria_id) : '';
       const brandId = productData.marca_id ? String(productData.marca_id) : '';
@@ -144,10 +141,10 @@ export function NewProductPage() {
       const dadosMapeados = {
         nome: isDuplicateMode ? `${productData.nome} - Cópia` : productData.nome,
         categoria_id: categoryId,
-        subcategoria_id: subcategoryId,
-        marca_id: brandId,
-        grade_id: gridId,
-        grade_atacado_id: gradeAtacadoId,
+        subcategoria_id: subcategoryId, 
+        marca_id: brandId,               
+        grade_id: gridId,               
+        grade_atacado_id: gradeAtacadoId, 
         ncm: productData.ncm || '',
         cfop_padrao: productData.cfop_padrao || '',
         cst_icms: productData.cst_icms || '',
@@ -163,53 +160,13 @@ export function NewProductPage() {
         composicao_atacado: composicaoParsed
       };
 
-      console.log('Dados MAPEADOS que serão enviados para o reset():', {
-        subcategoria_id: dadosMapeados.subcategoria_id,
-        marca_id: dadosMapeados.marca_id,
-        grade_id: dadosMapeados.grade_id
-      });
-
-      // RESET COMPLETO DO FORMULÁRIO
+      console.log('--- RESET DEFINITIVO DO FORMULÁRIO ---', dadosMapeados);
       reset(dadosMapeados);
-      console.log('=== DEBUG DYAD : RESET CHAMADO! ===');
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [productData, isPageLoading, isDuplicateMode, allSubcategories, reset]);
 
-
-  const selectedSubcategoryId = watch('subcategoria_id');
-
-  // =======================================================================
-  // 2. AUTOPREENCHIMENTO PROTEGIDO (Só roda se o usuário alterar a subcategoria)
-  // =======================================================================
-  useEffect(() => {
-    // CRÍTICO: Só executa se o campo "subcategoria_id" estiver "sujo" (alterado manualmente pelo usuário)
-    if (dirtyFields.subcategoria_id && selectedSubcategoryId && allSubcategories) {
-      console.log('Autopreenchimento ativado! (Usuário mudou a subcategoria manualmente)');
-      const selectedSub = allSubcategories.find(sub => String(sub.id) === String(selectedSubcategoryId));
-      if (selectedSub) {
-        // Preenche Categoria
-        setValue('categoria_id', String(selectedSub.categoria_id));
-        
-        // Preenche Grade (Apenas se a subcategoria tiver uma grade padrão vinculada)
-        if (selectedSub.grade_id) {
-            setValue('grade_id', String(selectedSub.grade_id), { shouldValidate: true });
-        }
-        
-        // Busca os dados fiscais da subcategoria
-        api.get(`/subcategorias/${selectedSubcategoryId}/fiscal`).then(response => {
-            const fiscalData = response.data;
-            if (fiscalData) {
-              setValue('ncm', fiscalData.ncm);
-              setValue('cfop_padrao', fiscalData.cfop_padrao);
-              setValue('cst_icms', fiscalData.cst_icms);
-              setValue('origem', String(fiscalData.origem));
-              setValue('unidade_medida', fiscalData.unidade_medida);
-            }
-        }).catch(() => null);
-      }
-    }
-  }, [selectedSubcategoryId, allSubcategories, dirtyFields.subcategoria_id, setValue]);
+  // O useEffect do autopreenchimento foi COMPLETAMENTE REMOVIDO DAQUI
+  // Agora a lógica vive dentro do onChange do Select na IdentificationSection!
 
   const onSubmit = (data: any) => {
     if (!data.nome || !data.grade_id || !data.subcategoria_id || !data.marca_id) {

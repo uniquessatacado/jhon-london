@@ -132,7 +132,7 @@ export function VariationsSection({ isEditMode, isDuplicateMode, grids }: Variat
             comprimento_cm: t.comprimento_cm || 0,
         })));
     }
-  }, [selectedGridObj, isEditMode, isDuplicateMode, replace, variacaoFields]);
+  }, [selectedGridObj, isEditMode, isDuplicateMode, replace]);
 
   const handleApplyBulkStock = () => {
     const qty = Number(bulkStockQty);

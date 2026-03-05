@@ -51,7 +51,7 @@ export function FinancialSection({ grids, globalAtacadoMin }: FinancialSectionPr
       // Se nenhuma grade estiver selecionada, limpa a tabela.
       replace([]);
     }
-  }, [gradeAtacadoObj, replace, composicaoFields]); // Roda sempre que a grade selecionada mudar.
+  }, [gradeAtacadoObj, replace]); // Roda sempre que a grade selecionada mudar.
 
   const handleGradeAtacadoChange = (val: string) => {
     const grade = grids?.find(g => String(g.id) === val);

@@ -149,12 +149,10 @@ export function NewProductPage() {
   const methods = useForm<any>({
     mode: 'onChange',
     defaultValues,
-    // A mágica acontece aqui: ao invés do reset() manual que gerava race condition, 
-    // o React Hook Form injeta os dados de forma perfeitamente segura.
     values: !isPageLoading ? formValues : defaultValues 
   });
 
-  const { watch, setValue, handleSubmit, getValues, formState: { isSubmitting, errors } } = methods;
+  const { watch, setValue, handleSubmit, getValues, reset, formState: { isSubmitting, errors } } = methods;
 
   const selectedSubcategoryId = watch('subcategoria_id');
 
@@ -190,12 +188,41 @@ export function NewProductPage() {
   }, [selectedSubcategoryId, allSubcategories, setValue, isEditMode, isDuplicateMode, getValues, productData]);
 
   const onSubmit = (data: any) => {
-    if (!data.nome || !data.grade_id || !data.subcategoria_id || !data.marca_id) return toast.error('Preencha todos os campos obrigatórios da Identificação.');
-    if (!data.variacoes || data.variacoes.length === 0) return toast.error('Adicione pelo menos uma variação na grade.');
-    if (data.variacoes?.some((v: any) => !v.sku && !v.codigo_barras)) return toast.error('Toda variação precisa de SKU ou Cód. Barras.');
+    // 1. Validações Básicas
+    if (!data.nome || !data.grade_id || !data.subcategoria_id || !data.marca_id) {
+        return toast.error('Preencha todos os campos obrigatórios da Identificação.');
+    }
+    if (!data.variacoes || data.variacoes.length === 0) {
+        return toast.error('Adicione pelo menos uma variação na grade.');
+    }
 
+    // 2. Validação Flexível de SKU (Só exige se tiver estoque)
+    const variacoesInvalidas = data.variacoes.filter((v: any) => Number(v.estoque) > 0 && !v.sku?.trim() && !v.codigo_barras?.trim());
+    if (variacoesInvalidas.length > 0) {
+        return toast.error('Tamanho com estoque MAIOR QUE ZERO exige que o SKU ou Cód. Barras seja preenchido.');
+    }
+
+    // 3. Validação de SKU repetido local (mesma grade)
     const skus = data.variacoes.map((v: any) => v.sku?.trim().toUpperCase()).filter(Boolean);
-    if (new Set(skus).size !== skus.length) return toast.error('Existem SKUs repetidos na grade do produto. Corrija os erros em vermelho.');
+    if (new Set(skus).size !== skus.length) {
+        return toast.error('Existem SKUs repetidos na grade do produto. Verifique os avisos em vermelho.');
+    }
+
+    // 4. Validação do Atacado Geral
+    if (data.habilita_atacado_geral && Number(data.preco_atacado_geral) <= 0) {
+        return toast.error('O Atacado Geral está ativo, portanto o Preço do Atacado Geral deve ser maior que zero.');
+    }
+
+    // 5. Validações do Atacado Grade
+    if (data.habilita_atacado_grade) {
+        if (Number(data.preco_atacado_grade) <= 0) {
+            return toast.error('O Atacado Grade está ativo, portanto o Preço do Pacote Fechado deve ser maior que zero.');
+        }
+        const hasQty = data.composicao_atacado?.some((c: any) => Number(c.quantidade) > 0);
+        if (!hasQty) {
+            return toast.error('Atacado Grade Ativo: Você precisa definir pelo menos uma peça (quantidade > 0) na tabela de Composição do Pacote.');
+        }
+    }
 
     const payload = { 
       ...data, 
@@ -208,6 +235,16 @@ export function NewProductPage() {
     isEditMode ? updateProduct(payload) : createProduct(payload);
   };
   
+  const onInvalid = (errors: any) => {
+    if (errors.variacoes) {
+        toast.error("O produto não foi salvo. Existe um erro de SKU duplicado nas variações.", {
+            description: "Verifique as caixas destacadas em vermelho na aba de Variações."
+        });
+    } else {
+        toast.error("Preencha todos os campos obrigatórios.");
+    }
+  };
+
   const isSaving = isCreating || isUpdating;
 
   // Renderiza apenas o loader até todos os requests do backend terem respondido.
@@ -217,7 +254,7 @@ export function NewProductPage() {
 
   return (
     <FormProvider {...methods}>
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 md:space-y-8 pb-24 md:pb-20">
+      <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="space-y-6 md:space-y-8 pb-24 md:pb-20">
         
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">

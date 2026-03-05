@@ -17,6 +17,8 @@ interface ViewProductDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
+const formatDim = (val: any) => (val && Number(val) > 0) ? val : '-';
+
 const ViewProductDialogContent = ({ product }: { product: Product }) => {
   const { data: categories } = useCategories();
   const { data: allSubcategories } = useAllSubcategories();
@@ -45,10 +47,10 @@ const ViewProductDialogContent = ({ product }: { product: Product }) => {
       const dim = dimensoes.find(d => d.tamanho === v.tamanho);
       return {
         ...v,
-        peso_kg: dim?.peso_kg,
-        altura_cm: dim?.altura_cm,
-        largura_cm: dim?.largura_cm,
-        comprimento_cm: dim?.comprimento_cm,
+        peso_kg: v.peso_kg || dim?.peso_kg,
+        altura_cm: v.altura_cm || dim?.altura_cm,
+        largura_cm: v.largura_cm || dim?.largura_cm,
+        comprimento_cm: v.comprimento_cm || dim?.comprimento_cm,
       };
     });
   }, [product]);
@@ -168,8 +170,8 @@ const ViewProductDialogContent = ({ product }: { product: Product }) => {
                                       <TableRow key={i} className="border-white/5 hover:bg-white/5">
                                           <TableCell className="font-bold text-emerald-400">{v.tamanho}</TableCell>
                                           <TableCell className="text-right">{v.estoque}</TableCell>
-                                          <TableCell className="text-muted-foreground text-xs">{v.sku}</TableCell>
-                                          <TableCell className="text-muted-foreground text-xs">{v.codigo_barras}</TableCell>
+                                          <TableCell className="text-muted-foreground text-xs">{v.sku || '-'}</TableCell>
+                                          <TableCell className="text-muted-foreground text-xs">{v.codigo_barras || '-'}</TableCell>
                                       </TableRow>
                                   ))}
                                   {!product.variacoes?.length && (
@@ -228,10 +230,10 @@ const ViewProductDialogContent = ({ product }: { product: Product }) => {
                                       {variacoesComDimensoes.map((v, i) => (
                                           <TableRow key={i} className="border-white/5 hover:bg-white/5">
                                               <TableCell className="font-bold">{v.tamanho}</TableCell>
-                                              <TableCell>{v.peso_kg || '-'}</TableCell>
-                                              <TableCell>{v.altura_cm || '-'}</TableCell>
-                                              <TableCell>{v.largura_cm || '-'}</TableCell>
-                                              <TableCell>{v.comprimento_cm || '-'}</TableCell>
+                                              <TableCell>{formatDim(v.peso_kg)}</TableCell>
+                                              <TableCell>{formatDim(v.altura_cm)}</TableCell>
+                                              <TableCell>{formatDim(v.largura_cm)}</TableCell>
+                                              <TableCell>{formatDim(v.comprimento_cm)}</TableCell>
                                           </TableRow>
                                       ))}
                                   </TableBody>

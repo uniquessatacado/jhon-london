@@ -119,7 +119,14 @@ function ProductFormContent({
     defaultValues: mappedData,
   });
 
-  const { handleSubmit, formState: { isSubmitting, errors } } = methods;
+  const { handleSubmit, formState: { isSubmitting, errors }, reset } = methods;
+
+  // Efeito para resetar o formulário quando os dados chegam
+  useEffect(() => {
+    if (productData) {
+      reset(mappedData);
+    }
+  }, [productData, mappedData, reset]);
 
   // Estados de Mídia
   const [mainImageFile, setMainImageFile] = useState<File | null>(null);

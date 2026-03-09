@@ -123,6 +123,7 @@ export function StartSaleDialog({ open, onOpenChange }: StartSaleDialogProps) {
       <CustomerFormDialog
         open={isNewCustomerOpen}
         onOpenChange={setIsNewCustomerOpen}
+        context="pdv"
       />
     </>
   );

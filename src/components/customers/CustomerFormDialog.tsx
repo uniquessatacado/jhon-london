@@ -27,45 +27,73 @@ interface CustomerFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   customer?: Customer | null;
+  context?: 'pdv' | 'full';
 }
 
-const formSchema = z.object({
-  nome: z.string().min(3, 'Nome deve ter pelo menos 3 letras'),
-  tipo_pessoa: z.enum(['F', 'J']),
-  cpf_cnpj: z.string().optional().or(z.literal('')),
-  whatsapp: z.string().min(14, 'WhatsApp é obrigatório'),
-  email: z.string().email('Email inválido').optional().or(z.literal('')),
-  rg_ie: z.string().optional().or(z.literal('')),
-  data_nascimento: z.string().optional().or(z.literal('')),
-  cep: z.string().optional().or(z.literal('')),
-  logradouro: z.string().optional().or(z.literal('')),
-  numero: z.string().optional().or(z.literal('')),
-  complemento: z.string().optional().or(z.literal('')),
-  bairro: z.string().optional().or(z.literal('')),
-  cidade: z.string().optional().or(z.literal('')),
-  estado: z.string().optional().or(z.literal('')),
-  tipo_cliente: z.enum(['varejo', 'atacado', 'ambos']),
-  observacoes: z.string().optional().or(z.literal('')),
-  ativo: z.boolean(),
-}).superRefine((data, ctx) => {
-  if (data.tipo_pessoa === 'J') {
-    if (!data.cpf_cnpj || !validateCNPJ(data.cpf_cnpj.replace(/\D/g, ''))) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "CNPJ inválido ou vazio.",
-        path: ["cpf_cnpj"],
-      });
-    }
-  } else { // tipo_pessoa === 'F'
-    if (data.cpf_cnpj && data.cpf_cnpj.replace(/\D/g, '').length > 0 && !validateCPF(data.cpf_cnpj.replace(/\D/g, ''))) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "CPF inválido.",
-        path: ["cpf_cnpj"],
-      });
-    }
+const getFormSchema = (context: 'pdv' | 'full') => {
+  const baseSchema = {
+    nome: z.string().min(3, 'Nome deve ter pelo menos 3 letras'),
+    whatsapp: z.string().min(14, 'WhatsApp é obrigatório'),
+    tipo_pessoa: z.enum(['F', 'J']),
+    cpf_cnpj: z.string().optional().or(z.literal('')),
+    email: z.string().email('Email inválido').optional().or(z.literal('')),
+    rg_ie: z.string().optional().or(z.literal('')),
+    data_nascimento: z.string().optional().or(z.literal('')),
+    cep: z.string().optional().or(z.literal('')),
+    logradouro: z.string().optional().or(z.literal('')),
+    numero: z.string().optional().or(z.literal('')),
+    complemento: z.string().optional().or(z.literal('')),
+    bairro: z.string().optional().or(z.literal('')),
+    cidade: z.string().optional().or(z.literal('')),
+    estado: z.string().optional().or(z.literal('')),
+    tipo_cliente: z.enum(['varejo', 'atacado', 'ambos']),
+    observacoes: z.string().optional().or(z.literal('')),
+    ativo: z.boolean(),
+  };
+
+  if (context === 'pdv') {
+    return z.object({
+      nome: baseSchema.nome,
+      whatsapp: baseSchema.whatsapp,
+      tipo_pessoa: baseSchema.tipo_pessoa.default('F'),
+      cpf_cnpj: baseSchema.cpf_cnpj,
+      email: baseSchema.email,
+      rg_ie: baseSchema.rg_ie,
+      data_nascimento: baseSchema.data_nascimento,
+      cep: baseSchema.cep,
+      logradouro: baseSchema.logradouro,
+      numero: baseSchema.numero,
+      complemento: baseSchema.complemento,
+      bairro: baseSchema.bairro,
+      cidade: baseSchema.cidade,
+      estado: baseSchema.estado,
+      tipo_cliente: baseSchema.tipo_cliente.default('varejo'),
+      observacoes: baseSchema.observacoes,
+      ativo: baseSchema.ativo.default(true),
+    });
   }
-});
+
+  // context === 'full'
+  return z.object(baseSchema).superRefine((data, ctx) => {
+    if (data.tipo_pessoa === 'J') {
+      if (!data.cpf_cnpj || !validateCNPJ(data.cpf_cnpj.replace(/\D/g, ''))) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "CNPJ inválido ou vazio.",
+          path: ["cpf_cnpj"],
+        });
+      }
+    } else { // tipo_pessoa === 'F'
+      if (data.cpf_cnpj && data.cpf_cnpj.replace(/\D/g, '').length > 0 && !validateCPF(data.cpf_cnpj.replace(/\D/g, ''))) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "CPF inválido.",
+          path: ["cpf_cnpj"],
+        });
+      }
+    }
+  });
+};
 
 // Converte YYYY-MM-DD para DD/MM/YYYY
 const parseDateFromBackend = (dateString?: string | null) => {
@@ -91,11 +119,13 @@ const formatDateForBackend = (dateString?: string) => {
   }
 };
 
-export function CustomerFormDialog({ open, onOpenChange, customer }: CustomerFormDialogProps) {
+export function CustomerFormDialog({ open, onOpenChange, customer, context = 'full' }: CustomerFormDialogProps) {
   const { mutate: createCustomer, isPending: isCreating } = useCreateCustomer();
   const { mutate: updateCustomer, isPending: isUpdating } = useUpdateCustomer();
 
   const [isCepLoading, setIsCepLoading] = useState(false);
+
+  const formSchema = getFormSchema(context);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -254,7 +284,7 @@ export function CustomerFormDialog({ open, onOpenChange, customer }: CustomerFor
                 />
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="grid gap-2">
-                    <Label htmlFor="cpf_cnpj">{tipoPessoa === 'F' ? 'CPF' : 'CNPJ *'}</Label>
+                    <Label htmlFor="cpf_cnpj">{tipoPessoa === 'F' ? 'CPF' : `CNPJ${context === 'full' ? ' *' : ''}`}</Label>
                     <Controller
                       name="cpf_cnpj"
                       control={form.control}

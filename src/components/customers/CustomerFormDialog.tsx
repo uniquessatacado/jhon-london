@@ -226,6 +226,18 @@ export function CustomerFormDialog({ open, onOpenChange, customer, context = 'fu
     const payload = {
       ...data,
       data_nascimento: formatDateForBackend(data.data_nascimento),
+      // Converte campos de texto vazios para null para evitar erros no backend
+      cpf_cnpj: data.cpf_cnpj || null,
+      email: data.email || null,
+      rg_ie: data.rg_ie || null,
+      cep: data.cep || null,
+      logradouro: data.logradouro || null,
+      numero: data.numero || null,
+      complemento: data.complemento || null,
+      bairro: data.bairro || null,
+      cidade: data.cidade || null,
+      estado: data.estado || null,
+      observacoes: data.observacoes || null,
     };
 
     if (customer) {

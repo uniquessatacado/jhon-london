@@ -1,101 +1,66 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { api } from '@/lib/api';
-import { User } from '@/types/auth';
+import { supabase } from '@/lib/supabase';
+import { AuthChangeEvent, Session, User } from '@supabase/supabase-js';
 
-export interface FeatureStatus {
-  [key: string]: boolean;
-}
+// O Supabase já tem um tipo 'User', mas podemos estender se precisarmos de campos customizados
+// que não estão em `user_metadata`. Por enquanto, o tipo nativo é suficiente.
+export type SupabaseUser = User;
 
 interface AuthContextType {
-  user: User | null;
+  user: SupabaseUser | null;
+  session: Session | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  featureStatus: FeatureStatus | null;
-  login: (token: string, userData: User) => void;
-  logout: () => void;
-  updateUser: (userData: User) => void;
-  refetchFeatureStatus: () => void;
+  logout: () => Promise<void>;
+  // A função de login agora será chamada diretamente da tela de login,
+  // pois o contexto vai reagir automaticamente às mudanças.
 }
 
 const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<SupabaseUser | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [featureStatus, setFeatureStatus] = useState<FeatureStatus | null>(null);
-
-  const fetchFeatureStatus = async () => {
-    try {
-      const { data } = await api.get('/features/status');
-      
-      const parsedData: FeatureStatus = {};
-      Object.keys(data).forEach(key => {
-        parsedData[key] = data[key] === true || String(data[key]) === 'true';
-      });
-      
-      setFeatureStatus(parsedData);
-    } catch (error) {
-      console.error("Failed to fetch feature status", error);
-      setFeatureStatus({});
-    }
-  };
-
-  const logout = () => {
-    localStorage.removeItem('jl_token');
-    localStorage.removeItem('jl_user');
-    delete api.defaults.headers.common['Authorization'];
-    setUser(null);
-    setFeatureStatus(null);
-  };
 
   useEffect(() => {
-    const token = localStorage.getItem('jl_token');
-    const storedUser = localStorage.getItem('jl_user');
+    // Tenta pegar a sessão inicial assim que o app carrega
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      setIsLoading(false);
+    });
 
-    if (token && storedUser) {
-      try {
-        const parsedUser = JSON.parse(storedUser);
-        // Garantir fallback global para evitar crashes se vier null do DB
-        parsedUser.permissoes = parsedUser.permissoes || {};
-        
-        setUser(parsedUser as User);
-        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-        fetchFeatureStatus();
-      } catch (e) {
-        logout();
+    // Ouve por mudanças no estado de autenticação (login, logout, etc.)
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (_event: AuthChangeEvent, session: Session | null) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        setIsLoading(false);
       }
-    }
-    setIsLoading(false);
+    );
 
-    const handleAuthError = () => {
-      logout();
-    };
-    window.addEventListener('auth-error', handleAuthError);
-
+    // Limpa o listener quando o componente desmontar
     return () => {
-      window.removeEventListener('auth-error', handleAuthError);
+      authListener.subscription.unsubscribe();
     };
   }, []);
 
-  const login = (token: string, userData: User) => {
-    // Tratamento de fallback
-    const safeUser = { ...userData, permissoes: userData.permissoes || {} } as User;
-    localStorage.setItem('jl_token', token);
-    localStorage.setItem('jl_user', JSON.stringify(safeUser));
-    api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-    setUser(safeUser);
-    fetchFeatureStatus();
-  };
-
-  const updateUser = (userData: User) => {
-    // Tratamento de fallback
-    const safeUser = { ...userData, permissoes: userData.permissoes || {} } as User;
-    setUser(safeUser);
-    localStorage.setItem('jl_user', JSON.stringify(safeUser));
+  const logout = async () => {
+    await supabase.auth.signOut();
+    // O listener onAuthStateChange vai cuidar de limpar o estado
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, isLoading, featureStatus, login, logout, updateUser, refetchFeatureStatus: fetchFeatureStatus }}>
+    <AuthContext.Provider 
+      value={{ 
+        user, 
+        session, 
+        isAuthenticated: !!session?.user, 
+        isLoading, 
+        logout 
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

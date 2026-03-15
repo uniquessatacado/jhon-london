@@ -3,79 +3,54 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { ArrowRight, Lock, User as UserIcon, Loader2, Mail, MessageCircle, Eye, EyeOff } from 'lucide-react';
-import { api } from '@/lib/api';
-import { useAuth } from '@/contexts/AuthContext';
+import { Lock, User as UserIcon, Loader2, Eye, EyeOff } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const { login } = useAuth();
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  
-  // Forgot Password States
-  const [isForgotOpen, setIsForgotOpen] = useState(false);
-  const [forgotEmail, setForgotEmail] = useState('');
-  const [isRecovering, setIsRecovering] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     
     try {
-        const response = await fetch('http://10.0.3.5:54321/functions/v1/auth-login', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ email, senha: password }),
-        });
-        
-        const data = await response.json();
-        
-        if (!response.ok) {
-          throw new Error(data.message || 'Credenciais inválidas.');
-        }
-        
-        login(data.token, data.user);
-        
-        toast.success('Acesso Autorizado', {
-            description: `Bem-vindo de volta, ${data.user.nome.split(' ')[0]}.`,
-        });
-        navigate('/');
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email,
+        password: password,
+      });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      // O AuthContext vai detectar o login automaticamente.
+      // Apenas navegamos para o dashboard.
+      toast.success('Acesso Autorizado', {
+          description: `Bem-vindo de volta!`,
+      });
+      navigate('/');
+
     } catch (error: any) {
         console.error(error);
-        const msg = error.message || 'Credenciais inválidas.';
+        const msg = error.message === 'Invalid login credentials' 
+          ? 'Credenciais inválidas. Verifique seu e-mail e senha.'
+          : 'Ocorreu um erro ao tentar fazer login.';
         toast.error('Acesso Negado', { description: msg });
     } finally {
         setIsLoading(false);
     }
   };
 
-  const handleRecoverPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!forgotEmail) return toast.error("Digite seu e-mail.");
-    
-    setIsRecovering(true);
-    try {
-        await api.post('/auth/recuperar-senha', { email: forgotEmail });
-        toast.success('E-mail enviado!', { 
-            description: 'Verifique sua caixa de entrada para redefinir a senha.' 
-        });
-        setIsForgotOpen(false);
-        setForgotEmail('');
-    } catch (error: any) {
-        toast.error('Erro ao recuperar', { 
-            description: error.response?.data?.message || 'Tente novamente mais tarde.' 
-        });
-    } finally {
-        setIsRecovering(false);
-    }
+  // A recuperação de senha também pode usar o método nativo do Supabase
+  const handleRecoverPassword = async () => {
+    // Exemplo: await supabase.auth.resetPasswordForEmail(email)
+    toast.info("Função de recuperar senha a ser implementada com Supabase.");
   };
 
   return (
@@ -87,7 +62,6 @@ export function LoginPage() {
       <div className="w-full max-w-md p-8 relative z-10">
         <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl p-8 space-y-8 animate-in fade-in zoom-in duration-500">
             
-            {/* Header com Logo */}
             <div className="flex flex-col items-center text-center space-y-4">
                 <div className="relative h-20 w-20 rounded-2xl overflow-hidden shadow-[0_0_30px_rgba(16,185,129,0.3)] border border-emerald-500/30">
                      <img src="/logo.jpg" alt="Logo" className="h-full w-full object-cover" />
@@ -102,7 +76,6 @@ export function LoginPage() {
                 </div>
             </div>
 
-            {/* Form */}
             <form onSubmit={handleLogin} className="space-y-6">
                 <div className="space-y-4">
                     <div className="space-y-2">
@@ -110,10 +83,10 @@ export function LoginPage() {
                         <div className="relative">
                             <UserIcon className="absolute left-3 top-2.5 h-5 w-5 text-emerald-500/50" />
                             <Input 
-                                id="email" 
+                                id="email"
                                 type="email"
-                                placeholder="seu@email.com" 
-                                className="pl-10 bg-white/5 border-white/10 focus:border-emerald-500/50 focus:ring-emerald-500/20 rounded-xl h-12 transition-all hover:bg-white/10"
+                                placeholder="seu@email.com"
+                                className="h-12 pl-10 bg-black/40 border-white/10 focus-visible:ring-emerald-500/50"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 required
@@ -121,107 +94,38 @@ export function LoginPage() {
                         </div>
                     </div>
                     <div className="space-y-2">
-                         <div className="flex justify-between items-center">
-                            <Label htmlFor="password" className="ml-1 text-xs uppercase tracking-wider text-muted-foreground">Senha</Label>
-                            <button 
-                                type="button" 
-                                onClick={() => setIsForgotOpen(true)}
-                                className="text-xs text-emerald-400 hover:text-emerald-300 transition-colors"
-                            >
-                                Esqueci minha senha
-                            </button>
-                         </div>
+                        <Label htmlFor="password" className="ml-1 text-xs uppercase tracking-wider text-muted-foreground">Senha</Label>
                         <div className="relative">
                             <Lock className="absolute left-3 top-2.5 h-5 w-5 text-emerald-500/50" />
                             <Input 
-                                id="password" 
-                                type={showPassword ? "text" : "password"}
-                                placeholder="••••••••" 
-                                className="pl-10 pr-10 bg-white/5 border-white/10 focus:border-emerald-500/50 focus:ring-emerald-500/20 rounded-xl h-12 transition-all hover:bg-white/10"
+                                id="password"
+                                type={showPassword ? 'text' : 'password'}
+                                placeholder="••••••••"
+                                className="h-12 pl-10 bg-black/40 border-white/10 focus-visible:ring-emerald-500/50"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 required
                             />
-                            <button
-                                type="button"
-                                onClick={() => setShowPassword(!showPassword)}
-                                className="absolute right-3 top-3 text-muted-foreground hover:text-white transition-colors"
-                            >
-                                {showPassword ? (
-                                    <EyeOff className="h-5 w-5" />
-                                ) : (
-                                    <Eye className="h-5 w-5" />
-                                )}
+                            <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-2.5 text-emerald-500/50 hover:text-emerald-500">
+                                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                             </button>
                         </div>
                     </div>
                 </div>
-
-                <Button 
-                    type="submit" 
-                    className="w-full h-12 rounded-xl text-base font-semibold shadow-[0_0_20px_rgba(16,185,129,0.2)] hover:shadow-[0_0_30px_rgba(16,185,129,0.4)] transition-all duration-300 bg-emerald-500 hover:bg-emerald-600 text-white"
-                    disabled={isLoading}
-                >
-                    {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <span className="flex items-center">Acessar Sistema <ArrowRight className="ml-2 h-4 w-4" /></span>}
+                
+                <Button type="submit" size="lg" className="w-full h-12 text-base bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20" disabled={isLoading}>
+                    {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    Entrar
                 </Button>
             </form>
-            
+
             <div className="text-center">
-                <p className="text-xs text-muted-foreground/50">© 2026 John London ERP System</p>
+                <button onClick={handleRecoverPassword} className="text-xs text-muted-foreground hover:text-emerald-400 transition-colors">
+                    Esqueceu sua senha?
+                </button>
             </div>
         </div>
       </div>
-
-      {/* Canto Inferior Direito: Créditos & Suporte */}
-      <div className="fixed bottom-6 right-6 flex flex-col items-end gap-3 z-50 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300">
-        <a 
-            href="https://wa.me/5519994554438" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-black font-semibold rounded-full shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-all hover:scale-105 active:scale-95"
-        >
-            <MessageCircle className="h-4 w-4" /> 
-            <span>Suporte</span>
-        </a>
-        <span className="text-[10px] text-white/20 font-mono tracking-widest uppercase">
-            Feito por Venduss Sars
-        </span>
-      </div>
-
-      {/* Forgot Password Modal */}
-      <Dialog open={isForgotOpen} onOpenChange={setIsForgotOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Recuperar Senha</DialogTitle>
-            <DialogDescription>
-              Digite seu e-mail para receber as instruções de redefinição.
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleRecoverPassword} className="space-y-4 py-4">
-             <div className="space-y-2">
-                <Label htmlFor="forgot-email">E-mail cadastrado</Label>
-                <div className="relative">
-                    <Mail className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                        id="forgot-email" 
-                        type="email" 
-                        placeholder="exemplo@johnlondon.com" 
-                        className="pl-9"
-                        value={forgotEmail}
-                        onChange={(e) => setForgotEmail(e.target.value)}
-                        required
-                    />
-                </div>
-             </div>
-             <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsForgotOpen(false)}>Cancelar</Button>
-                <Button type="submit" className="bg-emerald-500 hover:bg-emerald-600" disabled={isRecovering}>
-                    {isRecovering ? 'Enviando...' : 'Enviar Email'}
-                </Button>
-             </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

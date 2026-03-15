@@ -28,7 +28,19 @@ export function LoginPage() {
     setIsLoading(true);
     
     try {
-        const { data } = await api.post('/auth/login', { email, senha: password });
+        const response = await fetch('http://10.0.3.5:54321/functions/v1/auth-login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ email, senha: password }),
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.message || 'Credenciais inválidas.');
+        }
         
         login(data.token, data.user);
         
@@ -38,7 +50,7 @@ export function LoginPage() {
         navigate('/');
     } catch (error: any) {
         console.error(error);
-        const msg = error.response?.data?.message || 'Credenciais inválidas.';
+        const msg = error.message || 'Credenciais inválidas.';
         toast.error('Acesso Negado', { description: msg });
     } finally {
         setIsLoading(false);

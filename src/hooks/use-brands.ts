@@ -1,10 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
-import { api } from '@/lib/api';
+import { supabase } from '@/lib/supabase';
 import { Brand } from '@/types';
 
 async function fetchBrands(): Promise<Brand[]> {
-  const { data } = await api.get('/marcas');
-  return data;
+  const { data, error } = await supabase.from('marcas').select('*').order('nome');
+  
+  if (error) throw new Error(error.message);
+  return data || [];
 }
 
 export function useBrands() {

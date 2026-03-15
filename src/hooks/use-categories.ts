@@ -1,10 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
-import { api } from '@/lib/api';
+import { supabase } from '@/lib/supabase';
 import { Category, Subcategory } from '@/types';
 
 async function fetchCategories(): Promise<Category[]> {
-  const { data } = await api.get('/categorias');
-  return data;
+  const { data, error } = await supabase.from('categorias').select('*, subcategorias(*)').order('nome');
+  
+  if (error) throw new Error(error.message);
+  return data || [];
 }
 
 export function useCategories() {
@@ -14,10 +16,12 @@ export function useCategories() {
   });
 }
 
-// Busca todas as subcategorias (para combos gerais)
+// Busca todas as subcategorias
 async function fetchAllSubcategories(): Promise<Subcategory[]> {
-  const { data } = await api.get('/subcategorias');
-  return data;
+  const { data, error } = await supabase.from('subcategorias').select('*').order('nome');
+  
+  if (error) throw new Error(error.message);
+  return data || [];
 }
 
 export function useAllSubcategories() {
@@ -27,17 +31,23 @@ export function useAllSubcategories() {
   });
 }
 
-// Busca subcategorias filtradas por categoria (para árvore/config)
+// Busca subcategorias filtradas por categoria
 async function fetchSubcategories(categoryId: number | null): Promise<Subcategory[]> {
   if (!categoryId) return [];
-  const { data } = await api.get(`/subcategorias?categoria_id=${categoryId}`);
-  return data;
+  const { data, error } = await supabase
+    .from('subcategorias')
+    .select('*')
+    .eq('categoria_id', categoryId)
+    .order('nome');
+    
+  if (error) throw new Error(error.message);
+  return data || [];
 }
 
 export function useSubcategories(categoryId: number | null) {
   return useQuery({
     queryKey: ['subcategories', categoryId],
     queryFn: () => fetchSubcategories(categoryId),
-    enabled: !!categoryId, // Só busca se tiver ID selecionado
+    enabled: !!categoryId,
   });
 }

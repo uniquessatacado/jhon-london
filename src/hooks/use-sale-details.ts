@@ -47,37 +47,60 @@ export interface SaleFullDetails {
 }
 
 async function fetchSaleFullDetails(saleId: string): Promise<SaleFullDetails> {
-  // 1. Busca os dados principais (Venda, Cliente, Itens e Pagamentos)
-  const { data, error } = await supabase
+  // 1. Busca APENAS a venda primeiro (Garante que a venda existe)
+  const { data: venda, error: vendaError } = await supabase
     .from('vendas')
-    .select(`
-      *,
-      clientes (*),
-      venda_itens (*, produtos (nome, imagem_principal, sku)),
-      venda_pagamentos (*)
-    `)
+    .select('*')
     .eq('id', saleId)
     .single();
 
-  if (error) {
-    console.error("Error fetching full sale details:", error);
-    throw new Error(error.message);
+  if (vendaError || !venda) {
+    console.error("Erro ao buscar a venda principal:", vendaError);
+    throw new Error('Venda não encontrada');
   }
 
-  // 2. Busca o histórico SEPARADAMENTE. Se a tabela não existir, não quebra a página.
-  const { data: historyData, error: historyError } = await supabase
+  // 2. Busca o Cliente
+  let clienteData = null;
+  if (venda.cliente_id) {
+    const { data } = await supabase
+      .from('clientes')
+      .select('*')
+      .eq('id', venda.cliente_id)
+      .single();
+    clienteData = data;
+  }
+
+  // 3. Busca os Itens e junta com o Produto
+  const { data: itensData } = await supabase
+    .from('venda_itens')
+    .select('*, produtos(nome, imagem_principal, sku)')
+    .eq('venda_id', saleId);
+
+  // 4. Busca os Pagamentos (Try/Catch silencioso caso a tabela não exista)
+  const { data: pagamentosData, error: pagamentosError } = await supabase
+    .from('venda_pagamentos')
+    .select('*')
+    .eq('venda_id', saleId);
+    
+  if (pagamentosError) console.warn("Tabela venda_pagamentos pode não existir.");
+
+  // 5. Busca o Histórico (Try/Catch silencioso caso a tabela não exista)
+  const { data: historicoData, error: historicoError } = await supabase
     .from('venda_historico')
     .select('*')
     .eq('venda_id', saleId)
     .order('created_at', { ascending: false });
 
-  if (historyError) {
-    console.warn("Aviso: Tabela venda_historico pode não existir ainda no banco de dados.", historyError.message);
-  }
+  if (historicoError) console.warn("Tabela venda_historico pode não existir.");
 
-  data.venda_historico = historyData || [];
-
-  return data as SaleFullDetails;
+  // 6. Monta o objeto final exatamente como a tela espera
+  return {
+    ...venda,
+    clientes: clienteData,
+    venda_itens: itensData || [],
+    venda_pagamentos: pagamentosData || [],
+    venda_historico: historicoData || []
+  } as SaleFullDetails;
 }
 
 export function useSaleFullDetails(saleId: string | undefined) {

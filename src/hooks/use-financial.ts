@@ -57,18 +57,43 @@ async function fetchFinancialData(filters: DashboardFilters): Promise<FinancialM
   const { start, end } = getDateRange(filters);
 
   // 1. Busca Vendas no período (para Faturamento e Custo)
-  const { data: vendas } = await supabase
+  // Usamos select('*') para evitar erros caso alguma coluna como custo_total não exista na base.
+  let queryVendas = supabase
     .from('vendas')
-    .select('valor_total, custo_total')
+    .select('*')
     .gte('created_at', start)
     .lte('created_at', end);
 
-  // 2. Busca Pagamentos no período (para separação de Pix/Credito/etc)
+  // Aplica filtro de tipo (Tudo, Varejo, Atacado)
+  if (filters.tipo && filters.tipo !== 'tudo') {
+    if (filters.tipo === 'atacado') {
+      // O banco salva "atacado_geral" ou "atacado_grade", então usamos o 'like' para pegar ambos
+      queryVendas = queryVendas.like('tipo_venda', 'atacado%');
+    } else {
+      queryVendas = queryVendas.eq('tipo_venda', filters.tipo);
+    }
+  }
+
+  const { data: vendas, error: vendasError } = await queryVendas;
+
+  if (vendasError) {
+    console.error("Erro ao buscar vendas:", vendasError);
+  }
+
+  // Lista dos IDs das vendas filtradas para podermos filtrar os pagamentos depois
+  const validVendaIds = new Set((vendas || []).map(v => v.id));
+
+  // 2. Busca Pagamentos no período
   const { data: pagamentosPeriodo } = await supabase
     .from('venda_pagamentos')
-    .select('forma_pagamento, valor')
+    .select('*')
     .gte('created_at', start)
     .lte('created_at', end);
+
+  // Se houver filtro de tipo (Varejo/Atacado), só contamos os pagamentos referentes a essas vendas
+  const filteredPagamentos = filters.tipo !== 'tudo' 
+    ? (pagamentosPeriodo || []).filter(p => validVendaIds.has(p.venda_id))
+    : (pagamentosPeriodo || []);
 
   // 3. Busca TODO o dinheiro físico que entrou em vendas (Histórico Total para o Saldo do Caixa)
   const { data: pagamentosDinheiro } = await supabase
@@ -81,24 +106,26 @@ async function fetchFinancialData(filters: DashboardFilters): Promise<FinancialM
     .from('caixa_movimentacoes')
     .select('tipo, valor');
 
-  // Cálculos Período
+  // CÁLCULOS DO PERÍODO
   const faturamento = (vendas || []).reduce((acc, v) => acc + (Number(v.valor_total) || 0), 0);
-  const custo = (vendas || []).reduce((acc, v) => acc + (Number(v.custo_total) || (Number(v.valor_total) * 0.6) || 0), 0); // fallback de 60% se não houver custo preenchido
+  
+  // Cálculo do custo: Tenta pegar o custo_total da venda (se existir), senão estima em 60% do valor da venda
+  const custo = (vendas || []).reduce((acc, v: any) => acc + (Number(v.custo_total) || (Number(v.valor_total) * 0.6) || 0), 0);
+  
   const lucro = faturamento - custo;
 
   const metodos_pagamento: Record<string, number> = {};
-  (pagamentosPeriodo || []).forEach(p => {
+  filteredPagamentos.forEach(p => {
     const metodo = p.forma_pagamento.toLowerCase();
     metodos_pagamento[metodo] = (metodos_pagamento[metodo] || 0) + Number(p.valor);
   });
 
-  // Cálculos Saldo Físico (Caixa)
+  // CÁLCULOS DO CAIXA FÍSICO (Geral, independente da data)
   const totalDinheiroVendas = (pagamentosDinheiro || []).reduce((acc, p) => acc + Number(p.valor), 0);
   
   let totalReforcos = 0;
   let totalRetiradas = 0;
 
-  // Ignora o erro 42P01 caso a tabela ainda não tenha sido criada pelo usuário
   if (!movsError && movsCaixa) {
     movsCaixa.forEach(m => {
       if (m.tipo === 'entrada') totalReforcos += Number(m.valor);
@@ -125,7 +152,6 @@ export function useFinancialData(filters: DashboardFilters) {
   });
 }
 
-// Mutação para adicionar Reforço/Retirada
 export function useAddCashTransaction() {
   const queryClient = useQueryClient();
   

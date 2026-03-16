@@ -14,6 +14,8 @@ import { CustomerListPage } from './pages/customers/CustomerListPage';
 import { UnderConstructionPage } from './pages/UnderConstructionPage';
 import { FeatureReleasePage } from './pages/settings/FeatureReleasePage';
 import { SalesListPage } from './pages/sales/SalesListPage';
+import { SaleDetailsPage } from './pages/sales/SaleDetailsPage';
+import { SaleStatusPage } from './pages/settings/SaleStatusPage';
 import { useAuth } from './contexts/AuthContext';
 
 const FeatureGuard = ({ featureKey, children }: { featureKey: string, children: React.ReactNode }) => {
@@ -37,12 +39,14 @@ const router = createBrowserRouter([
       { path: 'produtos/editar/:id', element: <NewProductPage /> },
       { path: 'pdv', element: <FeatureGuard featureKey="pdv_liberado"><PDVPage /></FeatureGuard> },
       { path: 'vendas', element: <FeatureGuard featureKey="vendas_liberado"><SalesListPage /></FeatureGuard> },
+      { path: 'vendas/:id', element: <FeatureGuard featureKey="vendas_liberado"><SaleDetailsPage /></FeatureGuard> },
       { path: 'clientes', element: <CustomerListPage /> },
       { path: 'usuarios', element: <UserPage /> },
       { path: 'configuracoes/geral', element: <GeneralSettingsPage /> },
       { path: 'configuracoes/categorias', element: <CategoryPage /> },
       { path: 'configuracoes/marcas', element: <BrandPage /> },
       { path: 'configuracoes/grades', element: <GridPage /> },
+      { path: 'configuracoes/status-vendas', element: <SaleStatusPage /> },
       { path: 'configuracoes/liberacao-funcionalidades', element: <FeatureReleasePage /> },
     ],
   },

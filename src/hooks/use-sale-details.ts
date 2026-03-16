@@ -1,51 +1,81 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 
-export interface SaleItem {
-  id: number;
-  produto_id: number;
-  tamanho: string;
-  quantidade: number;
-  preco_unitario: number;
-  produtos: {
-    nome: string;
-  } | null;
-}
-
-export interface SaleHistory {
+export interface SaleFullDetails {
   id: number;
   created_at: string;
-  usuario_nome: string;
-  acao: string;
-  detalhes: any;
+  cliente_id: number;
+  valor_total: number;
+  status: string;
+  tipo_venda: string;
+  origem: string;
+  itens_count: number;
+  clientes: {
+    id: number;
+    nome: string;
+    whatsapp: string;
+    email: string;
+    cpf_cnpj: string;
+    cidade: string;
+    estado: string;
+  } | null;
+  venda_itens: {
+    id: number;
+    produto_id: number;
+    tamanho: string;
+    quantidade: number;
+    preco_unitario: number;
+    produtos: {
+      nome: string;
+      imagem_principal: string;
+      sku: string;
+    } | null;
+  }[];
+  venda_pagamentos: {
+    id: number;
+    forma_pagamento: string;
+    valor: number;
+    created_at: string;
+  }[];
+  venda_historico: {
+    id: number;
+    created_at: string;
+    usuario_nome: string;
+    acao: string;
+    detalhes: any;
+  }[];
 }
 
-async function fetchSaleDetails(saleId: number | null): Promise<SaleItem[]> {
-  if (!saleId) return [];
-  const { data, error } = await supabase.from('venda_itens').select(`id, produto_id, tamanho, quantidade, preco_unitario, produtos ( nome )`).eq('venda_id', saleId);
-  if (error) throw new Error(error.message);
-  return data as unknown as SaleItem[];
+async function fetchSaleFullDetails(saleId: string): Promise<SaleFullDetails> {
+  const { data, error } = await supabase
+    .from('vendas')
+    .select(`
+      *,
+      clientes (*),
+      venda_itens (*, produtos (nome, imagem_principal, sku)),
+      venda_pagamentos (*),
+      venda_historico (*)
+    `)
+    .eq('id', saleId)
+    .single();
+
+  if (error) {
+    console.error("Error fetching full sale details:", error);
+    throw new Error(error.message);
+  }
+
+  // Garante que o histórico venha ordenado do mais recente para o mais antigo
+  if (data.venda_historico && Array.isArray(data.venda_historico)) {
+    data.venda_historico.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  }
+
+  return data as SaleFullDetails;
 }
 
-export function useSaleDetails(saleId: number | null) {
+export function useSaleFullDetails(saleId: string | undefined) {
   return useQuery({
-    queryKey: ['saleDetails', saleId],
-    queryFn: () => fetchSaleDetails(saleId),
-    enabled: !!saleId,
-  });
-}
-
-async function fetchSaleHistory(saleId: number | null): Promise<SaleHistory[]> {
-  if (!saleId) return [];
-  const { data, error } = await supabase.from('venda_historico').select('*').eq('venda_id', saleId).order('created_at', { ascending: false });
-  if (error) throw new Error(error.message);
-  return data;
-}
-
-export function useSaleHistory(saleId: number | null) {
-  return useQuery({
-    queryKey: ['saleHistory', saleId],
-    queryFn: () => fetchSaleHistory(saleId),
+    queryKey: ['sale-full-details', saleId],
+    queryFn: () => fetchSaleFullDetails(saleId!),
     enabled: !!saleId,
   });
 }

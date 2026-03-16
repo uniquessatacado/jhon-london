@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useUpdateSaleStatus } from '@/hooks/use-sale-mutations';
 import { SaleWithDetails } from '@/hooks/use-sales';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSaleStatuses } from '@/hooks/use-sale-statuses';
+import { Loader2 } from 'lucide-react';
 
 interface UpdateSaleStatusDialogProps {
   sale: SaleWithDetails | null;
@@ -14,8 +16,15 @@ interface UpdateSaleStatusDialogProps {
 
 export function UpdateSaleStatusDialog({ sale, open, onOpenChange }: UpdateSaleStatusDialogProps) {
   const { user } = useAuth();
-  const [newStatus, setNewStatus] = useState(sale?.status || '');
+  const { data: statuses, isLoading: isLoadingStatuses } = useSaleStatuses();
+  const [newStatus, setNewStatus] = useState('');
   const { mutate: updateStatus, isPending } = useUpdateSaleStatus();
+
+  useEffect(() => {
+    if (sale?.status) {
+      setNewStatus(sale.status);
+    }
+  }, [sale]);
 
   const handleSave = () => {
     if (!sale || !newStatus) return;
@@ -27,25 +36,30 @@ export function UpdateSaleStatusDialog({ sale, open, onOpenChange }: UpdateSaleS
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Alterar Status da Venda #{sale?.id}</DialogTitle>
-          <DialogDescription>Selecione o novo status para esta venda.</DialogDescription>
+          <DialogTitle>Alterar Status do Pedido #{sale?.id}</DialogTitle>
+          <DialogDescription>Selecione o novo status para este pedido. A alteração será registrada no histórico.</DialogDescription>
         </DialogHeader>
-        <div className="py-4">
-          <Select value={newStatus} onValueChange={setNewStatus}>
-            <SelectTrigger><SelectValue placeholder="Selecione um status..." /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Concluído">Concluído</SelectItem>
-              <SelectItem value="Cancelado">Cancelado</SelectItem>
-              <SelectItem value="Aguardando Pagamento">Aguardando Pagamento</SelectItem>
-              <SelectItem value="Em Separação">Em Separação</SelectItem>
-            </SelectContent>
-          </Select>
+        <div className="py-6">
+          {isLoadingStatuses ? (
+            <div className="flex justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+          ) : (
+            <Select value={newStatus} onValueChange={setNewStatus}>
+              <SelectTrigger className="h-12 text-base">
+                <SelectValue placeholder="Selecione um status..." />
+              </SelectTrigger>
+              <SelectContent>
+                {statuses?.map((s) => (
+                  <SelectItem key={s.id} value={s.label}>{s.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={handleSave} disabled={isPending || !newStatus}>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button onClick={handleSave} disabled={isPending || !newStatus} className="bg-emerald-500 hover:bg-emerald-600 text-white">
             {isPending ? 'Salvando...' : 'Salvar Alteração'}
           </Button>
         </DialogFooter>

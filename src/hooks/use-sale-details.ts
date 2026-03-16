@@ -47,14 +47,14 @@ export interface SaleFullDetails {
 }
 
 async function fetchSaleFullDetails(saleId: string): Promise<SaleFullDetails> {
+  // 1. Busca os dados principais (Venda, Cliente, Itens e Pagamentos)
   const { data, error } = await supabase
     .from('vendas')
     .select(`
       *,
       clientes (*),
       venda_itens (*, produtos (nome, imagem_principal, sku)),
-      venda_pagamentos (*),
-      venda_historico (*)
+      venda_pagamentos (*)
     `)
     .eq('id', saleId)
     .single();
@@ -64,10 +64,18 @@ async function fetchSaleFullDetails(saleId: string): Promise<SaleFullDetails> {
     throw new Error(error.message);
   }
 
-  // Garante que o histórico venha ordenado do mais recente para o mais antigo
-  if (data.venda_historico && Array.isArray(data.venda_historico)) {
-    data.venda_historico.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  // 2. Busca o histórico SEPARADAMENTE. Se a tabela não existir, não quebra a página.
+  const { data: historyData, error: historyError } = await supabase
+    .from('venda_historico')
+    .select('*')
+    .eq('venda_id', saleId)
+    .order('created_at', { ascending: false });
+
+  if (historyError) {
+    console.warn("Aviso: Tabela venda_historico pode não existir ainda no banco de dados.", historyError.message);
   }
+
+  data.venda_historico = historyData || [];
 
   return data as SaleFullDetails;
 }

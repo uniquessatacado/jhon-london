@@ -12,14 +12,16 @@ import { toast } from 'sonner';
 import { PdvProvider, usePdv } from '@/contexts/PdvContext';
 import { StartSaleDialog } from '@/components/pdv/StartSaleDialog';
 import { PdvHeader } from '@/components/pdv/PdvHeader';
+import { CheckoutDialog } from '@/components/pdv/CheckoutDialog';
 
 function PdvContent() {
-  const { isSaleActive, clearSale } = usePdv();
+  const { isSaleActive, clearSale, saleType } = usePdv();
   const { data: products, isLoading } = useProducts();
   const [searchTerm, setSearchTerm] = useState('');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isStartSaleOpen, setIsStartSaleOpen] = useState(false);
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
 
   useEffect(() => {
     if (!isSaleActive) {
@@ -38,6 +40,14 @@ function PdvContent() {
   }).slice(0, 50);
 
   const addToCart = (product: Product, variation: ProductVariation) => {
+    // Define o preço baseando no tipo de venda escolhida no início
+    let unitPrice = product.preco_varejo;
+    if (saleType === 'atacado_geral' && product.habilita_atacado_geral && product.preco_atacado_geral > 0) {
+      unitPrice = product.preco_atacado_geral;
+    } else if (saleType === 'atacado_grade' && product.habilita_atacado_grade && product.preco_atacado_grade > 0) {
+      unitPrice = product.preco_atacado_grade;
+    }
+
     const existingItem = cart.find(item => item.productId === product.id && item.variation.tamanho === variation.tamanho);
 
     if (existingItem) {
@@ -51,7 +61,7 @@ function PdvContent() {
           sku: variation.sku,
         },
         quantity: 1,
-        unitPrice: product.preco_varejo, // Lógica de preço será adicionada aqui
+        unitPrice: unitPrice, 
         image: product.imagem_principal,
       };
       setCart(prev => [...prev, newItem]);
@@ -87,7 +97,7 @@ function PdvContent() {
   };
 
   const handleCheckout = () => {
-    toast.info("Função de checkout ainda não implementada.");
+    setIsCheckoutOpen(true);
   };
 
   const getImageUrl = (imagePath: string) => {
@@ -189,14 +199,14 @@ function PdvContent() {
                   <h3 className="text-xl font-bold">Selecione o Tamanho</h3>
                   <p className="text-muted-foreground">{selectedProduct.nome}</p>
                 </div>
-                <Button variant="ghost" size="icon" onClick={() => setSelectedProduct(null)}><XCircle /></Button>
+                <Button variant="ghost" size="icon" onClick={() => setSelectedProduct(null)}><XCircle className="h-6 w-6" /></Button>
               </div>
               <div className="mt-6 grid grid-cols-3 gap-3">
                 {selectedProduct.variacoes?.map(v => (
                   <Button 
                     key={v.tamanho} 
                     variant="outline" 
-                    className="h-16 text-lg"
+                    className="h-16 text-lg border-white/10 hover:bg-white/5 hover:border-emerald-500/50"
                     onClick={() => addToCart(selectedProduct, v)}
                   >
                     {v.tamanho}
@@ -207,6 +217,8 @@ function PdvContent() {
           </div>
         )}
       </div>
+
+      <CheckoutDialog open={isCheckoutOpen} onOpenChange={setIsCheckoutOpen} />
     </div>
   );
 }

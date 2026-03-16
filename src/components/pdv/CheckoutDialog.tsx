@@ -51,10 +51,10 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
         valor_unitario: item.unitPrice,
       }));
 
-      const { error: itensError } = await supabase.from('vendas_itens').insert(itens);
+      const { error: itensError } = await supabase.from('venda_itens').insert(itens);
       if (itensError) {
-          const { error: fallbackError } = await supabase.from('venda_itens').insert(itens);
-          if (fallbackError) throw new Error(`Erro ao registrar itens: ${itensError.message}`);
+        console.error('Supabase error inserting sale items:', itensError);
+        throw new Error(`Erro ao registrar itens: ${itensError.message || 'Ocorreu um problema ao salvar os produtos da venda.'}`);
       }
 
       // 3. Registrar o Pagamento
@@ -64,7 +64,7 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
          valor: finalTotal
       }]);
       if (paymentError) {
-        console.warn('Tabela de pagamentos não encontrada ou erro ignorado:', paymentError.message);
+        console.warn('Ignorando erro ao salvar pagamento:', paymentError.message);
       }
 
       // 4. Abater Estoque

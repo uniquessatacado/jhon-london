@@ -13,7 +13,7 @@ createRoot(document.getElementById("root")!).render(
     <AuthProvider>
       <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
         <App />
-        <Toaster />
+        <Toaster position="top-center" />
       </ThemeProvider>
     </AuthProvider>
   </QueryClientProvider>

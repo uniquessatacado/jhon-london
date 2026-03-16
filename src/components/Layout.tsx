@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useLocation, Navigate } from 'react-router-dom';
-import { Home, Package, ShoppingCart, Settings, Menu, LogOut, ChevronDown, Tag, Building, CircleUser, Grid as GridIcon, Settings2, Users, Rocket, Sun, Moon, DollarSign, Activity } from 'lucide-react';
+import { Home, Package, ShoppingCart, Settings, Menu, LogOut, ChevronDown, Tag, Building, CircleUser, Grid as GridIcon, Settings2, Users, Rocket, Sun, Moon, DollarSign, Activity, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import {
@@ -22,6 +22,7 @@ const navItems = [
   { to: '/produtos', icon: Package, label: 'Produtos', permissionKey: 'produtos' as keyof UserPermissions, featureKey: 'produtos_liberado' },
   { to: '/clientes', icon: Users, label: 'Clientes', permissionKey: 'clientes' as keyof UserPermissions, featureKey: 'clientes_liberado' },
   { to: '/vendas', icon: DollarSign, label: 'Vendas', permissionKey: 'financeiro' as keyof UserPermissions, featureKey: 'vendas_liberado' },
+  { to: '/financeiro', icon: Wallet, label: 'Financeiro', permissionKey: 'financeiro' as keyof UserPermissions },
   { to: '/pdv', icon: ShoppingCart, label: 'PDV', permissionKey: 'financeiro' as keyof UserPermissions, featureKey: 'pdv_liberado' },
 ];
 
@@ -38,7 +39,7 @@ const settingsNavItems = [
 const NavLinkItem = ({ to, icon: Icon, label }: { to: string, icon: React.ElementType, label: string }) => (
   <NavLink
     to={to}
-    end={to === '/vendas' ? false : true} // Impede match exato em /vendas para deixar ativo em /vendas/:id
+    end={to === '/vendas' ? false : true}
     className={({ isActive }) =>
       `flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition-all duration-200 ${
         isActive 

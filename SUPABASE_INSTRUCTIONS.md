@@ -80,6 +80,7 @@ serve(async (req) => {
   * vendas, venda_itens, venda_pagamentos
   * contas_receber, contas_pagar
   * movimentacoes_estoque (se existir)
+  * caixa_movimentacoes (reforços e retiradas de caixa)
 * **Configurações:**
   * formas_pagamento, configuracoes
 * **Storage Buckets:**

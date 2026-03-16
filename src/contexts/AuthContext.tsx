@@ -1,69 +1,98 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { supabase } from '@/lib/supabase';
-import { AuthChangeEvent, Session, User } from '@supabase/supabase-js';
-
-// O Supabase já tem um tipo 'User', mas podemos estender se precisarmos de campos customizados
-// que não estão em `user_metadata`. Por enquanto, o tipo nativo é suficiente.
-export type SupabaseUser = User;
+import { useNavigate } from 'react-router-dom';
+import { User as UserType } from '@/types/auth';
+import { toast } from 'sonner';
 
 interface AuthContextType {
-  user: SupabaseUser | null;
-  session: Session | null;
-  isAuthenticated: boolean;
+  user: UserType | null;
+  token: string | null;
   isLoading: boolean;
-  logout: () => Promise<void>;
-  // A função de login agora será chamada diretamente da tela de login,
-  // pois o contexto vai reagir automaticamente às mudanças.
+  login: (userData: UserType, token: string) => void;
+  logout: () => void;
+  updateUser: (userData: Partial<UserType>) => void;
+  featureStatus: { [key: string]: boolean } | null;
+  refetchFeatureStatus: () => void;
 }
 
 const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<SupabaseUser | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<UserType | null>(null);
+  const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [featureStatus, setFeatureStatus] = useState<{ [key: string]: boolean } | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    // Tenta pegar a sessão inicial assim que o app carrega
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setIsLoading(false);
-    });
+    try {
+      const storedToken = localStorage.getItem('jl_token');
+      const storedUser = localStorage.getItem('jl_user');
 
-    // Ouve por mudanças no estado de autenticação (login, logout, etc.)
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      (_event: AuthChangeEvent, session: Session | null) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        setIsLoading(false);
+      if (storedToken && storedUser) {
+        setToken(storedToken);
+        setUser(JSON.parse(storedUser));
       }
-    );
-
-    // Limpa o listener quando o componente desmontar
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
+    } catch (error) {
+      console.error("Falha ao carregar sessão do localStorage", error);
+      localStorage.removeItem('jl_token');
+      localStorage.removeItem('jl_user');
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
-  const logout = async () => {
-    await supabase.auth.signOut();
-    // O listener onAuthStateChange vai cuidar de limpar o estado
+  const login = (userData: UserType, authToken: string) => {
+    localStorage.setItem('jl_token', authToken);
+    localStorage.setItem('jl_user', JSON.stringify(userData));
+    setToken(authToken);
+    setUser(userData);
+    navigate('/');
   };
 
-  return (
-    <AuthContext.Provider 
-      value={{ 
-        user, 
-        session, 
-        isAuthenticated: !!session?.user, 
-        isLoading, 
-        logout 
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
-  );
+  const logout = () => {
+    localStorage.removeItem('jl_token');
+    localStorage.removeItem('jl_user');
+    setToken(null);
+    setUser(null);
+    navigate('/login');
+    toast.info("Você saiu da sua conta.");
+  };
+
+  const updateUser = (userData: Partial<UserType>) => {
+    if (user) {
+      const updatedUser = { ...user, ...userData };
+      setUser(updatedUser);
+      localStorage.setItem('jl_user', JSON.stringify(updatedUser));
+    }
+  };
+
+  const refetchFeatureStatus = async () => {
+    // Esta função será implementada quando a API de features estiver pronta
+  };
+
+  const value = {
+    user,
+    token,
+    isLoading,
+    login,
+    logout,
+    updateUser,
+    featureStatus: { // Mock para manter o layout funcionando
+        pdv_liberado: true,
+        clientes_liberado: true,
+        produtos_liberado: true,
+        vendas_liberado: true,
+    },
+    refetchFeatureStatus,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth deve ser usado dentro de um AuthProvider');
+  }
+  return context;
+};

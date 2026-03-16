@@ -5,13 +5,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { Lock, User as UserIcon, Loader2, Eye, EyeOff } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const { login } = useAuth();
   
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('ussloja@gmail.com');
+  const [password, setPassword] = useState('137900');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -20,37 +21,30 @@ export function LoginPage() {
     setIsLoading(true);
     
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: email,
-        password: password,
+      const response = await fetch('http://206.183.128.27:8001/functions/v1/manual-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
       });
 
-      if (error) {
-        throw new Error(error.message);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Erro desconhecido');
       }
 
-      // O AuthContext vai detectar o login automaticamente.
-      // Apenas navegamos para o dashboard.
+      login(data.user, data.token);
+      
       toast.success('Acesso Autorizado', {
-          description: `Bem-vindo de volta!`,
+          description: `Bem-vindo de volta, ${data.user.nome.split(' ')[0]}.`,
       });
-      navigate('/');
 
     } catch (error: any) {
         console.error(error);
-        const msg = error.message === 'Invalid login credentials' 
-          ? 'Credenciais inválidas. Verifique seu e-mail e senha.'
-          : 'Ocorreu um erro ao tentar fazer login.';
-        toast.error('Acesso Negado', { description: msg });
+        toast.error('Acesso Negado', { description: error.message });
     } finally {
         setIsLoading(false);
     }
-  };
-
-  // A recuperação de senha também pode usar o método nativo do Supabase
-  const handleRecoverPassword = async () => {
-    // Exemplo: await supabase.auth.resetPasswordForEmail(email)
-    toast.info("Função de recuperar senha a ser implementada com Supabase.");
   };
 
   return (
@@ -120,7 +114,7 @@ export function LoginPage() {
             </form>
 
             <div className="text-center">
-                <button onClick={handleRecoverPassword} className="text-xs text-muted-foreground hover:text-emerald-400 transition-colors">
+                <button className="text-xs text-muted-foreground hover:text-emerald-400 transition-colors">
                     Esqueceu sua senha?
                 </button>
             </div>

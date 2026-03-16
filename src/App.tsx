@@ -1,4 +1,4 @@
-import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider, RouteObject } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { LoginPage } from './pages/Login';
 import { DashboardPage } from './pages/Dashboard';
@@ -13,14 +13,13 @@ import { UserPage } from './pages/users/UserPage';
 import { CustomerListPage } from './pages/customers/CustomerListPage';
 import { UnderConstructionPage } from './pages/UnderConstructionPage';
 import { FeatureReleasePage } from './pages/settings/FeatureReleasePage';
+import { SalesListPage } from './pages/sales/SalesListPage';
 import { useAuth } from './contexts/AuthContext';
 
-// Componente de guarda para rotas que precisam de verificação de usuário
-const PdvRouteGuard = () => {
+const FeatureGuard = ({ featureKey, children }: { featureKey: string, children: React.ReactNode }) => {
   const { featureStatus } = useAuth();
-  if (!featureStatus) return null; // ou um loader
-  // Atualizado para usar a chave direta do novo JSON: pdv_liberado
-  return featureStatus.pdv_liberado ? <PDVPage /> : <UnderConstructionPage />;
+  if (!featureStatus) return null;
+  return featureStatus[featureKey] ? <>{children}</> : <UnderConstructionPage />;
 };
 
 const router = createBrowserRouter([
@@ -32,54 +31,19 @@ const router = createBrowserRouter([
     path: '/',
     element: <Layout />,
     children: [
-      {
-        index: true,
-        element: <DashboardPage />,
-      },
-      {
-        path: 'produtos',
-        element: <ProductListPage />,
-      },
-      {
-        path: 'produtos/novo',
-        element: <NewProductPage />,
-      },
-      {
-        path: 'produtos/editar/:id',
-        element: <NewProductPage />,
-      },
-      {
-        path: 'pdv',
-        element: <PdvRouteGuard />,
-      },
-      {
-        path: 'clientes',
-        element: <CustomerListPage />,
-      },
-      {
-        path: 'usuarios',
-        element: <UserPage />,
-      },
-      {
-        path: 'configuracoes/geral',
-        element: <GeneralSettingsPage />,
-      },
-      {
-        path: 'configuracoes/categorias',
-        element: <CategoryPage />,
-      },
-      {
-        path: 'configuracoes/marcas',
-        element: <BrandPage />,
-      },
-      {
-        path: 'configuracoes/grades',
-        element: <GridPage />,
-      },
-      {
-        path: 'configuracoes/liberacao-funcionalidades',
-        element: <FeatureReleasePage />,
-      },
+      { index: true, element: <DashboardPage /> },
+      { path: 'produtos', element: <ProductListPage /> },
+      { path: 'produtos/novo', element: <NewProductPage /> },
+      { path: 'produtos/editar/:id', element: <NewProductPage /> },
+      { path: 'pdv', element: <FeatureGuard featureKey="pdv_liberado"><PDVPage /></FeatureGuard> },
+      { path: 'vendas', element: <FeatureGuard featureKey="vendas_liberado"><SalesListPage /></FeatureGuard> },
+      { path: 'clientes', element: <CustomerListPage /> },
+      { path: 'usuarios', element: <UserPage /> },
+      { path: 'configuracoes/geral', element: <GeneralSettingsPage /> },
+      { path: 'configuracoes/categorias', element: <CategoryPage /> },
+      { path: 'configuracoes/marcas', element: <BrandPage /> },
+      { path: 'configuracoes/grades', element: <GridPage /> },
+      { path: 'configuracoes/liberacao-funcionalidades', element: <FeatureReleasePage /> },
     ],
   },
 ]);

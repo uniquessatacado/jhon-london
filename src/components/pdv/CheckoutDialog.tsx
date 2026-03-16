@@ -16,7 +16,7 @@ interface CheckoutDialogProps {
 }
 
 export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
-  const { cart, customer, clearSale } = usePdv();
+  const { cart, customer, saleType, clearSale } = usePdv();
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<string>('pix');
   const [discount, setDiscount] = useState<number | string>(0);
@@ -34,7 +34,7 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
       // 1. Criar a Venda
       const { data: venda, error: vendaError } = await supabase.from('vendas').insert([{
         cliente_id: customer.id,
-        cliente_nome: customer.nome,
+        tipo_venda: saleType,
         valor_total: finalTotal,
         status: 'Concluído',
         itens_count: cart.reduce((acc, item) => acc + item.quantity, 0),
@@ -53,22 +53,21 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
 
       const { error: itensError } = await supabase.from('vendas_itens').insert(itens);
       if (itensError) {
-          // Fallback silencioso caso a tabela se chame 'venda_itens' sem o 's'
           const { error: fallbackError } = await supabase.from('venda_itens').insert(itens);
           if (fallbackError) throw new Error(`Erro ao registrar itens: ${itensError.message}`);
       }
 
-      // 3. Registrar o Pagamento (Fail-safe: se a tabela não existir, ignora e continua)
+      // 3. Registrar o Pagamento
       const { error: paymentError } = await supabase.from('venda_pagamentos').insert([{
          venda_id: venda.id,
          forma_pagamento: paymentMethod,
          valor: finalTotal
       }]);
       if (paymentError) {
-        console.warn('Tabela de pagamentos não encontada ou erro ignorado:', paymentError);
+        console.warn('Tabela de pagamentos não encontrada ou erro ignorado:', paymentError.message);
       }
 
-      // 4. Abater Estoque (Processado item a item no frontend para simplicidade)
+      // 4. Abater Estoque
       for (const item of cart) {
         const { data: varData } = await supabase
           .from('produto_variacoes')

@@ -38,7 +38,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsLoading(false);
     }
 
-    // Listener global para lidar com tokens expirados (caso precise no futuro)
     const handleAuthError = () => {
       logout();
     };
@@ -51,7 +50,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('jl_user', JSON.stringify(userData));
     setToken(authToken);
     setUser(userData);
-    // A navegação agora é feita pela LoginPage após chamar esta função
   };
 
   const logout = () => {
@@ -59,7 +57,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('jl_user');
     setToken(null);
     setUser(null);
-    // A navegação ocorre automaticamente pelo componente Layout (guarda de rotas)
     toast.info("Você saiu da sua conta.");
   };
 
@@ -72,7 +69,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const refetchFeatureStatus = async () => {
-    // Esta função será implementada quando a API de features estiver pronta
   };
 
   const value = {
@@ -82,7 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     login,
     logout,
     updateUser,
-    featureStatus: { // Mock para manter o layout funcionando
+    featureStatus: {
         pdv_liberado: true,
         clientes_liberado: true,
         produtos_liberado: true,

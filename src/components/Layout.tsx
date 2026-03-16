@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useLocation, Navigate } from 'react-router-dom';
-import { Home, Package, ShoppingCart, Settings, Menu, LogOut, ChevronDown, Tag, Building, CircleUser, Grid as GridIcon, Settings2, Users, Rocket, Sun, Moon } from 'lucide-react';
+import { Home, Package, ShoppingCart, Settings, Menu, LogOut, ChevronDown, Tag, Building, CircleUser, Grid as GridIcon, Settings2, Users, Rocket, Sun, Moon, DollarSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import {
@@ -21,6 +21,7 @@ const navItems = [
   { to: '/', icon: Home, label: 'Dashboard.', permissionKey: 'dashboard' as keyof UserPermissions },
   { to: '/produtos', icon: Package, label: 'Produtos', permissionKey: 'produtos' as keyof UserPermissions, featureKey: 'produtos_liberado' },
   { to: '/clientes', icon: Users, label: 'Clientes', permissionKey: 'clientes' as keyof UserPermissions, featureKey: 'clientes_liberado' },
+  { to: '/vendas', icon: DollarSign, label: 'Vendas', permissionKey: 'financeiro' as keyof UserPermissions, featureKey: 'vendas_liberado' },
   { to: '/pdv', icon: ShoppingCart, label: 'PDV', permissionKey: 'financeiro' as keyof UserPermissions, featureKey: 'pdv_liberado' },
 ];
 
@@ -85,7 +86,6 @@ export function Layout() {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // Fecha o menu mobile ao navegar e rola para o topo
   useEffect(() => {
     setIsMobileMenuOpen(false);
     const mainContent = document.getElementById('main-content');
@@ -121,10 +121,8 @@ export function Layout() {
     return null;
   }
 
-  // O Super Admin agora é validado pelo e-mail
   const isMasterAdmin = user.email.toLowerCase() === 'ussloja@gmail.com';
 
-  // Helper para verificar permissões de forma 100% segura (previne crash se permissoes for null)
   const checkPermission = (key: keyof UserPermissions | undefined) => {
     if (!key) return false;
     return !!(user?.permissoes?.[key]);
@@ -134,7 +132,6 @@ export function Layout() {
     const hasPermission = user.role === 'admin' || checkPermission(item.permissionKey);
     if (!hasPermission) return false;
 
-    // Se a rota depende de uma liberação global, verifica no featureStatus de forma segura
     if (item.featureKey) {
       return !!featureStatus?.[item.featureKey];
     }

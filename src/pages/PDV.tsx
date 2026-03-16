@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { ShoppingCart } from '@/components/pdv/ShoppingCart';
 import { useProducts } from '@/hooks/use-products';
 import { Product, CartItem, ProductVariation } from '@/types';
-import { Search, Package, PlusCircle, XCircle, PlayCircle } from 'lucide-react';
+import { Search, Package, XCircle, PlayCircle } from 'lucide-react';
 import { mediaBaseUrl } from '@/lib/api';
 import { toast } from 'sonner';
 import { PdvProvider, usePdv } from '@/contexts/PdvContext';
@@ -15,10 +15,15 @@ import { PdvHeader } from '@/components/pdv/PdvHeader';
 import { CheckoutDialog } from '@/components/pdv/CheckoutDialog';
 
 function PdvContent() {
-  const { isSaleActive, clearSale, saleType } = usePdv();
+  const { 
+    isSaleActive, 
+    cart, 
+    addToCart, 
+    updateCartQuantity, 
+    removeFromCart 
+  } = usePdv();
   const { data: products, isLoading } = useProducts();
   const [searchTerm, setSearchTerm] = useState('');
-  const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isStartSaleOpen, setIsStartSaleOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
@@ -39,53 +44,6 @@ function PdvContent() {
     return nameMatch || variationMatch;
   }).slice(0, 50);
 
-  const addToCart = (product: Product, variation: ProductVariation) => {
-    // Define o preço baseando no tipo de venda escolhida no início
-    let unitPrice = product.preco_varejo;
-    if (saleType === 'atacado_geral' && product.habilita_atacado_geral && product.preco_atacado_geral > 0) {
-      unitPrice = product.preco_atacado_geral;
-    } else if (saleType === 'atacado_grade' && product.habilita_atacado_grade && product.preco_atacado_grade > 0) {
-      unitPrice = product.preco_atacado_grade;
-    }
-
-    const existingItem = cart.find(item => item.productId === product.id && item.variation.tamanho === variation.tamanho);
-
-    if (existingItem) {
-      updateCartQuantity(product.id, variation.tamanho, existingItem.quantity + 1);
-    } else {
-      const newItem: CartItem = {
-        productId: product.id,
-        productName: product.nome,
-        variation: {
-          tamanho: variation.tamanho,
-          sku: variation.sku,
-        },
-        quantity: 1,
-        unitPrice: unitPrice, 
-        image: product.imagem_principal,
-      };
-      setCart(prev => [...prev, newItem]);
-    }
-    toast.success(`${product.nome} (${variation.tamanho}) adicionado ao carrinho.`);
-    setSelectedProduct(null);
-  };
-
-  const updateCartQuantity = (productId: number, tamanho: string, newQuantity: number) => {
-    if (newQuantity <= 0) {
-      removeFromCart(productId, tamanho);
-      return;
-    }
-    setCart(prev => prev.map(item => 
-      item.productId === productId && item.variation.tamanho === tamanho 
-        ? { ...item, quantity: newQuantity } 
-        : item
-    ));
-  };
-
-  const removeFromCart = (productId: number, tamanho: string) => {
-    setCart(prev => prev.filter(item => !(item.productId === productId && item.variation.tamanho === tamanho)));
-  };
-
   const handleProductSelect = (product: Product) => {
     if (product.variacoes && product.variacoes.length > 1) {
       setSelectedProduct(product);
@@ -97,6 +55,9 @@ function PdvContent() {
   };
 
   const handleCheckout = () => {
+    if (cart.length === 0) {
+      return toast.error("Carrinho vazio", { description: "Adicione produtos antes de finalizar a venda." });
+    }
     setIsCheckoutOpen(true);
   };
 
@@ -207,7 +168,10 @@ function PdvContent() {
                     key={v.tamanho} 
                     variant="outline" 
                     className="h-16 text-lg border-white/10 hover:bg-white/5 hover:border-emerald-500/50"
-                    onClick={() => addToCart(selectedProduct, v)}
+                    onClick={() => {
+                      addToCart(selectedProduct, v);
+                      setSelectedProduct(null);
+                    }}
                   >
                     {v.tamanho}
                   </Button>

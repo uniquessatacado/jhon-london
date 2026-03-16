@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { Lock, User as UserIcon, Loader2, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -21,31 +22,36 @@ export function LoginPage() {
     setIsLoading(true);
     
     try {
-      const response = await fetch('http://206.183.128.27:8001/functions/v1/manual-login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
+      // 1. Buscar usuário direto na tabela 'usuarios' usando o cliente Supabase
+      const { data: user, error } = await supabase
+        .from('usuarios')
+        .select('*')
+        .eq('email', email)
+        .single();
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Erro desconhecido');
+      if (error || !user) {
+        throw new Error('Usuário não encontrado');
       }
 
-      // 1. Atualiza o AuthContext
-      login(data.user, data.token);
+      // 2. Comparar senha diretamente com o campo senha_hash
+      if (user.senha_hash !== password) {
+        throw new Error('Senha incorreta');
+      }
+
+      // 3. Sucesso: Passa o usuário pro contexto e gera um token falso pra manter a estrutura
+      const fakeToken = `token-${user.id}-${Date.now()}`;
+      login(user, fakeToken);
       
       toast.success('Acesso Autorizado', {
-          description: `Bem-vindo de volta, ${data.user.nome.split(' ')[0]}.`,
+          description: `Bem-vindo de volta, ${user.nome.split(' ')[0]}.`,
       });
 
-      // 2. Redireciona o usuário
+      // 4. Redireciona o usuário para o Dashboard
       navigate('/');
 
     } catch (error: any) {
-        console.error(error);
-        toast.error('Acesso Negado', { description: error.message });
+        console.error("Erro no login:", error);
+        toast.error('Acesso Negado', { description: error.message || 'Credenciais inválidas' });
     } finally {
         setIsLoading(false);
     }

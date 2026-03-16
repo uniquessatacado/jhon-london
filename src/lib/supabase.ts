@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Usando a nova URL do Supabase (porta 8001)
+// Usando a URL fornecida (porta 8001)
 const supabaseUrl = 'http://206.183.128.27:8001';
 const supabaseAnonKey = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJzdXBhYmFzZSIsImlhdCI6MTc3MzYwODEwMCwiZXhwIjo0OTI5MjgxNzAwLCJyb2xlIjoiYW5vbiJ9.I1NCfm8Tdgg-OBGbEpruVu1IEzAbVkDA7FU9kOFHgIo';
 

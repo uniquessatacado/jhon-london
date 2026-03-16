@@ -47,7 +47,7 @@ export interface SaleFullDetails {
 }
 
 async function fetchSaleFullDetails(saleId: string): Promise<SaleFullDetails> {
-  // 1. Busca APENAS a venda primeiro (Garante que a venda existe)
+  // 1. Busca APENAS a venda primeiro
   const { data: venda, error: vendaError } = await supabase
     .from('vendas')
     .select('*')
@@ -55,7 +55,6 @@ async function fetchSaleFullDetails(saleId: string): Promise<SaleFullDetails> {
     .single();
 
   if (vendaError || !venda) {
-    console.error("Erro ao buscar a venda principal:", vendaError);
     throw new Error('Venda não encontrada');
   }
 
@@ -70,30 +69,39 @@ async function fetchSaleFullDetails(saleId: string): Promise<SaleFullDetails> {
     clienteData = data;
   }
 
-  // 3. Busca os Itens e junta com o Produto
-  const { data: itensData } = await supabase
+  // 3. Busca os Itens e tenta juntar com o Produto (Com plano B se falhar)
+  let itensData = [];
+  const { data: itensJoin, error: joinError } = await supabase
     .from('venda_itens')
     .select('*, produtos(nome, imagem_principal, sku)')
     .eq('venda_id', saleId);
+    
+  if (joinError) {
+      console.warn("Aviso: Tentando buscar itens sem os detalhes do produto", joinError);
+      // Plano B: Busca os itens puros, sem tentar puxar o nome/foto do produto
+      const { data: fallbackItens } = await supabase
+        .from('venda_itens')
+        .select('*')
+        .eq('venda_id', saleId);
+      itensData = fallbackItens || [];
+  } else {
+      itensData = itensJoin || [];
+  }
 
-  // 4. Busca os Pagamentos (Try/Catch silencioso caso a tabela não exista)
-  const { data: pagamentosData, error: pagamentosError } = await supabase
+  // 4. Busca os Pagamentos
+  const { data: pagamentosData } = await supabase
     .from('venda_pagamentos')
     .select('*')
     .eq('venda_id', saleId);
-    
-  if (pagamentosError) console.warn("Tabela venda_pagamentos pode não existir.");
 
-  // 5. Busca o Histórico (Try/Catch silencioso caso a tabela não exista)
-  const { data: historicoData, error: historicoError } = await supabase
+  // 5. Busca o Histórico
+  const { data: historicoData } = await supabase
     .from('venda_historico')
     .select('*')
     .eq('venda_id', saleId)
     .order('created_at', { ascending: false });
 
-  if (historicoError) console.warn("Tabela venda_historico pode não existir.");
-
-  // 6. Monta o objeto final exatamente como a tela espera
+  // Monta o objeto final
   return {
     ...venda,
     clientes: clienteData,

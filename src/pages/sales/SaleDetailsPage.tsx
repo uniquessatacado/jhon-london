@@ -4,12 +4,11 @@ import { useSaleStatuses } from '@/hooks/use-sale-statuses';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, Loader2, Package, User, CalendarClock, CreditCard, History, MessageCircle, MapPin, ExternalLink, QrCode, Banknote } from 'lucide-react';
 import { mediaBaseUrl } from '@/lib/api';
 import { useState } from 'react';
 import { UpdateSaleStatusDialog } from '@/components/sales/UpdateSaleStatusDialog';
-import { SaleWithDetails } from '@/hooks/use-sales'; // Para reaproveitar o modal
+import { SaleWithDetails } from '@/hooks/use-sales';
 
 export function SaleDetailsPage() {
   const { id } = useParams<{ id: string }>();
@@ -47,7 +46,6 @@ export function SaleDetailsPage() {
     return <div className="flex flex-col items-center justify-center h-[80vh] text-center gap-4"><p className="text-xl text-muted-foreground">Pedido não encontrado.</p><Button onClick={() => navigate('/vendas')} variant="outline">Voltar para Vendas</Button></div>;
   }
 
-  // Encontra a cor do status atual
   const currentStatusObj = statuses?.find(s => s.label === sale.status);
   const statusColorClass = currentStatusObj 
     ? `bg-${currentStatusObj.color}-500/20 text-${currentStatusObj.color}-600 dark:text-${currentStatusObj.color}-400 border-${currentStatusObj.color}-500/30` 
@@ -61,7 +59,6 @@ export function SaleDetailsPage() {
     }
   };
 
-  // Prepara o objeto para o modal de status
   const saleForModal: SaleWithDetails = { ...sale } as any;
 
   return (
@@ -99,26 +96,34 @@ export function SaleDetailsPage() {
                 </CardHeader>
                 <CardContent className="p-0">
                     <div className="divide-y border-t-0">
-                        {sale.venda_itens?.map((item) => {
-                            const img = getImageUrl(item.produtos?.imagem_principal);
-                            return (
-                                <div key={item.id} className="p-4 flex flex-col sm:flex-row gap-4 hover:bg-muted/20 transition-colors">
-                                    <div className="h-20 w-20 shrink-0 bg-muted rounded-xl border overflow-hidden flex items-center justify-center">
-                                        {img ? <img src={img} alt="" className="h-full w-full object-cover" /> : <Package className="h-8 w-8 text-muted-foreground/50" />}
-                                    </div>
-                                    <div className="flex-1 flex flex-col justify-between">
-                                        <div>
-                                            <h4 className="font-semibold text-foreground text-base leading-tight">{item.produtos?.nome || 'Produto removido'}</h4>
-                                            <p className="text-xs text-muted-foreground mt-1">Tam: <span className="font-bold text-foreground">{item.tamanho}</span></p>
+                        {sale.venda_itens && sale.venda_itens.length > 0 ? (
+                            sale.venda_itens.map((item) => {
+                                const img = getImageUrl(item.produtos?.imagem_principal);
+                                return (
+                                    <div key={item.id} className="p-4 flex flex-col sm:flex-row gap-4 hover:bg-muted/20 transition-colors">
+                                        <div className="h-20 w-20 shrink-0 bg-muted rounded-xl border overflow-hidden flex items-center justify-center">
+                                            {img ? <img src={img} alt="" className="h-full w-full object-cover" /> : <Package className="h-8 w-8 text-muted-foreground/50" />}
+                                        </div>
+                                        <div className="flex-1 flex flex-col justify-between">
+                                            <div>
+                                                <h4 className="font-semibold text-foreground text-base leading-tight">{item.produtos?.nome || `Produto Local #${item.produto_id}`}</h4>
+                                                <p className="text-xs text-muted-foreground mt-1">Tam: <span className="font-bold text-foreground">{item.tamanho || 'N/A'}</span></p>
+                                            </div>
+                                        </div>
+                                        <div className="flex sm:flex-col justify-between items-end text-right mt-2 sm:mt-0">
+                                            <p className="text-sm text-muted-foreground">{item.quantidade}x {formatCurrency(item.preco_unitario)}</p>
+                                            <p className="font-bold text-lg text-emerald-500">{formatCurrency(item.quantidade * item.preco_unitario)}</p>
                                         </div>
                                     </div>
-                                    <div className="flex sm:flex-col justify-between items-end text-right mt-2 sm:mt-0">
-                                        <p className="text-sm text-muted-foreground">{item.quantidade}x {formatCurrency(item.preco_unitario)}</p>
-                                        <p className="font-bold text-lg text-emerald-500">{formatCurrency(item.quantidade * item.preco_unitario)}</p>
-                                    </div>
-                                </div>
-                            );
-                        })}
+                                );
+                            })
+                        ) : (
+                            <div className="p-10 flex flex-col items-center justify-center text-center text-muted-foreground">
+                                <Package className="h-12 w-12 mb-3 opacity-20" />
+                                <p className="font-medium">Os itens deste pedido não foram encontrados.</p>
+                                <p className="text-sm mt-1 opacity-70">Pode ter havido uma falha durante o salvamento dos itens no PDV.</p>
+                            </div>
+                        )}
                     </div>
                 </CardContent>
             </Card>
@@ -130,7 +135,7 @@ export function SaleDetailsPage() {
                 </CardHeader>
                 <CardContent className="p-6">
                     <div className="space-y-6 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-border before:to-transparent">
-                        {sale.venda_historico?.map((log, i) => (
+                        {sale.venda_historico?.map((log) => (
                             <div key={log.id} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
                                 <div className="flex items-center justify-center w-10 h-10 rounded-full border-4 border-background bg-muted text-muted-foreground shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 shadow-sm z-10">
                                     <History className="h-4 w-4" />
@@ -213,14 +218,14 @@ export function SaleDetailsPage() {
                             <div className="pt-4 border-t">
                                 <Button 
                                     onClick={() => openWhatsApp(sale.clientes?.whatsapp, sale.clientes?.nome || '')} 
-                                    disabled={!sale.clientes.whatsapp}
+                                    disabled={!sale.clientes?.whatsapp}
                                     className="w-full bg-[#25D366] hover:bg-[#128C7E] text-white font-bold h-12"
                                 >
                                     <MessageCircle className="mr-2 h-5 w-5" />
                                     Falar no WhatsApp
                                     <ExternalLink className="ml-2 h-3 w-3 opacity-50" />
                                 </Button>
-                                {!sale.clientes.whatsapp && <p className="text-center text-xs text-muted-foreground mt-2">Cliente não possui WhatsApp cadastrado.</p>}
+                                {!sale.clientes?.whatsapp && <p className="text-center text-xs text-muted-foreground mt-2">Cliente não possui WhatsApp cadastrado.</p>}
                             </div>
                         </>
                     ) : (

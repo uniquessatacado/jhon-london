@@ -46,8 +46,8 @@ export function SaleDetailsDialog({ sale, open, onOpenChange }: SaleDetailsDialo
                       <TableCell className="font-medium">{item.produtos?.nome || 'Produto não encontrado'}</TableCell>
                       <TableCell>{item.tamanho}</TableCell>
                       <TableCell className="text-right">{item.quantidade}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(item.valor_unitario)}</TableCell>
-                      <TableCell className="text-right font-bold">{formatCurrency(item.quantidade * item.valor_unitario)}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(item.preco_unitario)}</TableCell>
+                      <TableCell className="text-right font-bold">{formatCurrency(item.quantidade * item.preco_unitario)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

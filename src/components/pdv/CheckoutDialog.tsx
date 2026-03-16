@@ -48,7 +48,7 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
         produto_id: item.productId,
         tamanho: item.variation.tamanho,
         quantidade: item.quantity,
-        valor_unitario: item.unitPrice,
+        preco_unitario: item.unitPrice,
       }));
 
       const { error: itensError } = await supabase.from('venda_itens').insert(itens);

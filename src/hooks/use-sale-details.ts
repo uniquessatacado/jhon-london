@@ -6,7 +6,7 @@ export interface SaleItem {
   produto_id: number;
   tamanho: string;
   quantidade: number;
-  valor_unitario: number;
+  preco_unitario: number;
   produtos: {
     nome: string;
   } | null;
@@ -16,13 +16,13 @@ async function fetchSaleDetails(saleId: number | null): Promise<SaleItem[]> {
   if (!saleId) return [];
 
   const { data, error } = await supabase
-    .from('vendas_itens')
+    .from('venda_itens')
     .select(`
       id,
       produto_id,
       tamanho,
       quantidade,
-      valor_unitario,
+      preco_unitario,
       produtos ( nome )
     `)
     .eq('venda_id', saleId);

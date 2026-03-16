@@ -54,7 +54,7 @@ async function fetchAllDashboardData(filters: DashboardFilters) {
   ] = await Promise.all([
     supabase.from('vendas').select('*, clientes(nome)').gte('created_at', start).lte('created_at', end),
     supabase.from('clientes').select('*'),
-    Promise.resolve(supabase.from('vendas_itens').select('*, produtos(nome, imagem_principal, estoque)')).catch(() => ({ data: [] }))
+    supabase.from('venda_itens').select('*, produtos(nome, imagem_principal, estoque)')
   ]);
 
   const vendas = vendasData || [];
@@ -123,7 +123,7 @@ async function fetchAllDashboardData(filters: DashboardFilters) {
                   };
               }
               productAgg[pId].quantidade_vendida += Number(item.quantidade) || 0;
-              productAgg[pId].valor_total_vendido += (Number(item.quantidade) || 0) * (Number(item.valor_unitario) || 0);
+              productAgg[pId].valor_total_vendido += (Number(item.quantidade) || 0) * (Number(item.preco_unitario) || 0);
           }
       });
       topProducts = Object.values(productAgg).sort((a: any, b: any) => b.quantidade_vendida - a.quantidade_vendida).slice(0, 5);

@@ -47,11 +47,21 @@ export function useUpdateSaleStatus() {
 type DeletePayload = { id: number; userId?: number; userName?: string; };
 
 async function deleteSale({ id, userId, userName }: DeletePayload) {
-  // Primeiro, loga a exclusão.
-  await logSaleHistory(id, userId, userName, 'Exclusão de Venda', { venda_id: id });
+  // 1. Deletar os itens da venda (Resolve o erro venda_itens_venda_id_fkey)
+  const { error: itemsError } = await supabase.from('venda_itens').delete().eq('venda_id', id);
+  if (itemsError) throw new Error(`Erro ao excluir itens: ${itemsError.message}`);
 
+  // 2. Deletar os pagamentos da venda
+  const { error: paymentsError } = await supabase.from('venda_pagamentos').delete().eq('venda_id', id);
+  if (paymentsError) throw new Error(`Erro ao excluir pagamentos: ${paymentsError.message}`);
+
+  // 3. Deletar o histórico atrelado à venda
+  const { error: historyError } = await supabase.from('venda_historico').delete().eq('venda_id', id);
+  if (historyError) console.warn("Aviso ao deletar histórico (pode não existir):", historyError.message);
+
+  // 4. Finalmente, deletar a venda
   const { error } = await supabase.from('vendas').delete().eq('id', id);
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(`Erro ao excluir venda principal: ${error.message}`);
 }
 
 export function useDeleteSale() {

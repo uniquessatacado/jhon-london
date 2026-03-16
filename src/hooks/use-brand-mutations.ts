@@ -1,11 +1,11 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '@/lib/api';
+import { supabase } from '@/lib/supabase';
 import { Brand } from '@/types';
 import { toast } from 'sonner';
 
-// --- Create ---
 async function createBrand(newBrand: { nome: string }): Promise<Brand> {
-  const { data } = await api.post('/marcas', newBrand);
+  const { data, error } = await supabase.from('marcas').insert([newBrand]).select().single();
+  if (error) throw new Error(error.message);
   return data;
 }
 
@@ -17,15 +17,13 @@ export function useCreateBrand() {
       toast.success('Marca criada com sucesso!');
       queryClient.invalidateQueries({ queryKey: ['brands'] });
     },
-    onError: () => {
-      toast.error('Falha ao criar marca.');
-    },
+    onError: (err) => toast.error('Falha ao criar marca.', { description: err.message }),
   });
 }
 
-// --- Update ---
 async function updateBrand({ id, ...updatedBrand }: Partial<Brand>): Promise<Brand> {
-  const { data } = await api.put(`/marcas/${id}`, updatedBrand);
+  const { data, error } = await supabase.from('marcas').update(updatedBrand).eq('id', id).select().single();
+  if (error) throw new Error(error.message);
   return data;
 }
 
@@ -37,18 +35,13 @@ export function useUpdateBrand() {
       toast.success('Marca atualizada com sucesso!');
       queryClient.invalidateQueries({ queryKey: ['brands'] });
     },
-    onError: (error: any) => {
-      console.error('Falha ao atualizar marca:', error.response?.data);
-      toast.error('Falha ao atualizar marca.', {
-        description: error.response?.data?.message || 'Erro desconhecido.'
-      });
-    },
+    onError: (err) => toast.error('Falha ao atualizar marca.', { description: err.message }),
   });
 }
 
-// --- Delete ---
 async function deleteBrand(id: number): Promise<void> {
-  await api.delete(`/marcas/${id}`);
+  const { error } = await supabase.from('marcas').delete().eq('id', id);
+  if (error) throw new Error(error.message);
 }
 
 export function useDeleteBrand() {
@@ -59,11 +52,6 @@ export function useDeleteBrand() {
       toast.success('Marca excluída com sucesso!');
       queryClient.invalidateQueries({ queryKey: ['brands'] });
     },
-    onError: (error: any) => {
-      console.error('Falha ao excluir marca:', error.response?.data);
-      toast.error('Falha ao excluir marca.', {
-        description: error.response?.data?.message || 'Erro desconhecido.'
-      });
-    },
+    onError: (err) => toast.error('Falha ao excluir marca.', { description: err.message }),
   });
 }

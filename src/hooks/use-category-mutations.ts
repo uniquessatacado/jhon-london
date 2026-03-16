@@ -1,12 +1,11 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '@/lib/api';
+import { supabase } from '@/lib/supabase';
 import { Category, Subcategory } from '@/types';
 import { toast } from 'sonner';
 
-// --- Categories ---
-
 async function createCategory(newCategory: { nome: string }): Promise<Category> {
-  const { data } = await api.post('/categorias', newCategory);
+  const { data, error } = await supabase.from('categorias').insert([newCategory]).select().single();
+  if (error) throw new Error(error.message);
   return data;
 }
 
@@ -18,17 +17,13 @@ export function useCreateCategory() {
       toast.success('Categoria criada com sucesso!');
       queryClient.invalidateQueries({ queryKey: ['categories'] });
     },
-    onError: (error: any) => {
-      const msg = error.response?.data?.error || error.response?.data?.message || 'Erro desconhecido ao criar categoria.';
-      toast.error('Falha ao criar categoria.', { description: msg });
-    },
+    onError: (err) => toast.error('Falha ao criar categoria.', { description: err.message }),
   });
 }
 
 async function updateCategory({ id, ...updatedCategory }: Partial<Category>): Promise<Category> {
-  // Blindagem para garantir que enviamos apenas o campo nome para o Kimi
-  const payload = { nome: updatedCategory.nome };
-  const { data } = await api.put(`/categorias/${id}`, payload);
+  const { data, error } = await supabase.from('categorias').update({ nome: updatedCategory.nome }).eq('id', id).select().single();
+  if (error) throw new Error(error.message);
   return data;
 }
 
@@ -40,17 +35,13 @@ export function useUpdateCategory() {
       toast.success('Categoria atualizada com sucesso!');
       queryClient.invalidateQueries({ queryKey: ['categories'] });
     },
-    onError: (error: any) => {
-      console.error("Erro ao atualizar categoria:", error.response?.data || error.message);
-      // Pega "error" ou "message" para cobrir as duas formas que o Kimi costuma usar
-      const msg = error.response?.data?.error || error.response?.data?.message || error.message || 'Erro interno no servidor do Kimi.';
-      toast.error('Falha ao atualizar categoria.', { description: msg });
-    },
+    onError: (err) => toast.error('Falha ao atualizar categoria.', { description: err.message }),
   });
 }
 
 async function deleteCategory(id: number): Promise<void> {
-  await api.delete(`/categorias/${id}`);
+  const { error } = await supabase.from('categorias').delete().eq('id', id);
+  if (error) throw new Error(error.message);
 }
 
 export function useDeleteCategory() {
@@ -58,30 +49,20 @@ export function useDeleteCategory() {
   return useMutation({
     mutationFn: deleteCategory,
     onSuccess: () => {
-      toast.success('Categoria excluída com sucesso!');
+      toast.success('Categoria excluída!');
       queryClient.invalidateQueries({ queryKey: ['categories'] });
     },
-    onError: (error: any) => {
-      const msg = error.response?.data?.error || error.response?.data?.message || 'Não é possível excluir categorias em uso.';
-      toast.error('Falha ao excluir categoria.', { description: msg });
-    },
+    onError: (err) => toast.error('Falha ao excluir categoria.', { description: err.message }),
   });
 }
 
-// --- Subcategories ---
-
 async function createSubcategory(newSub: Omit<Subcategory, 'id'>): Promise<Subcategory> {
-  const payload = {
-    nome: newSub.nome,
-    ncm: newSub.ncm,
-    cfop_padrao: newSub.cfop_padrao,
-    cst_icms: newSub.cst_icms,
-    origem: newSub.origem,
-    unidade_medida: newSub.unidade_medida,
-    categoria_id: newSub.categoria_id,
+  const { data, error } = await supabase.from('subcategorias').insert([{
+    nome: newSub.nome, ncm: newSub.ncm, cfop_padrao: newSub.cfop_padrao, cst_icms: newSub.cst_icms,
+    origem: newSub.origem, unidade_medida: newSub.unidade_medida, categoria_id: newSub.categoria_id,
     grade_id: newSub.grade_id && String(newSub.grade_id) !== "null" ? Number(newSub.grade_id) : null
-  };
-  const { data } = await api.post('/subcategorias', payload);
+  }]).select().single();
+  if (error) throw new Error(error.message);
   return data;
 }
 
@@ -90,29 +71,21 @@ export function useCreateSubcategory() {
   return useMutation({
     mutationFn: createSubcategory,
     onSuccess: () => {
-      toast.success('Subcategoria criada com sucesso!');
+      toast.success('Subcategoria criada!');
       queryClient.invalidateQueries({ queryKey: ['subcategories'] });
       queryClient.invalidateQueries({ queryKey: ['all-subcategories'] });
     },
-    onError: (error: any) => {
-      const msg = error.response?.data?.error || error.response?.data?.message || 'Erro desconhecido ao criar.';
-      toast.error('Falha ao criar subcategoria.', { description: msg });
-    },
+    onError: (err) => toast.error('Falha ao criar subcategoria.', { description: err.message }),
   });
 }
 
 async function updateSubcategory({ id, ...updatedSub }: Partial<Subcategory> & { id: number }): Promise<Subcategory> {
-  const payload = {
-    nome: updatedSub.nome,
-    ncm: updatedSub.ncm,
-    cfop_padrao: updatedSub.cfop_padrao,
-    cst_icms: updatedSub.cst_icms,
-    origem: updatedSub.origem,
-    unidade_medida: updatedSub.unidade_medida,
-    categoria_id: updatedSub.categoria_id,
+  const { data, error } = await supabase.from('subcategorias').update({
+    nome: updatedSub.nome, ncm: updatedSub.ncm, cfop_padrao: updatedSub.cfop_padrao, cst_icms: updatedSub.cst_icms,
+    origem: updatedSub.origem, unidade_medida: updatedSub.unidade_medida, categoria_id: updatedSub.categoria_id,
     grade_id: updatedSub.grade_id && String(updatedSub.grade_id) !== "null" ? Number(updatedSub.grade_id) : null
-  };
-  const { data } = await api.put(`/subcategorias/${id}`, payload);
+  }).eq('id', id).select().single();
+  if (error) throw new Error(error.message);
   return data;
 }
 
@@ -121,19 +94,17 @@ export function useUpdateSubcategory() {
   return useMutation({
     mutationFn: updateSubcategory,
     onSuccess: () => {
-      toast.success('Subcategoria atualizada com sucesso!');
+      toast.success('Subcategoria atualizada!');
       queryClient.invalidateQueries({ queryKey: ['subcategories'] });
       queryClient.invalidateQueries({ queryKey: ['all-subcategories'] });
     },
-    onError: (error: any) => {
-      const msg = error.response?.data?.error || error.response?.data?.message || 'Erro desconhecido ao atualizar.';
-      toast.error('Falha ao atualizar subcategoria.', { description: msg });
-    },
+    onError: (err) => toast.error('Falha ao atualizar subcategoria.', { description: err.message }),
   });
 }
 
 async function deleteSubcategory(id: number): Promise<void> {
-  await api.delete(`/subcategorias/${id}`);
+  const { error } = await supabase.from('subcategorias').delete().eq('id', id);
+  if (error) throw new Error(error.message);
 }
 
 export function useDeleteSubcategory() {
@@ -141,13 +112,10 @@ export function useDeleteSubcategory() {
   return useMutation({
     mutationFn: deleteSubcategory,
     onSuccess: () => {
-      toast.success('Subcategoria excluída com sucesso!');
+      toast.success('Subcategoria excluída!');
       queryClient.invalidateQueries({ queryKey: ['subcategories'] });
       queryClient.invalidateQueries({ queryKey: ['all-subcategories'] });
     },
-    onError: (error: any) => {
-      const msg = error.response?.data?.error || error.response?.data?.message || 'Não é possível excluir subcategorias em uso.';
-      toast.error('Falha ao excluir subcategoria.', { description: msg });
-    },
+    onError: (err) => toast.error('Falha ao excluir subcategoria.', { description: err.message }),
   });
 }

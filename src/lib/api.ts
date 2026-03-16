@@ -1,31 +1,13 @@
-import axios from 'axios';
+import { supabase } from './supabase';
 
-// Usamos um caminho relativo para o proxy do Vite ou rewrites da Vercel interceptarem
-export const api = axios.create({
-  baseURL: '/api',
-});
+// URL base para imagens absolutas vindo do backend (Storage do Supabase)
+export const mediaBaseUrl = 'http://206.183.128.27:8001/storage/v1/object/public/produtos/';
 
-// URL base para imagens absolutas vindo do backend
-export const mediaBaseUrl = 'https://api.jl.venduss.com/uploads/';
-
-// Interceptor para adicionar o token em TODAS as requisições
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('jl_token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
-// Interceptor para lidar com token expirado ou inválido
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      // Dispara evento global para deslogar o usuário em caso de token inválido
-      window.dispatchEvent(new Event('auth-error'));
-    }
-    // 403 - Acesso negado: não deslogar, apenas mostrar erro na tela
-    return Promise.reject(error);
-  }
-);
+// A exportação 'api' foi substituída intencionalmente para disparar erros claros 
+// caso ainda exista algum arquivo esquecido tentando chamar endpoints antigos.
+export const api = {
+  get: async () => { throw new Error('CÓDIGO MORTO: Use o Supabase diretamente.') },
+  post: async () => { throw new Error('CÓDIGO MORTO: Use o Supabase diretamente.') },
+  put: async () => { throw new Error('CÓDIGO MORTO: Use o Supabase diretamente.') },
+  delete: async () => { throw new Error('CÓDIGO MORTO: Use o Supabase diretamente.') },
+};

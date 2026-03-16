@@ -1,48 +1,38 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '@/lib/api';
+import { supabase } from '@/lib/supabase';
 import { Grid, GridSize } from '@/types';
 import { toast } from 'sonner';
 
-type GridSizeInput = {
-  id?: number;
-  tamanho: string;
-  peso_kg: number | string;
-  altura_cm: number | string;
-  largura_cm: number | string;
-  comprimento_cm: number | string;
-};
-
-type CreateGridDTO = {
-  nome: string;
-  tamanhos: GridSizeInput[];
-};
-
+type GridSizeInput = { id?: number; tamanho: string; peso_kg: number | string; altura_cm: number | string; largura_cm: number | string; comprimento_cm: number | string; };
+type CreateGridDTO = { nome: string; tamanhos: GridSizeInput[]; };
 type UpdateGridDTO = CreateGridDTO & { id: number };
 
-// Função blindada para garantir que vírgulas virem pontos e nunca envie NaN (Not a Number) para o back-end
 const parseToNumber = (value: any): number => {
   if (typeof value === 'number') return value;
   if (!value) return 0;
-  // Troca vírgula por ponto caso o usuário ou o navegador use formatação pt-BR
   const parsed = parseFloat(String(value).replace(',', '.'));
   return isNaN(parsed) ? 0 : parsed;
 };
 
-// --- Create ---
 async function createGrid(newGrid: CreateGridDTO): Promise<Grid> {
-  const payload = {
-    nome: newGrid.nome,
-    tamanhos: newGrid.tamanhos.map(t => ({
-      tamanho: t.tamanho,
-      peso_kg: parseToNumber(t.peso_kg),
-      altura_cm: parseToNumber(t.altura_cm),
-      largura_cm: parseToNumber(t.largura_cm),
-      comprimento_cm: parseToNumber(t.comprimento_cm),
-    }))
-  };
+  // 1. Cria a grade mestre
+  const { data: grade, error: err1 } = await supabase.from('grades').insert([{ nome: newGrid.nome }]).select().single();
+  if (err1) throw new Error(err1.message);
+
+  // 2. Insere os tamanhos vinculados
+  const tamanhos = newGrid.tamanhos.map(t => ({
+    grade_id: grade.id,
+    tamanho: t.tamanho,
+    peso_kg: parseToNumber(t.peso_kg),
+    altura_cm: parseToNumber(t.altura_cm),
+    largura_cm: parseToNumber(t.largura_cm),
+    comprimento_cm: parseToNumber(t.comprimento_cm),
+  }));
   
-  const { data } = await api.post('/grades', payload);
-  return data;
+  const { error: err2 } = await supabase.from('grade_tamanhos').insert(tamanhos);
+  if (err2) throw new Error(err2.message);
+  
+  return grade;
 }
 
 export function useCreateGrid() {
@@ -53,31 +43,30 @@ export function useCreateGrid() {
       toast.success('Grade criada com sucesso!');
       queryClient.invalidateQueries({ queryKey: ['grids'] });
     },
-    onError: (error: any) => {
-      console.error("Erro completo ao criar grade:", error.response?.data);
-      toast.error('Falha ao criar grade.', {
-        description: error.response?.data?.message || 'Verifique os dados e tente novamente.'
-      });
-    },
+    onError: (err) => toast.error('Falha ao criar grade.', { description: err.message }),
   });
 }
 
-// --- Update ---
 async function updateGrid(updatedGrid: UpdateGridDTO): Promise<Grid> {
-  const payload = {
-    nome: updatedGrid.nome,
-    tamanhos: updatedGrid.tamanhos.map(t => ({
-      id: t.id, // Opcional, mas ajuda a API a saber qual linha atualizar
-      tamanho: t.tamanho,
-      peso_kg: parseToNumber(t.peso_kg),
-      altura_cm: parseToNumber(t.altura_cm),
-      largura_cm: parseToNumber(t.largura_cm),
-      comprimento_cm: parseToNumber(t.comprimento_cm),
-    }))
-  };
+  const { data: grade, error: err1 } = await supabase.from('grades').update({ nome: updatedGrid.nome }).eq('id', updatedGrid.id).select().single();
+  if (err1) throw new Error(err1.message);
+
+  // Para evitar problemas de IDs de grade, removemos os tamanhos antigos e inserimos os novos
+  await supabase.from('grade_tamanhos').delete().eq('grade_id', updatedGrid.id);
+
+  const tamanhos = updatedGrid.tamanhos.map(t => ({
+    grade_id: updatedGrid.id,
+    tamanho: t.tamanho,
+    peso_kg: parseToNumber(t.peso_kg),
+    altura_cm: parseToNumber(t.altura_cm),
+    largura_cm: parseToNumber(t.largura_cm),
+    comprimento_cm: parseToNumber(t.comprimento_cm),
+  }));
   
-  const { data } = await api.put(`/grades/${updatedGrid.id}`, payload);
-  return data;
+  const { error: err2 } = await supabase.from('grade_tamanhos').insert(tamanhos);
+  if (err2) throw new Error(err2.message);
+
+  return grade;
 }
 
 export function useUpdateGrid() {
@@ -85,21 +74,16 @@ export function useUpdateGrid() {
   return useMutation({
     mutationFn: updateGrid,
     onSuccess: () => {
-      toast.success('Grade atualizada com sucesso!');
+      toast.success('Grade atualizada!');
       queryClient.invalidateQueries({ queryKey: ['grids'] });
     },
-    onError: (error: any) => {
-      console.error('Erro completo ao atualizar grade:', error.response?.data);
-      toast.error('Falha ao atualizar grade.', {
-        description: error.response?.data?.message || 'A API recusou o formato dos dados.'
-      });
-    },
+    onError: (err) => toast.error('Falha ao atualizar grade.', { description: err.message }),
   });
 }
 
-// --- Delete ---
 async function deleteGrid(id: number): Promise<void> {
-  await api.delete(`/grades/${id}`);
+  const { error } = await supabase.from('grades').delete().eq('id', id);
+  if (error) throw new Error(error.message);
 }
 
 export function useDeleteGrid() {
@@ -110,11 +94,6 @@ export function useDeleteGrid() {
       toast.success('Grade excluída com sucesso!');
       queryClient.invalidateQueries({ queryKey: ['grids'] });
     },
-    onError: (error: any) => {
-      console.error('Falha ao excluir grade:', error.response?.data);
-      toast.error('Falha ao excluir grade.', {
-        description: error.response?.data?.message || 'Erro desconhecido.'
-      });
-    },
+    onError: (err) => toast.error('Falha ao excluir grade.', { description: err.message }),
   });
 }

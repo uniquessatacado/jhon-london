@@ -28,7 +28,6 @@ export interface SaleFullDetails {
     produtos: {
       nome: string;
       imagem_principal: string;
-      sku: string;
     } | null;
   }[];
   venda_pagamentos: {
@@ -55,6 +54,7 @@ async function fetchSaleFullDetails(saleId: string): Promise<SaleFullDetails> {
     .single();
 
   if (vendaError || !venda) {
+    console.error("Erro ao buscar a venda principal:", vendaError);
     throw new Error('Venda não encontrada');
   }
 
@@ -69,16 +69,17 @@ async function fetchSaleFullDetails(saleId: string): Promise<SaleFullDetails> {
     clienteData = data;
   }
 
-  // 3. Busca os Itens e tenta juntar com o Produto (Com plano B se falhar)
+  // 3. Busca os Itens e junta com o Produto
+  // (Removemos o 'sku' daqui pois ele fica nas variações e causava o erro na query)
   let itensData = [];
   const { data: itensJoin, error: joinError } = await supabase
     .from('venda_itens')
-    .select('*, produtos(nome, imagem_principal, sku)')
+    .select('*, produtos(nome, imagem_principal)')
     .eq('venda_id', saleId);
     
   if (joinError) {
-      console.warn("Aviso: Tentando buscar itens sem os detalhes do produto", joinError);
-      // Plano B: Busca os itens puros, sem tentar puxar o nome/foto do produto
+      console.error("Erro na junção dos itens com produtos:", joinError);
+      // Plano B: Busca os itens puros
       const { data: fallbackItens } = await supabase
         .from('venda_itens')
         .select('*')
@@ -101,7 +102,7 @@ async function fetchSaleFullDetails(saleId: string): Promise<SaleFullDetails> {
     .eq('venda_id', saleId)
     .order('created_at', { ascending: false });
 
-  // Monta o objeto final
+  // 6. Monta o objeto final
   return {
     ...venda,
     clientes: clienteData,

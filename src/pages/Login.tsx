@@ -33,11 +33,15 @@ export function LoginPage() {
         throw new Error(data.message || 'Erro desconhecido');
       }
 
+      // 1. Atualiza o AuthContext
       login(data.user, data.token);
       
       toast.success('Acesso Autorizado', {
           description: `Bem-vindo de volta, ${data.user.nome.split(' ')[0]}.`,
       });
+
+      // 2. Redireciona o usuário
+      navigate('/');
 
     } catch (error: any) {
         console.error(error);

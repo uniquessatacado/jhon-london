@@ -1,5 +1,4 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { User as UserType } from '@/types/auth';
 import { toast } from 'sonner';
 
@@ -21,7 +20,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [featureStatus, setFeatureStatus] = useState<{ [key: string]: boolean } | null>(null);
-  const navigate = useNavigate();
 
   useEffect(() => {
     try {
@@ -39,6 +37,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
+
+    // Listener global para lidar com tokens expirados (caso precise no futuro)
+    const handleAuthError = () => {
+      logout();
+    };
+    window.addEventListener('auth-error', handleAuthError);
+    return () => window.removeEventListener('auth-error', handleAuthError);
   }, []);
 
   const login = (userData: UserType, authToken: string) => {
@@ -46,7 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('jl_user', JSON.stringify(userData));
     setToken(authToken);
     setUser(userData);
-    navigate('/');
+    // A navegação agora é feita pela LoginPage após chamar esta função
   };
 
   const logout = () => {
@@ -54,7 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('jl_user');
     setToken(null);
     setUser(null);
-    navigate('/login');
+    // A navegação ocorre automaticamente pelo componente Layout (guarda de rotas)
     toast.info("Você saiu da sua conta.");
   };
 

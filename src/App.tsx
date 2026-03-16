@@ -7,7 +7,6 @@ import { NewProductPage } from './pages/products/NewProduct';
 import { PDVPage } from './pages/PDV';
 import { CategoryPage } from './pages/settings/CategoryPage';
 import { BrandPage } from './pages/settings/BrandPage';
-import { ApiStatusPage } from './pages/settings/ApiStatusPage';
 import { GridPage } from './pages/settings/GridPage';
 import { GeneralSettingsPage } from './pages/settings/GeneralSettingsPage';
 import { UserPage } from './pages/users/UserPage';
@@ -80,10 +79,6 @@ const router = createBrowserRouter([
       {
         path: 'configuracoes/liberacao-funcionalidades',
         element: <FeatureReleasePage />,
-      },
-      {
-        path: 'configuracoes/status-api',
-        element: <ApiStatusPage />,
       },
     ],
   },

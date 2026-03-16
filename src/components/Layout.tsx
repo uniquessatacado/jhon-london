@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useLocation, Navigate } from 'react-router-dom';
-import { Home, Package, ShoppingCart, Settings, Menu, LogOut, ChevronDown, Tag, Building, CircleUser, Server, Grid as GridIcon, Settings2, Users, Rocket, Sun, Moon } from 'lucide-react';
+import { Home, Package, ShoppingCart, Settings, Menu, LogOut, ChevronDown, Tag, Building, CircleUser, Grid as GridIcon, Settings2, Users, Rocket, Sun, Moon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import {
@@ -31,7 +31,6 @@ const settingsNavItems = [
     { to: '/configuracoes/grades', label: 'Grades', icon: GridIcon, permissionKey: 'cadastros' as keyof UserPermissions },
     { to: '/usuarios', label: 'Usuários', icon: Users, permissionKey: 'usuarios' as keyof UserPermissions },
     { to: '/configuracoes/liberacao-funcionalidades', label: 'Liberação', icon: Rocket, specialPermission: 'super_admin' },
-    { to: '/configuracoes/status-api', label: 'Status da API', icon: Server, specialPermission: 'super_admin' },
 ];
 
 const NavLinkItem = ({ to, icon: Icon, label }: { to: string, icon: React.ElementType, label: string }) => (

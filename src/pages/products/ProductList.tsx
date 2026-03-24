@@ -20,6 +20,7 @@ import { useMediaQuery } from '@/hooks/use-media-query';
 import { ProductCardMobile } from '@/components/products/ProductCardMobile';
 import { mediaBaseUrl } from '@/lib/api';
 import { ImageViewerDialog } from '@/components/products/ImageViewerDialog';
+import { ProductStats } from '@/components/products/ProductStats';
 
 export function ProductListPage() {
   const navigate = useNavigate();
@@ -123,6 +124,22 @@ export function ProductListPage() {
     }
     return Number(product.estoque) || 0;
   };
+
+  const { totalStock, totalCost } = useMemo(() => {
+    if (!products) return { totalStock: 0, totalCost: 0 };
+
+    const totals = products.reduce(
+      (acc, product) => {
+        const stock = getTotalStock(product);
+        acc.totalStock += stock;
+        acc.totalCost += stock * (product.preco_custo || 0);
+        return acc;
+      },
+      { totalStock: 0, totalCost: 0 }
+    );
+
+    return totals;
+  }, [products]);
 
   const getInitials = (name: string) => name.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase().substring(0, 2);
 
@@ -228,7 +245,7 @@ export function ProductListPage() {
         Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-40 w-full rounded-2xl bg-muted" />)
       ) : filteredProducts.length > 0 ? (
         filteredProducts.map(product => (
-          <ProductCardMobile 
+          <ProductCardMobile
             key={product.id}
             product={product}
             onView={handleViewProduct}
@@ -266,19 +283,23 @@ export function ProductListPage() {
         </div>
       </div>
 
+      <div className='px-4 md:px-0'>
+        <ProductStats totalStock={totalStock} totalCost={totalCost} />
+      </div>
+
       <div className="rounded-3xl md:border md:bg-card md:backdrop-blur-xl md:shadow-2xl overflow-hidden md:ring-1">
         <div className="p-4 md:p-6 border-b flex flex-col md:flex-row gap-4 bg-muted/50">
            <div className="relative flex-1 group">
                 <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground group-focus-within:text-emerald-500 transition-colors" />
-                <Input 
-                    placeholder="Buscar por nome..." 
+                <Input
+                    placeholder="Buscar por nome..."
                     className="pl-9 bg-background border rounded-xl focus:border-emerald-500/50 focus:ring-emerald-500/20 transition-all h-10"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                 />
            </div>
-           <Button 
-                variant={showFilters ? "secondary" : "outline"} 
+           <Button
+                variant={showFilters ? "secondary" : "outline"}
                 onClick={() => setShowFilters(!showFilters)}
                 className={`rounded-xl border h-10 transition-all ${showFilters ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-background hover:bg-accent text-muted-foreground hover:text-foreground'}`}
            >
